@@ -1,0 +1,12 @@
+{
+  "name": "tienda-nintendo-switch",
+  "version": "1.0.0",
+  "description": "Tienda accesible de juegos de Nintendo Switch",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
