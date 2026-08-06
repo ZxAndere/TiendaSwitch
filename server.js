@@ -120,7 +120,7 @@ const JUEGOS = [
     precioOriginal: 10000,
     rating: 4.9,
     peso: "1.2 GB",
-    imagen: "https://assets.games.gg/celeste_banner_banner_76600851ba.webp",
+    imagen: "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/store/software/switch/70010000006442/691ba3e0801180a9864cc8a7694b6f98097f9d9799bc7e3dc6db92f086759252",
     imagenDetalle: "https://s.pacn.ws/1/p/104/celeste-650491.10.jpg?v=smiu1n",
     descripcion: "Ayuda a Madeline a superar sus demonios internos y escalar la exigente Montaña Celeste.",
     resumenExtenso: "Un juego de plataformas sobre la superación personal creado por los creadores de TowerFall. Supera cientos de desafíos hechos a mano, descubre secretos perturbadores y desentraña el misterio de la montaña."
