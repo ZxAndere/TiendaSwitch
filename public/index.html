@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SwitchAccesible | Catálogo de Juegos Nintendo Switch en Oferta</title>
-  <meta name="description" content="Tu tienda preferida de juegos de Nintendo Switch con precios accesibles, entrega digital inmediata y garantía garantizada.">
+  <title>ZonaSwitchChile | Juegos de Nintendo Switch Chile</title>
+  <meta name="description" content="Tu tienda preferida en Chile de juegos de Nintendo Switch en formato digital. Cuentas Primarias y Secundarias 100% garantizadas.">
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- CSS principal -->
   <link rel="stylesheet" href="style.css">
@@ -22,17 +22,20 @@
   <header class="navbar">
     <div class="nav-container">
       <a href="#" class="logo">
-        <span class="joycon-icon">
-          <span class="dot red"></span>
-          <span class="dot cyan"></span>
-        </span>
+        <img src="logo.jpg" alt="ZonaSwitchChile Logo" class="brand-logo-img">
         <div class="logo-text">
-          <span class="logo-title">Switch<span class="highlight">Accesible</span></span>
-          <span class="logo-badge">OLED STORE</span>
+          <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+          <span class="logo-badge">TIENDA OFICIAL CHILE 🇨🇱</span>
         </div>
       </a>
 
       <div class="nav-actions">
+        <!-- Área de Usuario / Sesión -->
+        <div id="user-nav-area" class="user-nav-area">
+          <button class="nav-auth-btn login-btn" id="open-login-btn">Iniciar Sesión</button>
+          <button class="nav-auth-btn register-btn" id="open-register-btn">Registrarse</button>
+        </div>
+
         <button class="cart-trigger-btn" id="cart-btn" aria-label="Ver Carrito de Compras">
           <svg class="cart-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="8" cy="21" r="1"></circle>
@@ -50,28 +53,28 @@
   <section class="hero-section">
     <div class="hero-content">
       <div class="hero-tag">
-        <span class="sparkle">✨</span> Ofertas Digitales Verificadas
+        <span class="sparkle">🇨🇱</span> Los Mejores Precios de Juegos Switch en Chile
       </div>
       <h1 class="hero-title">
-        Juegos de Nintendo Switch <br>
-        <span class="gradient-text">al alcance de todos</span>
+        Tu Zona Digital de <br>
+        <span class="gradient-text">Juegos de Nintendo Switch</span>
       </h1>
       <p class="hero-subtitle">
-        Entretenimiento de primera categoría sin pagar precios excesivos. Descarga tus juegos favoritos al instante con total seguridad.
+        Cuentas Primarias y Secundarias 100% Garantizadas. Descarga tus juegos preferidos de forma rápida, sencilla y segura.
       </p>
 
       <div class="hero-stats">
+        <div class="stat-pill">
+          <span class="stat-icon">🎮</span>
+          <span>Instalación 1 Consola</span>
+        </div>
         <div class="stat-pill">
           <span class="stat-icon">⚡</span>
           <span>Entrega Digital Inmediata</span>
         </div>
         <div class="stat-pill">
           <span class="stat-icon">🛡️</span>
-          <span>100% Garantizados</span>
-        </div>
-        <div class="stat-pill">
-          <span class="stat-icon">🏷️</span>
-          <span>Hasta -70% OFF</span>
+          <span>Soporte Directo Chile</span>
         </div>
       </div>
     </div>
@@ -80,16 +83,14 @@
   <!-- Filtros y Búsqueda -->
   <section class="controls-section">
     <div class="controls-container">
-      <!-- Buscador -->
       <div class="search-box">
         <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="search-input" placeholder="Buscar por título (ej. Zelda, Mario)..." aria-label="Buscar juegos">
+        <input type="text" id="search-input" placeholder="Buscar juego (ej. Zelda, Mario, Hollow Knight)..." aria-label="Buscar juegos">
       </div>
 
-      <!-- Filtros por Categoría -->
       <div class="category-pills" id="category-pills">
         <button class="pill-btn active" data-category="todos">Todos</button>
         <button class="pill-btn" data-category="Acción / Aventura">Acción y Aventura</button>
@@ -103,14 +104,146 @@
   <!-- Catálogo de Juegos -->
   <main class="main-container">
     <div class="section-header">
-      <h2 class="section-title">Juegos en Destacados</h2>
+      <h2 class="section-title">Catálogo de Juegos Destacados</h2>
       <span class="section-count" id="games-count">Cargando catálogo...</span>
     </div>
 
     <div class="games-grid" id="games-grid">
-      <!-- Skeleton Loaders se insertan por JS -->
+      <!-- Tarjetas de juegos cargadas por JS -->
     </div>
   </main>
+
+  <!-- MODAL DE DETALLE DEL JUEGO (Game Details Modal) -->
+  <div class="modal-backdrop" id="game-modal-backdrop">
+    <div class="game-modal-card">
+      <button class="modal-close-x" id="close-game-modal">&times;</button>
+      
+      <div class="game-modal-grid">
+        <div class="game-modal-media">
+          <img id="gmodal-img" src="" alt="Portada del juego">
+          <div class="game-modal-badges">
+            <span class="size-badge" id="gmodal-size">📦 0 GB</span>
+            <span class="console-badge">🎮 Instalación 1 Consola</span>
+          </div>
+        </div>
+
+        <div class="game-modal-info">
+          <div class="gmodal-header">
+            <span class="gmodal-category" id="gmodal-category">Categoría</span>
+            <div class="gmodal-rating" id="gmodal-rating">★ 4.9</div>
+          </div>
+          <h2 class="gmodal-title" id="gmodal-title">Título del Juego</h2>
+          <p class="gmodal-summary" id="gmodal-summary">Resumen del juego...</p>
+
+          <!-- SELECCIÓN OBLIGATORIA DE LICENCIA -->
+          <div class="license-selector-section">
+            <label class="license-label-title">Selecciona tipo de Licencia <span class="required-star">*</span></label>
+
+            <div class="license-options-grid">
+              <!-- Opción Secundaria -->
+              <label class="license-option-card" for="lic-secundaria">
+                <input type="radio" name="license_type" id="lic-secundaria" value="secundaria">
+                <div class="license-card-content">
+                  <div class="lic-header">
+                    <span class="lic-name">Licencia Secundaria</span>
+                    <span class="lic-price" id="gmodal-price-sec">$0.00</span>
+                  </div>
+                  <span class="lic-badge-tag sec">Económica</span>
+                </div>
+              </label>
+
+              <!-- Opción Primaria -->
+              <label class="license-option-card" for="lic-primaria">
+                <input type="radio" name="license_type" id="lic-primaria" value="primaria">
+                <div class="license-card-content">
+                  <div class="lic-header">
+                    <span class="lic-name">Licencia Primaria</span>
+                    <span class="lic-price" id="gmodal-price-prim">$0.00</span>
+                  </div>
+                  <span class="lic-badge-tag prim">Recomendada</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Caja Informativa de Condiciones de la Licencia Seleccionada -->
+            <div class="license-info-box" id="license-info-box">
+              <p class="info-placeholder">👇 Por favor selecciona una opción (Secundaria o Primaria) para ver las condiciones y añadir al carrito.</p>
+            </div>
+          </div>
+
+          <div class="gmodal-actions">
+            <button class="gmodal-btn btn-add-cart" id="gmodal-add-btn" disabled>
+              🛒 Añadir al Carrito
+            </button>
+            <button class="gmodal-btn btn-buy-now" id="gmodal-buy-btn" disabled>
+              ⚡ Comprar Ahora
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE INICIO DE SESIÓN -->
+  <div class="modal-backdrop" id="login-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-login-modal">&times;</button>
+      <div class="auth-modal-header">
+        <img src="logo.jpg" alt="Logo" class="auth-logo">
+        <h3>Iniciar Sesión en ZonaSwitchChile</h3>
+        <p>Accede con tu cuenta registrada en nuestro servidor</p>
+      </div>
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="login-username">Usuario</label>
+          <input type="text" id="login-username" placeholder="Ingresa tu usuario" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="auth-error-msg" id="login-error-msg"></div>
+        <button type="submit" class="auth-submit-btn">Ingresar a Mi Cuenta</button>
+      </form>
+      <div class="auth-switch-text">
+        ¿Aún no tienes cuenta? <a href="#" id="switch-to-register">Regístrate gratis aquí</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE REGISTRO DE USUARIO -->
+  <div class="modal-backdrop" id="register-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-register-modal">&times;</button>
+      <div class="auth-modal-header">
+        <img src="logo.jpg" alt="Logo" class="auth-logo">
+        <h3>Crear Cuenta en ZonaSwitchChile</h3>
+        <p>Tu cuenta quedará registrada permanentemente en el servidor</p>
+      </div>
+      <form id="register-form" class="auth-form">
+        <div class="form-group">
+          <label for="register-username">Nombre de Usuario</label>
+          <input type="text" id="register-username" placeholder="Tu nombre o apodo único" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Contraseña</label>
+          <input type="password" id="register-password" placeholder="Mínimo 6 caracteres y 1 número" required autocomplete="new-password">
+        </div>
+
+        <!-- Indicador de requisitos de contraseña -->
+        <div class="pwd-rules-box">
+          <div class="rule-item" id="rule-length">❌ Mínimo 6 letras / caracteres</div>
+          <div class="rule-item" id="rule-number">❌ Al menos 1 número</div>
+        </div>
+
+        <div class="auth-error-msg" id="register-error-msg"></div>
+        <button type="submit" class="auth-submit-btn" id="register-submit-btn" disabled>Crear Mi Cuenta</button>
+      </form>
+      <div class="auth-switch-text">
+        ¿Ya estás registrado? <a href="#" id="switch-to-login">Inicia sesión aquí</a>
+      </div>
+    </div>
+  </div>
 
   <!-- Carrito Lateral Deslizable (Side Drawer) -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
@@ -128,12 +261,10 @@
     </div>
 
     <div class="drawer-body">
-      <!-- Lista de Ítems en Carrito -->
       <div class="cart-items-container" id="cart-items-container">
-        <!-- Generado por JavaScript -->
+        <!-- Ítems renderizados por JS -->
       </div>
 
-      <!-- Resumen del Pedido y Formulario de Compra -->
       <div class="cart-checkout-wrapper" id="checkout-wrapper">
         <div class="cart-summary">
           <div class="summary-row">
@@ -151,7 +282,7 @@
         </div>
 
         <form id="checkout-form" class="checkout-form">
-          <h4 class="form-title">Datos de Cliente para Entrega Digital</h4>
+          <h4 class="form-title">Datos para la Entrega Digital 🇨🇱</h4>
           <div class="form-group">
             <input type="text" id="nombre" placeholder="Nombre" required autocomplete="given-name">
           </div>
@@ -159,10 +290,10 @@
             <input type="text" id="apellido" placeholder="Apellido" required autocomplete="family-name">
           </div>
           <div class="form-group">
-            <input type="email" id="email" placeholder="Correo Electrónico (para recibir código)" required autocomplete="email">
+            <input type="email" id="email" placeholder="Correo Electrónico (para recibir datos de descarga)" required autocomplete="email">
           </div>
           <button type="submit" class="submit-order-btn" id="submit-order-btn">
-            <span>Finalizar Pedido y Recibir Juegos</span>
+            <span>Finalizar Pedido en ZonaSwitchChile</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
@@ -182,15 +313,15 @@
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
         </div>
-        <h3 id="receipt-title">¡Compra Completada con Éxito!</h3>
-        <p id="receipt-message">Los detalles de tu orden han sido procesados satisfactoriamente.</p>
+        <h3 id="receipt-title">¡Compra Completada en ZonaSwitchChile!</h3>
+        <p id="receipt-message">Recibirás los pasos de instalación en tu correo registrado.</p>
       </div>
 
       <div class="receipt-body">
         <div class="order-code-box">
           <span class="code-label">Código de Orden:</span>
           <div class="code-value-wrapper">
-            <strong id="receipt-code" class="code-value">NSW-000000</strong>
+            <strong id="receipt-code" class="code-value">ZSC-000000</strong>
             <button class="copy-btn" id="copy-code-btn" title="Copiar código">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -206,16 +337,12 @@
             <strong id="receipt-client">-</strong>
           </div>
           <div class="detail-row">
+            <span>Cuenta / Usuario:</span>
+            <strong id="receipt-user">-</strong>
+          </div>
+          <div class="detail-row">
             <span>Total Pagado:</span>
             <strong id="receipt-total" class="highlight-green">$0.00</strong>
-          </div>
-          <div class="detail-row">
-            <span>Total Ahorrado:</span>
-            <strong id="receipt-savings" class="highlight-cyan">$0.00</strong>
-          </div>
-          <div class="detail-row">
-            <span>Artículos:</span>
-            <strong id="receipt-items">0 juegos</strong>
           </div>
           <div class="detail-row">
             <span>Fecha:</span>
@@ -225,7 +352,7 @@
       </div>
 
       <div class="receipt-footer">
-        <button class="btn-close-modal" id="close-modal-btn">Volver a la Tienda</button>
+        <button class="btn-close-modal" id="close-modal-btn">Volver al Catálogo</button>
       </div>
     </div>
   </div>
@@ -234,11 +361,12 @@
   <footer class="footer">
     <div class="footer-container">
       <div class="footer-brand">
-        <span class="logo-title">Switch<span class="highlight">Accesible</span></span>
-        <p>Tu plataforma favorita de ofertas en videojuegos digitales. Rápido, económico y seguro.</p>
+        <img src="logo.jpg" alt="Logo" class="footer-logo">
+        <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+        <p>Tu tienda de confianza en Chile para juegos digitales de Nintendo Switch. Cuentas Secundarias y Primarias con garantía total.</p>
       </div>
       <div class="footer-copyright">
-        &copy; 2026 SwitchAccesible. Desplegado en <strong>Railway</strong> &amp; <strong>GitHub</strong>.
+        &copy; 2026 ZonaSwitchChile. Desplegado en <strong>Railway</strong> &amp; <strong>GitHub</strong>.
       </div>
     </div>
   </footer>
