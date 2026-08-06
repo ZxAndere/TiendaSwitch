@@ -134,8 +134,8 @@ const JUEGOS = [
     precioOriginal: 54990,
     rating: 4.6,
     peso: "6.1 GB",
-    imagen: "https://assets.nintendo.com/image/upload/ar_16:9,c_lpad,w_1200/b_white/f_auto/q_auto/ncom/software/switch/70010000039945/4d70889ec1b739fb5ecf91196ed5e381",
-    imagenDetalle: "https://assets.nintendo.com/image/upload/c_fill,w_1200/v1/ncom/en_US/games/switch/p/pokemon-legends-arceus-switch/hero",
+    imagen: "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/store/software/switch/70010000039945/dcb496d7cf954c7eb51ab2e5d0c27918fb7f055e50f4e902135bd4a70a44b491",
+    imagenDetalle: "https://i.pinimg.com/736x/56/30/ea/5630ea6eafa61e329aac53ff68ca91db.jpg",
     descripcion: "Explora la antigua región de Hisui y crea la primera Pokédex de la historia.",
     resumenExtenso: "Prepárate para una nueva gran aventura Pokémon en Hisui, la región de Sinnoh en tiempos remotos. Atrapa, explora e investiga Pokémon salvajes en un vasto mundo abierto lleno de misterios ancestrales."
   },
