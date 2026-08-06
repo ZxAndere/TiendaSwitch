@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwitchAccesible | Juegos al alcance de todos</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <span class="badge">NINTENDO</span>
+      <h1>SwitchAccesible</h1>
+    </div>
+    <button class="cart-btn" id="cart-btn">
+      🛒 Carrito (<span id="cart-count">0</span>)
+    </button>
+  </header>
+
+  <section class="hero">
+    <h2>Juegos de Switch al alcance de todos</h2>
+    <p>Creemos que el entretenimiento debe ser accesible. Precios reducidos sin complicaciones.</p>
+  </section>
+
+  <main class="container">
+    <div class="grid" id="games-grid"></div>
+  </main>
+
+  <!-- Modal Carrito -->
+  <div class="modal-overlay" id="cart-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Tu Carrito</h3>
+        <button class="close-btn" id="close-cart">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="cart-items"></div>
+        <div class="cart-total" id="cart-total-container">
+          <strong>Total: $<span id="cart-total">0.00</span></strong>
+        </div>
+        
+        <form id="checkout-form" class="checkout-form">
+          <h4>Datos de entrega (Modo Prueba)</h4>
+          <input type="text" id="nombre" placeholder="Nombre" required>
+          <input type="text" id="apellido" placeholder="Apellido" required>
+          <button type="submit" class="btn-primary btn-block">Confirmar y Obtener Juegos</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
