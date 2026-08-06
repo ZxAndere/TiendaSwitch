@@ -9,12 +9,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Catálogo de juegos en oferta
 const JUEGOS = [
-  { id: 1, titulo: "The Legend of Zelda: Tears of the Kingdom", precio: 24.99, imagen: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?auto=format&fit=crop&w=600&q=80" },
-  { id: 2, titulo: "Super Mario Bros. Wonder", precio: 19.99, imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=600&q=80" },
-  { id: 3, titulo: "Hollow Knight", precio: 4.99, imagen: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=600&q=80" },
-  { id: 4, titulo: "Mario Kart 8 Deluxe", precio: 22.50, imagen: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=600&q=80" },
-  { id: 5, titulo: "Metroid Dread", precio: 18.00, imagen: "https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?auto=format&fit=crop&w=600&q=80" },
-  { id: 6, titulo: "Celeste", precio: 3.99, imagen: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=80" }
+  { id: 1, titulo: "The Legend of Zelda: Tears of the Kingdom", precio: 20.000, imagen: "https://img-eshop.cdn.nintendo.net/i/9222b2b244072d28af4586c4e33663e2c65527b593edff956367361ec1263989.jpg" },
+  { id: 2, titulo: "Super Mario Bros. Wonder", precio: 20.000, imagen: "https://www.nintendo.com/eu/media/images/10_share_images/games_15/nintendo_switch_4/2x1_NSwitch_SuperMarioBrosWonder.jpg" },
+  { id: 3, titulo: "Hollow Knight", precio: 8.000, imagen: "https://images.squarespace-cdn.com/content/v1/606d4deb4db8c15ea53b3624/1619052791039-U5P66XF1HX6OHSPMRHP0/banner_real.jpg" },
+  { id: 4, titulo: "Mario Kart 8 Deluxe", precio: 20.000, imagen: "https://assets.nintendo.com/image/upload/q_auto/f_auto/store/software/switch/70010000000153/de697f487a36d802dd9a5ff0341f717c8486221f2f1219b675af37aca63bc453" },
+  { id: 5, titulo: "Metroid Dread", precio: 18.00, imagen: "https://media.vandal.net/ivandal/12/63/1200x630/10/102441/metroid-dread-20216151935543_22.jpg" },
+  { id: 6, titulo: "Celeste", precio: 6.000, imagen: "https://assets.games.gg/celeste_banner_banner_76600851ba.webp" }
 ];
 
 // Endpoint para obtener catálogo
