@@ -106,7 +106,7 @@ const JUEGOS = [
     precioOriginal: 54990,
     rating: 4.7,
     peso: "4.1 GB",
-    imagen: "https://media.vandal.net/ivandal/12/63/1200x630/10/102441/metroid-dread-20216151935543_22.jpg",
+    imagen: "https://assets.nintendo.com/image/upload/c_limit,f_auto,h_300,q_auto,w_500/v1/store/software/switch/70010000042924/Video/posters/108eba74975cb5b86a704357b65e925f0ee88d2f1d06fb6981beebbec42c4c9f",
     imagenDetalle: "https://static.wikia.nocookie.net/metroid/images/a/aa/M5_key_art_alt.jpg/revision/latest/scale-to-width-down/250?cb=20210827042811",
     descripcion: "Acompaña a Samus Aran en su escape de un peligroso mundo alienígena infestado de robots E.M.M.I.",
     resumenExtenso: "Únete a la cazarrecompensas intergaláctica Samus Aran en su primera historia en 2D de Metroid en 19 años. Escape del planeta ZDR mientras eres perseguido por letales robots de investigación E.M.M.I."
