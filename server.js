@@ -114,8 +114,8 @@ app.get('/api/debug/mongo', (req, res) => {
 });
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
-const FLOW_API_KEY = (process.env.FLOW_API_KEY || '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8').trim();
-const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963').trim();
+const FLOW_API_KEY = (process.env.FLOW_API_KEY || '').trim();
+const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || '').trim();
 
 let rawFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/\/+$/, '');
 if (rawFlowUrl.includes('flow.cl') && !rawFlowUrl.includes('www.flow.cl') && !rawFlowUrl.includes('sandbox')) {
@@ -123,8 +123,8 @@ if (rawFlowUrl.includes('flow.cl') && !rawFlowUrl.includes('www.flow.cl') && !ra
 }
 const FLOW_API_URL = rawFlowUrl;
 
-const MP_PUBLIC_KEY = process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad';
-const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626';
+const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || '').trim();
+const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || '').trim();
 
 const ORDERS_STORE = new Map();
 
