@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+const mongoose = require('mongoose');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -26,6 +28,71 @@ if (!fs.existsSync(ORDERS_FILE)) {
   fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
 }
 
+// --- CONEXIÓN Y MODELOS MONGODB ATLAS (TIEMPO REAL EN LA NUBE) ---
+let isMongoConnected = false;
+
+const userSchema = new mongoose.Schema({
+  id: String,
+  username: { type: String, required: true },
+  email: { type: String, required: true },
+  passwordHash: String,
+  password: String,
+  createdAt: { type: Date, default: Date.now }
+});
+
+const orderSchema = new mongoose.Schema({
+  codigoOrden: { type: String, required: true, unique: true },
+  flowOrder: String,
+  usuario: String,
+  email: String,
+  juegos: Array,
+  tipoLicencia: String,
+  monto: Number,
+  moneda: { type: String, default: 'CLP' },
+  estado: String,
+  fecha: { type: Date, default: Date.now },
+  detallesPago: Object
+});
+
+const UserModel = mongoose.model('User', userSchema);
+const OrderModel = mongoose.model('Order', orderSchema);
+
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI.trim())
+    .then(async () => {
+      isMongoConnected = true;
+      console.log('🍃 Conectado exitosamente a MongoDB Atlas (Base de Datos en Tiempo Real)');
+      
+      // Sincronizar usuarios desde MongoDB Atlas
+      try {
+        const mongoUsers = await UserModel.find({});
+        if (mongoUsers.length > 0) {
+          const formatted = mongoUsers.map(u => ({
+            id: u.id || u._id.toString(),
+            username: u.username,
+            email: u.email,
+            passwordHash: u.passwordHash,
+            password: u.password
+          }));
+          fs.writeFileSync(USERS_FILE, JSON.stringify(formatted, null, 2));
+          console.log(`📥 Sincronizados ${formatted.length} usuarios desde MongoDB Atlas.`);
+        }
+      } catch (e) { console.error('Error cargando usuarios MongoDB:', e); }
+
+      // Sincronizar órdenes desde MongoDB Atlas
+      try {
+        const mongoOrders = await OrderModel.find({});
+        if (mongoOrders.length > 0) {
+          mongoOrders.forEach(o => {
+            if (o.codigoOrden) ORDERS_STORE.set(o.codigoOrden, o.toObject());
+          });
+          console.log(`📥 Sincronizadas ${mongoOrders.length} órdenes desde MongoDB Atlas.`);
+        }
+      } catch (e) { console.error('Error cargando órdenes MongoDB:', e); }
+    })
+    .catch(err => console.error('❌ Error de conexión a MongoDB Atlas:', err.message));
+}
+
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
 const FLOW_API_KEY = '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
 const FLOW_SECRET_KEY = '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
@@ -43,7 +110,12 @@ function getOrders() {
 function saveOrders(ordersList) {
   if (Array.isArray(ordersList)) {
     ordersList.forEach(o => {
-      if (o && o.codigoOrden) ORDERS_STORE.set(o.codigoOrden, o);
+      if (o && o.codigoOrden) {
+        ORDERS_STORE.set(o.codigoOrden, o);
+        if (isMongoConnected) {
+          OrderModel.updateOne({ codigoOrden: o.codigoOrden }, o, { upsert: true }).catch(() => {});
+        }
+      }
     });
   }
 }
@@ -73,7 +145,17 @@ function getUsers() {
 }
 
 function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  } catch (e) {}
+
+  if (isMongoConnected && Array.isArray(users)) {
+    users.forEach(async (u) => {
+      try {
+        await UserModel.updateOne({ id: u.id }, u, { upsert: true });
+      } catch (e) {}
+    });
+  }
 }
 
 // Catálogo de Juegos ZonaSwitchChile en CLP (Pesos Chilenos)
