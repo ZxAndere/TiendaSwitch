@@ -1175,12 +1175,26 @@ app.post('/api/admin/juegos/update', (req, res) => {
   if (descripcion) game.descripcion = descripcion.trim();
   if (imagen) game.imagen = imagen.trim();
   if (imagenDetalle) game.imagenDetalle = imagenDetalle.trim();
+  if (correoTexto !== undefined) game.correoTexto = correoTexto.trim();
+  if (correoImagen !== undefined) game.correoImagen = correoImagen.trim();
+
+  if (typeof cuentas === 'string') {
+    game.cuentas = cuentas.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+  } else if (Array.isArray(cuentas)) {
+    game.cuentas = cuentas;
+  }
+
+  if (typeof game.siguienteVarianteIndex !== 'number') {
+    game.siguienteVarianteIndex = 0;
+  }
 
   saveGamesLocal(GAMES_STORE);
+  broadcastCatalogUpdate();
 
-  console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado en tiempo real.`);
-  res.json({ exito: true, mensaje: `Juego "${game.titulo}" actualizado correctamente en tiempo real.`, juego: game, juegos: GAMES_STORE });
+  console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado. ${game.cuentas ? game.cuentas.length : 0} variante(s) de cuenta guardadas.`);
+  res.json({ exito: true, mensaje: `Juego ${game.titulo} actualizado exitosamente.`, juegos: GAMES_STORE, juego: game });
 });
+
 
 // --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS ---
 const DEFAULT_GALLERY = [
@@ -1243,9 +1257,93 @@ function saveGalleryLocal(gallery) {
   }
 }
 
-loadInitialGallery();
+// --- GESTIÓN PERMANENTE DE CUPONES DE DESCUENTO ---
+const COUPONS_FILE = path.join(__dirname, 'data', 'coupons.json');
+let COUPONS_STORE = [];
 
-// --- CONFIGURACIÓN GLOBAL (SETTINGS) ---
+const DEFAULT_COUPONS = [
+  { code: 'PRUEBAXD', type: 'percent', value: 100, desc: '100% de descuento (Modo Prueba)' },
+  { code: 'ZONA10', type: 'percent', value: 10, desc: '10% de descuento' },
+  { code: 'SWITCH2026', type: 'percent', value: 15, desc: '15% de descuento' },
+  { code: 'NINTENDO5', type: 'fixed', value: 5000, desc: '$5.000 CLP de descuento' },
+  { code: 'DESCUENTO', type: 'percent', value: 10, desc: '10% de descuento' }
+];
+
+function loadCoupons() {
+  if (fs.existsSync(COUPONS_FILE)) {
+    try {
+      COUPONS_STORE = JSON.parse(fs.readFileSync(COUPONS_FILE, 'utf8'));
+    } catch (e) {
+      COUPONS_STORE = [...DEFAULT_COUPONS];
+    }
+  } else {
+    COUPONS_STORE = [...DEFAULT_COUPONS];
+    saveCouponsLocal(COUPONS_STORE);
+  }
+}
+
+function saveCouponsLocal(coupons) {
+  COUPONS_STORE = coupons;
+  try {
+    fs.writeFileSync(COUPONS_FILE, JSON.stringify(coupons, null, 2));
+  } catch (e) {}
+}
+
+loadCoupons();
+
+// Endpoint Público: Retorna todos los cupones de descuento activos
+app.get('/api/coupons', (req, res) => {
+  res.json(COUPONS_STORE);
+});
+
+// Endpoint Admin: Crear / Guardar Cupón Permanente
+app.post('/api/admin/coupons/create', (req, res) => {
+  const { code, type, value, desc, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  if (!code || value === undefined || value === '') {
+    return res.status(400).json({ error: "El código y el valor del descuento son obligatorios." });
+  }
+
+  const cleanCode = code.trim().toUpperCase();
+  const numValue = Number(value);
+  const couponType = type === 'fixed' ? 'fixed' : 'percent';
+
+  const existingIdx = COUPONS_STORE.findIndex(c => c.code === cleanCode);
+  const newCoupon = {
+    code: cleanCode,
+    type: couponType,
+    value: numValue,
+    desc: desc && desc.trim() ? desc.trim() : (couponType === 'percent' ? `${numValue}% de descuento` : `$${numValue.toLocaleString('es-CL')} CLP de descuento`)
+  };
+
+  if (existingIdx !== -1) {
+    COUPONS_STORE[existingIdx] = newCoupon;
+  } else {
+    COUPONS_STORE.push(newCoupon);
+  }
+
+  saveCouponsLocal(COUPONS_STORE);
+  console.log(`🎟️ [ADMIN] Cupón permanente guardado: ${cleanCode} (${newCoupon.desc})`);
+  res.json({ exito: true, mensaje: `Cupón "${cleanCode}" guardado exitosamente.`, cupones: COUPONS_STORE });
+});
+
+// Endpoint Admin: Borrar Cupón Permanente
+app.post('/api/admin/coupons/delete', (req, res) => {
+  const { code, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  const cleanCode = (code || '').trim().toUpperCase();
+  COUPONS_STORE = COUPONS_STORE.filter(c => c.code !== cleanCode);
+  saveCouponsLocal(COUPONS_STORE);
+
+  console.log(`🎟️ [ADMIN] Cupón eliminado: ${cleanCode}`);
+  res.json({ exito: true, mensaje: `Cupón "${cleanCode}" eliminado.`, cupones: COUPONS_STORE });
+});
 let STORED_SETTINGS = {
   galleryEnabled: false
 };
@@ -1344,13 +1442,46 @@ app.post('/api/checkout', async (req, res) => {
   const total = typeof montoTotal === 'number' ? Math.max(0, montoTotal) : subtotal;
   const codigoOrden = `ZSC-${Math.floor(100000 + Math.random() * 900000)}`;
 
+  // Asignación de variantes de cuentas en rotación (Round-Robin 🔄) para cada juego comprado
+  const carritoConVariantes = carrito.map(item => {
+    const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
+    let varianteAsignada = '';
+    let correoTextoItem = '';
+    let correoImagenItem = '';
+
+    if (gameInStore) {
+      correoTextoItem = gameInStore.correoTexto || '';
+      correoImagenItem = gameInStore.correoImagen || '';
+
+      if (Array.isArray(gameInStore.cuentas) && gameInStore.cuentas.length > 0) {
+        if (typeof gameInStore.siguienteVarianteIndex !== 'number') {
+          gameInStore.siguienteVarianteIndex = 0;
+        }
+        const varIdx = gameInStore.siguienteVarianteIndex % gameInStore.cuentas.length;
+        varianteAsignada = gameInStore.cuentas[varIdx];
+
+        // Incrementar índice para el próximo comprador (Round-Robin)
+        gameInStore.siguienteVarianteIndex = (gameInStore.siguienteVarianteIndex + 1) % gameInStore.cuentas.length;
+      }
+    }
+
+    return {
+      ...item,
+      varianteAsignada: varianteAsignada || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
+      correoTexto: correoTextoItem,
+      correoImagen: correoImagenItem
+    };
+  });
+
+  saveGamesLocal(GAMES_STORE);
+
   const orderData = {
     codigoOrden,
     cliente: `${nombre.trim()} ${apellido.trim()}`,
     usuario: username || 'Invitado',
     email: cleanEmail,
-    carrito,
-    articulos: carrito.reduce((acc, item) => acc + item.cantidad, 0),
+    carrito: carritoConVariantes,
+    articulos: carritoConVariantes.reduce((acc, item) => acc + item.cantidad, 0),
     total,
     totalFormatted: `$${total.toLocaleString('es-CL')} CLP`,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),

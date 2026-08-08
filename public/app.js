@@ -183,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
   try { fetchSettings(); } catch (e) { console.error('Error fetchSettings:', e); }
+  try { fetchCoupons(); } catch (e) { console.error('Error fetchCoupons:', e); }
   try { fetchCatalog(); } catch (e) { console.error('Error fetchCatalog:', e); }
   try { fetchAndRenderGallery(); } catch (e) { console.error('Error fetchAndRenderGallery:', e); }
   try { updateCartBadge(); } catch (e) { console.error('Error updateCartBadge:', e); }
@@ -268,6 +269,12 @@ function initEventListeners() {
   // Formulario agregar foto a galería (Admin)
   const addGalleryForm = document.getElementById('admin-add-gallery-form');
   if (addGalleryForm) addGalleryForm.addEventListener('submit', handleAdminAddGallerySubmit);
+
+  // Formulario agregar cupón de descuento (Admin)
+  const addCouponForm = document.getElementById('admin-add-coupon-form');
+  if (addCouponForm) addCouponForm.addEventListener('submit', handleAdminAddCouponSubmit);
+  const editGameForm = document.getElementById('game-edit-form');
+  if (editGameForm) editGameForm.addEventListener('submit', handleGameEditSubmit);
 
   // Selector de Conversión de Moneda
   const currSelect = document.getElementById('currency-select');
@@ -593,8 +600,23 @@ function openGameEditModal(gameId) {
   const imgDet = document.getElementById('edit-game-imagen-detalle');
   if (imgDet) imgDet.value = game.imagenDetalle || game.imagen || '';
   document.getElementById('edit-game-descripcion').value = game.descripcion || '';
-  document.getElementById('game-edit-error').textContent = '';
 
+  const correoTxt = document.getElementById('edit-game-correo-texto');
+  if (correoTxt) correoTxt.value = game.correoTexto || '';
+
+  const correoImg = document.getElementById('edit-game-correo-imagen');
+  if (correoImg) correoImg.value = game.correoImagen || '';
+
+  const cuentasTxt = document.getElementById('edit-game-cuentas');
+  if (cuentasTxt) {
+    if (Array.isArray(game.cuentas)) {
+      cuentasTxt.value = game.cuentas.join('\n');
+    } else {
+      cuentasTxt.value = game.cuentas || '';
+    }
+  }
+
+  document.getElementById('game-edit-error').textContent = '';
   document.getElementById('game-edit-modal-backdrop').classList.add('active');
 }
 
@@ -615,6 +637,16 @@ async function handleGameEditSubmit(e) {
   const imgDetEl = document.getElementById('edit-game-imagen-detalle');
   const imagenDetalle = imgDetEl ? imgDetEl.value.trim() : '';
   const descripcion = document.getElementById('edit-game-descripcion').value.trim();
+
+  const correoTextoEl = document.getElementById('edit-game-correo-texto');
+  const correoTexto = correoTextoEl ? correoTextoEl.value.trim() : '';
+
+  const correoImagenEl = document.getElementById('edit-game-correo-imagen');
+  const correoImagen = correoImagenEl ? correoImagenEl.value.trim() : '';
+
+  const cuentasEl = document.getElementById('edit-game-cuentas');
+  const cuentas = cuentasEl ? cuentasEl.value : '';
+
   const errorMsg = document.getElementById('game-edit-error');
   errorMsg.textContent = '';
 
@@ -635,6 +667,9 @@ async function handleGameEditSubmit(e) {
         imagen,
         imagenDetalle,
         descripcion,
+        correoTexto,
+        correoImagen,
+        cuentas,
         username: currentUser.username
       })
     });
@@ -651,7 +686,7 @@ async function handleGameEditSubmit(e) {
     renderAdminGamesList(adminCatalog);
     await fetchCatalog();
     closeGameEditModal();
-    showToast(data.mensaje || '¡Juego actualizado con éxito! 🎉');
+    showToast(data.mensaje || '¡Juego y cuentas actualizados con éxito! 🎉');
   } catch (err) {
     errorMsg.textContent = 'Error de comunicación con el servidor.';
   } finally {
@@ -1712,6 +1747,27 @@ function openReceiptModal(detalles) {
   document.getElementById('receipt-total').textContent = detalles.total;
   document.getElementById('receipt-date').textContent = detalles.fecha;
 
+  const itemsContainer = document.getElementById('receipt-items-assigned-container');
+  if (itemsContainer) {
+    if (Array.isArray(detalles.carrito) && detalles.carrito.length > 0) {
+      itemsContainer.innerHTML = `
+        <h5 style="color: var(--joycon-cyan); font-size: 0.9rem; font-weight: 800; margin-bottom: 0.6rem;">🎮 Datos de Acceso Entregados (Correo Digital):</h5>
+        ${detalles.carrito.map(item => `
+          <div style="background: rgba(15, 22, 36, 0.9); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 0.6rem;">
+            <div style="font-weight: 800; color: #ffffff; font-size: 0.9rem;">${escapeHTML(item.titulo)} (${item.licencia})</div>
+            ${item.correoTexto ? `<p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.3rem 0;">${escapeHTML(item.correoTexto)}</p>` : ''}
+            <div style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); padding: 0.6rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: var(--joycon-cyan); margin-top: 0.4rem; word-break: break-all;">
+              🔑 ${escapeHTML(item.varianteAsignada || 'Asignación automática enviada a tu correo')}
+            </div>
+            ${item.correoImagen ? `<img src="${escapeHTML(item.correoImagen)}" alt="Banner correo" style="width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-top: 0.5rem;">` : ''}
+          </div>
+        `).join('')}
+      `;
+    } else {
+      itemsContainer.innerHTML = '';
+    }
+  }
+
   document.getElementById('modal-backdrop').classList.add('active');
 }
 
@@ -1840,16 +1896,154 @@ function escapeHTML(str) {
   );
 }
 
-// --- SISTEMA DE CUPONES DE DESCUENTO ---
+// --- SISTEMA DE CUPONES DE DESCUENTO Y ADMINISTRACIÓN ---
 let appliedCoupon = null;
+let AVAILABLE_COUPONS = {};
+let adminCouponsStore = [];
 
-const AVAILABLE_COUPONS = {
-  PRUEBAXD: { code: 'PRUEBAXD', type: 'percent', value: 100, desc: '100% de descuento (Modo Prueba Pruebaxd)' },
-  ZONA10: { code: 'ZONA10', type: 'percent', value: 10, desc: '10% de descuento' },
-  SWITCH2026: { code: 'SWITCH2026', type: 'percent', value: 15, desc: '15% de descuento' },
-  NINTENDO5: { code: 'NINTENDO5', type: 'fixed', value: 5000, desc: '$5.000 CLP de descuento' },
-  DESCUENTO: { code: 'DESCUENTO', type: 'percent', value: 10, desc: '10% de descuento' }
-};
+async function fetchCoupons() {
+  try {
+    const res = await fetch('/api/coupons');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        adminCouponsStore = data;
+        AVAILABLE_COUPONS = {};
+        data.forEach(c => {
+          AVAILABLE_COUPONS[c.code] = c;
+        });
+      }
+    }
+  } catch (e) {}
+}
+
+async function fetchAndRenderAdminCoupons() {
+  const container = document.getElementById('admin-coupons-items-container');
+  if (!container) return;
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando cupones...</p>';
+
+  await fetchCoupons();
+  renderAdminCouponsList(adminCouponsStore);
+}
+
+function renderAdminCouponsList(coupons) {
+  const container = document.getElementById('admin-coupons-items-container');
+  if (!container) return;
+
+  if (!Array.isArray(coupons) || coupons.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No hay cupones registrados.</p>';
+    return;
+  }
+
+  container.innerHTML = coupons.map(c => `
+    <div class="admin-game-row">
+      <div class="admin-game-info">
+        <div style="font-size: 1.5rem; margin-right: 0.5rem;">🎟️</div>
+        <div class="admin-game-details">
+          <span class="admin-game-title" style="color: var(--joycon-cyan); font-weight: 800;">${escapeHTML(c.code)}</span>
+          <span class="admin-game-sub">${escapeHTML(c.desc || (c.type === 'percent' ? `${c.value}% OFF` : `$${c.value} CLP OFF`))}</span>
+        </div>
+      </div>
+      <div class="admin-game-actions">
+        <button type="button" class="remove-item-btn" onclick="deleteCoupon('${escapeHTML(c.code)}')" title="Eliminar cupón permanente">
+          🗑️ Eliminar
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleAdminAddCouponSubmit(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+
+  const code = document.getElementById('admin-coupon-code').value.trim();
+  const type = document.getElementById('admin-coupon-type').value;
+  const value = document.getElementById('admin-coupon-value').value;
+  const desc = document.getElementById('admin-coupon-desc').value.trim();
+  const errorMsg = document.getElementById('admin-coupon-error');
+  errorMsg.textContent = '';
+
+  const saveBtn = document.getElementById('save-coupon-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando...';
+
+  try {
+    const res = await fetch('/api/admin/coupons/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, type, value, desc, username: currentUser.username })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.exito) {
+      errorMsg.textContent = data.error || 'No se pudo guardar el cupón.';
+      return;
+    }
+
+    document.getElementById('admin-add-coupon-form').reset();
+    if (data.cupones) {
+      adminCouponsStore = data.cupones;
+      renderAdminCouponsList(adminCouponsStore);
+      await fetchCoupons();
+    }
+    showToast(`¡Cupón "${code.toUpperCase()}" guardado exitosamente! 🎟️`);
+  } catch (err) {
+    errorMsg.textContent = 'Error de comunicación con el servidor.';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '🎟️ Guardar Cupón Permanente';
+  }
+}
+
+async function deleteCoupon(code) {
+  if (!currentUser || !confirm(`¿Estás seguro de borrar permanentemente el cupón ${code}?`)) return;
+
+  try {
+    const res = await fetch('/api/admin/coupons/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, username: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.exito && data.cupones) {
+      adminCouponsStore = data.cupones;
+      renderAdminCouponsList(adminCouponsStore);
+      await fetchCoupons();
+      showToast(`Cupón ${code} eliminado`);
+    }
+  } catch (err) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+function switchAdminSubtab(subtab) {
+  const btnGames = document.getElementById('btn-subtab-games');
+  const btnCoupons = document.getElementById('btn-subtab-coupons');
+  const btnGallery = document.getElementById('btn-subtab-gallery');
+  const viewGames = document.getElementById('admin-view-games');
+  const viewCoupons = document.getElementById('admin-view-coupons');
+  const viewGallery = document.getElementById('admin-view-gallery');
+
+  if (btnGames) btnGames.classList.remove('active');
+  if (btnCoupons) btnCoupons.classList.remove('active');
+  if (btnGallery) btnGallery.classList.remove('active');
+  if (viewGames) viewGames.style.display = 'none';
+  if (viewCoupons) viewCoupons.style.display = 'none';
+  if (viewGallery) viewGallery.style.display = 'none';
+
+  if (subtab === 'games') {
+    if (btnGames) btnGames.classList.add('active');
+    if (viewGames) viewGames.style.display = 'block';
+  } else if (subtab === 'coupons') {
+    if (btnCoupons) btnCoupons.classList.add('active');
+    if (viewCoupons) viewCoupons.style.display = 'block';
+    fetchAndRenderAdminCoupons();
+  } else if (subtab === 'gallery') {
+    if (btnGallery) btnGallery.classList.add('active');
+    if (viewGallery) viewGallery.style.display = 'block';
+  }
+}
 
 function handleApplyCoupon() {
   const input = document.getElementById('coupon-code-input');
