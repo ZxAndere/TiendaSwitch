@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preguntas Frecuentes (FAQ) | ZonaSwitchChile</title>
+  <meta name="description" content="Resuelve tus dudas sobre la compra e instalación de juegos digitales de Nintendo Switch en Cuentas Primarias y Secundarias en ZonaSwitchChile.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .faq-hero {
+      text-align: center;
+      padding: 3rem 1.5rem 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .faq-hero h1 {
+      font-family: var(--font-heading);
+      font-size: 2.5rem;
+      font-weight: 900;
+      margin-bottom: 0.75rem;
+    }
+    .faq-hero p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+    .faq-container {
+      max-width: 860px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .faq-item.active {
+      border-color: var(--switch-red);
+      box-shadow: 0 0 18px rgba(255, 0, 60, 0.15);
+    }
+    .faq-question {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-main);
+      font-family: var(--font-heading);
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-align: left;
+      cursor: pointer;
+      gap: 1rem;
+    }
+    .faq-question:hover {
+      color: var(--joycon-cyan);
+    }
+    .faq-icon {
+      font-size: 1.3rem;
+      transition: transform 0.3s ease;
+      color: var(--switch-red);
+    }
+    .faq-item.active .faq-icon {
+      transform: rotate(180deg);
+      color: var(--joycon-cyan);
+    }
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), padding 0.35s ease;
+      padding: 0 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .faq-item.active .faq-answer {
+      max-height: 300px;
+      padding: 0 1.5rem 1.25rem;
+    }
+    .back-home-banner {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .back-home-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: linear-gradient(135deg, var(--switch-red), #d60033);
+      color: white;
+      text-decoration: none;
+      padding: 0.8rem 1.75rem;
+      border-radius: var(--radius-full);
+      font-weight: 800;
+      box-shadow: 0 4px 15px rgba(255, 0, 60, 0.3);
+      transition: transform 0.2s;
+    }
+    .back-home-btn:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Notificaciones Toast -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Barra de Navegación Sticky -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <img src="logo.jpg" alt="ZonaSwitchChile Logo" class="brand-logo-img">
+        <div class="logo-text">
+          <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <a href="index.html" class="nav-faq-btn" title="Volver a la Tienda">
+          <span>🏠 Inicio</span>
+        </a>
+
+        <!-- Selector de Conversión de Monedas -->
+        <div class="currency-select-wrapper">
+          <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
+            <option value="CLP">🇨🇱 Chile (CLP)</option>
+            <option value="ARS">🇦🇷 Argentina (ARS)</option>
+            <option value="BRL">🇧🇷 Brasil (BRL)</option>
+            <option value="MXN">🇲🇽 México (MXN)</option>
+            <option value="COP">🇨🇴 Colombia (COP)</option>
+            <option value="PEN">🇵🇪 Perú (PEN)</option>
+            <option value="HNL">🇭🇳 Honduras (HNL)</option>
+          </select>
+        </div>
+
+        <div id="user-nav-area" class="user-nav-area">
+          <button class="nav-auth-btn login-btn" onclick="window.location.href='index.html'">Iniciar Sesión</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero FAQ -->
+  <section class="faq-hero">
+    <h1>Centro de Ayuda y <span class="gradient-text">Preguntas Frecuentes</span></h1>
+    <p>Resuelve todas tus dudas sobre Cuentas Primarias, Secundarias, garantía y medios de pago en Flow.</p>
+  </section>
+
+  <!-- FAQ Accordion -->
+  <main class="faq-container">
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>1. ¿Qué diferencia hay entre Cuenta Primaria y Cuenta Secundaria?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p><strong>Cuenta Primaria:</strong> Te permite instalar el juego desde la cuenta proporcionada y jugarlo directamente con tu perfil personal de siempre. Puedes acumular trofeos y jugar tanto online como offline (sin conexión a internet).</p>
+        <p style="margin-top:0.5rem"><strong>Cuenta Secundaria:</strong> Juegas conectándote a través del perfil que te entregamos. Es más económica, te permite guardar partida y trofeos, y requiere seguir sencillos pasos al iniciar.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>2. ¿Cómo recibo mi juego tras realizar el pago?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p>La entrega es digital e inmediata. Tan pronto como tu pago se procese correctamente a través de la pasarela segura de <strong>Flow Chile</strong>, recibirás las credenciales e instrucciones de instalación paso a paso en tu correo electrónico registrado.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>3. ¿Es seguro pagar en ZonaSwitchChile mediante Flow?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p>Absolutamente. Todos nuestros cobros son procesados de forma cifrada por la pasarela de pagos oficial <strong>Flow Chile</strong>, permitiéndote pagar con Webpay Plus, Servipag y tarjetas de débito o crédito con total tranquilidad.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>4. ¿Los juegos son 100% originales y tienen garantía?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p>Sí. Todos nuestros juegos son originales descargados legítimamente desde la eShop oficial de Nintendo. Ofrecemos garantía directa y soporte permanente ante cualquier duda en Chile.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>5. ¿Puedo actualizar mis juegos y jugar en línea?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p>Sí, podrás descargar todas las actualizaciones oficiales y parches de los juegos. En la opción de Cuenta Primaria puedes jugar partidas multijugador online con tu propio perfil.</p>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">
+        <span>6. ¿Qué hago si tengo dudas durante la instalación?</span>
+        <span class="faq-icon">▾</span>
+      </button>
+      <div class="faq-answer">
+        <p>Contamos con un equipo de soporte técnico dedicado a ayudarte paso a paso. Si necesitas apoyo extra, contáctanos y te guiaremos durante la vinculación en tu consola Nintendo Switch.</p>
+      </div>
+    </div>
+
+    <div class="back-home-banner">
+      <a href="index.html" class="back-home-btn">
+        🎮 Volver al Catálogo de Juegos
+      </a>
+    </div>
+  </main>
+
+  <!-- Pie de página con enlace a Instagram -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <img src="logo.jpg" alt="Logo" class="footer-logo">
+        <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+      </div>
+
+      <!-- Enlace a Instagram -->
+      <a href="https://www.instagram.com/zonaswitchchile/" target="_blank" rel="noopener noreferrer" class="footer-instagram-link" title="Síguenos en Instagram">
+        <svg class="instagram-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+        </svg>
+        <span>@zonaswitchchile</span>
+      </a>
+
+      <div class="footer-copyright">
+        &copy; 2026 ZonaSwitchChile.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Accordion Interaction
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        item.classList.toggle('active');
+      });
+    });
+
+    // Sync Currency Selector
+    const currSelect = document.getElementById('currency-select');
+    if (currSelect) {
+      currSelect.value = localStorage.getItem('zonaswitch_currency') || 'CLP';
+      currSelect.addEventListener('change', (e) => {
+        localStorage.setItem('zonaswitch_currency', e.target.value);
+      });
+    }
+  </script>
+</body>
+</html>

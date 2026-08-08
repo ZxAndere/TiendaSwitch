@@ -1,0 +1,14 @@
+[
+  {
+    "id": "USR-1786128243127",
+    "username": "ZxAndere",
+    "passwordHash": "7625dc1d9d17db0a4d68ab0c5c28877735e419d6ffb0b1a5ef51a66227d5edf9",
+    "createdAt": "2026-08-07T18:44:03.127Z"
+  },
+  {
+    "id": "USR-1786128275553",
+    "username": "ELpepe123",
+    "passwordHash": "f4a0ffab3b342bf7f50d4116b2d9105948c84cbe83e059f61c5b2dad46e2dce1",
+    "createdAt": "2026-08-07T18:44:35.553Z"
+  }
+]

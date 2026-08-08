@@ -1,0 +1,97 @@
+[
+  {
+    "codigoOrden": "ZSC-252683",
+    "cliente": "Andere Dev",
+    "usuario": "Andere",
+    "email": "andere@gmail.com",
+    "carrito": [
+      {
+        "titulo": "Super Mario Galaxy 2",
+        "precio": 20000,
+        "cantidad": 1,
+        "licencia": "Secundaria"
+      }
+    ],
+    "articulos": 1,
+    "total": 20000,
+    "totalFormatted": "$20.000 CLP",
+    "fecha": "7 de agosto de 2026 a las 03:05 p. m.",
+    "estado": "pendiente"
+  },
+  {
+    "codigoOrden": "ZSC-219750",
+    "cliente": "Andere Dev",
+    "usuario": "Andere",
+    "email": "andere@gmail.com",
+    "carrito": [
+      {
+        "titulo": "Super Mario Galaxy 2",
+        "precio": 20000,
+        "cantidad": 1,
+        "licencia": "Secundaria"
+      }
+    ],
+    "articulos": 1,
+    "total": 20000,
+    "totalFormatted": "$20.000 CLP",
+    "fecha": "7 de agosto de 2026 a las 03:05 p. m.",
+    "estado": "pendiente"
+  },
+  {
+    "codigoOrden": "ZSC-917509",
+    "cliente": "Andere Dev",
+    "usuario": "Andere",
+    "email": "andere@gmail.com",
+    "carrito": [
+      {
+        "titulo": "Super Mario Galaxy 2",
+        "precio": 20000,
+        "cantidad": 1,
+        "licencia": "Secundaria"
+      }
+    ],
+    "articulos": 1,
+    "total": 20000,
+    "totalFormatted": "$20.000 CLP",
+    "fecha": "7 de agosto de 2026 a las 03:07 p. m.",
+    "estado": "pendiente"
+  },
+  {
+    "codigoOrden": "ZSC-946179",
+    "cliente": "Andere Dev",
+    "usuario": "Andere",
+    "email": "andere@gmail.com",
+    "carrito": [
+      {
+        "titulo": "Super Mario Galaxy 2",
+        "precio": 20000,
+        "cantidad": 1,
+        "licencia": "Secundaria"
+      }
+    ],
+    "articulos": 1,
+    "total": 20000,
+    "totalFormatted": "$20.000 CLP",
+    "fecha": "7 de agosto de 2026 a las 03:08 p. m.",
+    "estado": "pendiente"
+  },
+  {
+    "codigoOrden": "ZSC-448199",
+    "cliente": "Andere Dev",
+    "usuario": "Andere",
+    "email": "andere@gmail.com",
+    "carrito": [
+      {
+        "titulo": "Super Mario Galaxy 2",
+        "precio": 20000,
+        "cantidad": 1,
+        "licencia": "Secundaria"
+      }
+    ],
+    "articulos": 1,
+    "total": 20000,
+    "totalFormatted": "$20.000 CLP",
+    "fecha": "7 de agosto de 2026 a las 03:08 p. m.",
+    "estado": "pendiente"
+  }
+]
