@@ -1470,9 +1470,6 @@ function showToast(message, duration = 3500) {
       <span class="toast-text">${escapeHTML(message)}</span>
       <button class="toast-close-btn" aria-label="Cerrar">&times;</button>
     </div>
-    <div class="toast-progress-bar-wrapper">
-      <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
-    </div>
   `;
 
   container.appendChild(toast);

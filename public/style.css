@@ -2737,7 +2737,7 @@ body {
 }
 
 /* ==========================================================================
-   Toast Notifications, Progress Bar & Swipe Gesture
+   Toast Notifications: Aesthetic Left-to-Right Color Shift & Swipe Gesture
    ========================================================================== */
 .toast-container {
   position: fixed;
@@ -2753,9 +2753,11 @@ body {
 .toast {
   pointer-events: auto;
   position: relative;
-  background: rgba(15, 22, 36, 0.95);
+  background: linear-gradient(110deg, rgba(15, 22, 36, 0.96) 0%, rgba(255, 0, 60, 0.22) 35%, rgba(0, 240, 255, 0.25) 70%, rgba(15, 22, 36, 0.96) 100%);
+  background-size: 240% 100%;
+  animation: toastGradientFlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   backdrop-filter: blur(16px);
-  border: 1px solid var(--border-active);
+  border: 1px solid rgba(255, 0, 60, 0.4);
   border-radius: var(--radius-md);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), var(--glow-red);
   color: #ffffff;
@@ -2770,6 +2772,45 @@ body {
   user-select: none;
 }
 
+.toast::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 0, 60, 0.3), rgba(0, 240, 255, 0.4), rgba(255, 183, 3, 0.3), transparent);
+  animation: toastSweepLight 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes toastGradientFlow {
+  0% {
+    background-position: 0% 50%;
+    border-color: rgba(255, 0, 60, 0.45);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 0, 60, 0.35);
+  }
+  50% {
+    background-position: 100% 50%;
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.4);
+  }
+  100% {
+    background-position: 0% 50%;
+    border-color: rgba(255, 0, 60, 0.45);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 0, 60, 0.35);
+  }
+}
+
+@keyframes toastSweepLight {
+  0% {
+    left: -120%;
+  }
+  100% {
+    left: 120%;
+  }
+}
+
 .toast:active {
   cursor: grabbing;
 }
@@ -2780,6 +2821,8 @@ body {
 }
 
 .toast-content {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -2810,28 +2853,4 @@ body {
 }
 .toast-close-btn:hover {
   color: #ffffff;
-}
-
-.toast-progress-bar-wrapper {
-  width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-}
-
-.toast-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--switch-red), var(--joycon-cyan));
-  width: 100%;
-  transform-origin: left;
-  animation: toastShrinkLinear linear forwards;
-}
-
-@keyframes toastShrinkLinear {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
 }
