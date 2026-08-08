@@ -366,21 +366,53 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const OTP_STORE = new Map();
 
 async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de Verificación - ZonaSwitchChile') {
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #f8fafc; padding: 28px; border-radius: 12px; border: 1px solid #1e293b; max-width: 500px; margin: 0 auto;">
+      <h2 style="color: #ff003c; margin: 0 0 10px; font-size: 24px;">🎮 ZonaSwitchChile</h2>
+      <p style="font-size: 15px; color: #cbd5e1; margin-bottom: 20px;">${subjectTitle}:</p>
+      <div style="background: #0f1624; border: 2px solid #00f0ff; color: #00f0ff; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);">
+        ${code}
+      </div>
+      <p style="color: #94a3b8; font-size: 13px; margin-top: 20px;">Este código de 6 dígitos expira en 10 minutos.</p>
+    </div>
+  `;
+
+  // 1. Enviar usando Brevo API REST (si BREVO_API_KEY está presente en el servidor o Railway)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: "ZonaSwitchChile", email: process.env.BREVO_SENDER_EMAIL || "tiendaswitchchile@gmail.com" },
+          to: [{ email: toEmail }],
+          subject: `🔐 ${subjectTitle}`,
+          htmlContent: htmlContent
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`📩 Correo enviado REALMENTE con Brevo (ID: ${data.messageId}) a ${toEmail}`);
+        return true;
+      } else {
+        console.warn('📌 Brevo API Error:', data);
+      }
+    } catch (err) {
+      console.error('Error enviando con Brevo:', err);
+    }
+  }
+
+  // 2. Intento por Resend (Fallback)
   try {
     const { data, error } = await resend.emails.send({
       from: 'ZonaSwitchChile <onboarding@resend.dev>',
       to: [toEmail],
       subject: `🔐 ${subjectTitle}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #f8fafc; padding: 28px; border-radius: 12px; border: 1px solid #1e293b; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #ff003c; margin: 0 0 10px; font-size: 24px;">🎮 ZonaSwitchChile</h2>
-          <p style="font-size: 15px; color: #cbd5e1; margin-bottom: 20px;">${subjectTitle}:</p>
-          <div style="background: #0f1624; border: 2px solid #00f0ff; color: #00f0ff; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);">
-            ${code}
-          </div>
-          <p style="color: #94a3b8; font-size: 13px; margin-top: 20px;">Este código de 6 dígitos expira en 10 minutos.</p>
-        </div>
-      `
+      html: htmlContent
     });
 
     if (error) {
