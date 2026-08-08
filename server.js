@@ -56,9 +56,9 @@ const orderSchema = new mongoose.Schema({
   monto: Number,
   moneda: { type: String, default: 'CLP' },
   estado: String,
-  fecha: { type: Date, default: Date.now },
+  fecha: { type: mongoose.Schema.Types.Mixed, default: Date.now },
   detallesPago: Object
-});
+}, { strict: false });
 
 const UserModel = mongoose.model('User', userSchema);
 const OrderModel = mongoose.model('Order', orderSchema);
@@ -120,11 +120,13 @@ const DEFAULT_FLOW_SECRET = '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
 const FLOW_API_KEY = (process.env.FLOW_API_KEY || DEFAULT_FLOW_KEY).trim().replace(/^["']|["']$/g, '');
 const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || DEFAULT_FLOW_SECRET).trim().replace(/^["']|["']$/g, '');
 
-let rawFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
-if (rawFlowUrl.includes('flow.cl') && !rawFlowUrl.includes('www.flow.cl') && !rawFlowUrl.includes('sandbox')) {
-  rawFlowUrl = rawFlowUrl.replace('flow.cl', 'www.flow.cl');
+let targetFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/^["']|["']$/g, '');
+if (targetFlowUrl.includes('sandbox')) {
+  targetFlowUrl = 'https://sandbox.flow.cl/api';
+} else {
+  targetFlowUrl = 'https://www.flow.cl/api';
 }
-const FLOW_API_URL = rawFlowUrl;
+const FLOW_API_URL = targetFlowUrl;
 
 const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad').trim().replace(/^["']|["']$/g, '');
 const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626').trim().replace(/^["']|["']$/g, '');
@@ -142,7 +144,7 @@ function saveOrders(ordersList) {
         ORDERS_STORE.set(o.codigoOrden, o);
         if (isMongoConnected) {
           try {
-            await OrderModel.findOneAndUpdate({ codigoOrden: o.codigoOrden }, o, { upsert: true, new: true });
+            await OrderModel.findOneAndUpdate({ codigoOrden: o.codigoOrden }, o, { upsert: true, returnDocument: 'after' });
             console.log(`🍃 Orden ${o.codigoOrden} guardada en MongoDB Atlas.`);
           } catch (err) {
             console.error('❌ Error guardando orden en Mongo:', err.message);
@@ -161,7 +163,7 @@ function saveUsers(users) {
   if (isMongoConnected && Array.isArray(users)) {
     users.forEach(async (u) => {
       try {
-        await UserModel.findOneAndUpdate({ email: u.email }, u, { upsert: true, new: true });
+        await UserModel.findOneAndUpdate({ email: u.email }, u, { upsert: true, returnDocument: 'after' });
         console.log(`🍃 Usuario ${u.username} (${u.email}) guardado en MongoDB Atlas.`);
       } catch (err) {
         console.error('❌ Error guardando usuario en Mongo:', err.message);
