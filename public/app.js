@@ -362,16 +362,7 @@ function initEventListeners() {
   if (closeMobileDrawerBtn) closeMobileDrawerBtn.addEventListener('click', closeMobileDrawer);
   if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileDrawer);
 
-  // Sincronización de Búsqueda y Moneda Móvil
-  const mobileSearchInput = document.getElementById('mobile-search-input');
-  if (mobileSearchInput) {
-    mobileSearchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value.toLowerCase().trim();
-      const desktopSearch = document.getElementById('search-input');
-      if (desktopSearch) desktopSearch.value = e.target.value;
-      renderCatalog();
-    });
-  }
+
 
   const mobileCurrencySelect = document.getElementById('mobile-currency-select');
   if (mobileCurrencySelect) {
@@ -1383,11 +1374,11 @@ function renderCartDrawer() {
 
   checkoutWrapper.style.display = 'block';
 
-  let total = 0;
+  let subtotal = 0;
 
   container.innerHTML = cart.map(item => {
     const itemSubtotal = item.precio * item.cantidad;
-    total += itemSubtotal;
+    subtotal += itemSubtotal;
 
     return `
       <div class="cart-item-card">
