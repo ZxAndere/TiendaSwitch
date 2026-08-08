@@ -244,38 +244,8 @@
         <p class="gallery-subtitle">Fotos reales compartidas por compradores de Nintendo Switch en Chile</p>
       </div>
 
-      <div class="gallery-grid">
-        <div class="gallery-card">
-          <img src="https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=600&auto=format&fit=crop" alt="Setup Cliente 1">
-          <div class="gallery-card-info">
-            <div class="gallery-user">⭐ ⭐ ⭐ ⭐ ⭐ <strong>@matias_switch</strong></div>
-            <p>"Zelda TOTK descargado en 15 min. Licencia primaria 100% funcional. ¡Gracias ZonaSwitchChile!"</p>
-          </div>
-        </div>
-
-        <div class="gallery-card">
-          <img src="https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop" alt="Setup Cliente 2">
-          <div class="gallery-card-info">
-            <div class="gallery-user">⭐ ⭐ ⭐ ⭐ ⭐ <strong>@camila_gimer</strong></div>
-            <p>"Compré Mario Wonder y entregaron la cuenta al tiro al correo. Atención rápida por WhatsApp."</p>
-          </div>
-        </div>
-
-        <div class="gallery-card">
-          <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop" alt="Setup Cliente 3">
-          <div class="gallery-card-info">
-            <div class="gallery-user">⭐ ⭐ ⭐ ⭐ ⭐ <strong>@nicolas.gamer.cl</strong></div>
-            <p>"Excelente servicio. Pagué con Webpay y los pasos de instalación son súper claros. Recomendado 100%."</p>
-          </div>
-        </div>
-
-        <div class="gallery-card">
-          <img src="https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=600&auto=format&fit=crop" alt="Setup Cliente 4">
-          <div class="gallery-card-info">
-            <div class="gallery-user">⭐ ⭐ ⭐ ⭐ ⭐ <strong>@benja_switch_cl</strong></div>
-            <p>"Hollow Knight y Mario Kart funcionando impecable en mi OLED. Precios accesibles y garantizados."</p>
-          </div>
-        </div>
+      <div class="gallery-grid" id="customer-gallery-grid">
+        <!-- Renderizado dinámico de fotos de clientes por JS -->
       </div>
     </div>
   </section>
@@ -512,15 +482,58 @@
         <div id="tab-admin" class="settings-form tab-pane">
           <div class="admin-tab-header">
             <h4>🛠️ Opciones de Administrador</h4>
-            <p>Configura la visibilidad y edita en tiempo real los juegos del catálogo de la tienda.</p>
+            <p>Gestiona los juegos del catálogo y las fotos de la galería de clientes en tiempo real.</p>
           </div>
 
-          <div class="admin-search-box-wrapper">
-            <input type="text" id="admin-game-search" placeholder="🔍 Filtrar juegos en el panel..." class="admin-search-input">
+          <div class="admin-subtabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button type="button" class="tab-btn active" id="btn-subtab-games" onclick="switchAdminSubtab('games')">🎮 Juegos</button>
+            <button type="button" class="tab-btn" id="btn-subtab-gallery" onclick="switchAdminSubtab('gallery')">📸 Galería de Clientes</button>
           </div>
 
-          <div class="admin-games-container" id="admin-games-container">
-            <!-- Juegos cargados dinámicamente -->
+          <!-- Vista Juegos Admin -->
+          <div id="admin-view-games">
+            <div class="admin-search-box-wrapper">
+              <input type="text" id="admin-game-search" placeholder="🔍 Filtrar juegos en el panel..." class="admin-search-input">
+            </div>
+
+            <div class="admin-games-container" id="admin-games-container">
+              <!-- Juegos cargados dinámicamente -->
+            </div>
+          </div>
+
+          <!-- Vista Galería Admin -->
+          <div id="admin-view-gallery" style="display: none;">
+            <form id="admin-add-gallery-form" class="settings-form" style="margin-bottom: 1.25rem;">
+              <h5 style="color: var(--joycon-cyan); font-size: 0.95rem; font-weight: 800;">➕ Agregar Nueva Foto / Reseña a la Galería</h5>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label>Usuario / Instagram</label>
+                  <input type="text" id="admin-gallery-user" placeholder="Ej: @matias_switch" required>
+                </div>
+                <div class="form-group">
+                  <label>Calificación</label>
+                  <select id="admin-gallery-stars" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #ffffff; padding: 0.65rem; border-radius: var(--radius-sm);">
+                    <option value="⭐ ⭐ ⭐ ⭐ ⭐">⭐ ⭐ ⭐ ⭐ ⭐ (5 Estrellas)</option>
+                    <option value="⭐ ⭐ ⭐ ⭐">⭐ ⭐ ⭐ ⭐ (4 Estrellas)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>URL de la Foto Real del Setup</label>
+                <input type="url" id="admin-gallery-imagen" placeholder="https://..." required>
+              </div>
+              <div class="form-group">
+                <label>Comentario / Reseña del Cliente</label>
+                <textarea id="admin-gallery-comment" rows="2" placeholder="Ej: Zelda TOTK descargado en 15 min. Licencia primaria 100% funcional..." required></textarea>
+              </div>
+              <div class="auth-error-msg" id="admin-gallery-error"></div>
+              <button type="submit" class="auth-submit-btn" id="save-gallery-btn">📸 Publicar Foto en Galería</button>
+            </form>
+
+            <h5 style="color: #ffffff; font-size: 0.9rem; font-weight: 800; margin-bottom: 0.75rem;">Reseñas Actuales en la Tienda</h5>
+            <div class="admin-games-container" id="admin-gallery-items-container">
+              <!-- Fotos de galería cargadas por JS -->
+            </div>
           </div>
         </div>
       </div>

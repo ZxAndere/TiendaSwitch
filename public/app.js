@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
   initUserSession();
   fetchCatalog();
+  fetchAndRenderGallery();
   updateCartBadge();
   checkPaymentReturnUrls();
   initRealtimeCatalogStream();
@@ -122,9 +123,9 @@ function initEventListeners() {
   if (mobileOpenGuideBtn) mobileOpenGuideBtn.addEventListener('click', () => { closeMobileDrawer(); openInstallGuideModal(); });
   if (closeGuideBtn) closeGuideBtn.addEventListener('click', closeInstallGuideModal);
 
-  // Cupón de descuento en carrito
-  const applyCouponBtn = document.getElementById('apply-coupon-btn');
-  if (applyCouponBtn) applyCouponBtn.addEventListener('click', handleApplyCoupon);
+  // Formulario agregar foto a galería (Admin)
+  const addGalleryForm = document.getElementById('admin-add-gallery-form');
+  if (addGalleryForm) addGalleryForm.addEventListener('submit', handleAdminAddGallerySubmit);
 
   // Selector de Conversión de Moneda
   const currSelect = document.getElementById('currency-select');
@@ -981,15 +982,21 @@ async function fetchCatalog() {
 function renderCatalog() {
   const grid = document.getElementById('games-grid');
   const countLabel = document.getElementById('games-count');
+  if (!grid) return;
+
+  if (!Array.isArray(catalog)) catalog = [];
 
   const filtered = catalog.filter(game => {
+    if (!game) return false;
+    const title = (game.titulo || '').toLowerCase();
+    const category = (game.categoria || '').toLowerCase();
+    const q = (searchQuery || '').toLowerCase();
     const matchCategory = activeCategory === 'todos' || game.categoria === activeCategory;
-    const matchSearch = game.titulo.toLowerCase().includes(searchQuery) ||
-                        game.categoria.toLowerCase().includes(searchQuery);
+    const matchSearch = title.includes(q) || category.includes(q);
     return matchCategory && matchSearch;
   });
 
-  countLabel.textContent = `${filtered.length} juego(s) disponible(s)`;
+  if (countLabel) countLabel.textContent = `${filtered.length} juego(s) disponible(s)`;
 
   if (filtered.length === 0) {
     grid.innerHTML = `
@@ -1002,21 +1009,21 @@ function renderCatalog() {
   }
 
   grid.innerHTML = filtered.map((game) => `
-    <article class="game-card" onclick="openGameModal(${game.id})">
+    <article class="game-card in-view" onclick="openGameModal(${game.id})">
       <div class="card-media">
-        <img src="${game.imagen}" alt="${game.titulo}" loading="lazy">
-        <span class="card-tag">${game.categoria}</span>
-        <span class="card-size-tag">📦 ${game.peso}</span>
+        <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
+        <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
+        <span class="card-size-tag">📦 ${escapeHTML(game.peso || 'N/A')}</span>
       </div>
       <div class="card-content">
-        <h3 class="card-title">${game.titulo}</h3>
-        <p class="card-desc">${game.descripcion}</p>
+        <h3 class="card-title">${escapeHTML(game.titulo || '')}</h3>
+        <p class="card-desc">${escapeHTML(game.descripcion || '')}</p>
         <div class="card-license-hint">
           🎮 Secundaria: ${formatCLP(game.precioSecundaria)} | Primaria: ${formatCLP(game.precioPrimaria)}
         </div>
         <div class="card-footer">
           <div class="price-container">
-            <span class="original-price">${formatCLP(game.precioOriginal)}</span>
+            <span class="original-price">${formatCLP(game.precioOriginal || game.precioSecundaria)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
           <button class="buy-card-btn">
@@ -1810,3 +1817,175 @@ window.addEventListener('scroll', () => {
 
   lastScrollY = currentScrollY;
 }, { passive: true });
+
+// --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS ---
+let customerGalleryStore = [];
+
+async function fetchAndRenderGallery() {
+  const container = document.getElementById('customer-gallery-grid');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/gallery');
+    if (!res.ok) throw new Error('Error al consultar galería');
+    customerGalleryStore = await res.json();
+    renderCustomerGallery(customerGalleryStore);
+  } catch (err) {
+    console.error('Error cargando galería:', err);
+  }
+}
+
+function renderCustomerGallery(items) {
+  const container = document.getElementById('customer-gallery-grid');
+  if (!container) return;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); grid-column: 1/-1;">No hay fotos registradas en la galería.</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => `
+    <div class="gallery-card">
+      <img src="${escapeHTML(item.imagen)}" alt="Setup de ${escapeHTML(item.user)}" loading="lazy">
+      <div class="gallery-card-info">
+        <div class="gallery-user">${escapeHTML(item.stars || '⭐ ⭐ ⭐ ⭐ ⭐')} <strong>${escapeHTML(item.user)}</strong></div>
+        <p>"${escapeHTML(item.comment)}"</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+// --- FUNCIONES ADMIN PARA LA GALERÍA DE CLIENTES ---
+
+function switchAdminSubtab(viewName) {
+  const btnGames = document.getElementById('btn-subtab-games');
+  const btnGallery = document.getElementById('btn-subtab-gallery');
+  const viewGames = document.getElementById('admin-view-games');
+  const viewGallery = document.getElementById('admin-view-gallery');
+
+  if (viewName === 'gallery') {
+    if (btnGallery) btnGallery.classList.add('active');
+    if (btnGames) btnGames.classList.remove('active');
+    if (viewGallery) viewGallery.style.display = 'block';
+    if (viewGames) viewGames.style.display = 'none';
+    fetchAndRenderAdminGallery();
+  } else {
+    if (btnGames) btnGames.classList.add('active');
+    if (btnGallery) btnGallery.classList.remove('active');
+    if (viewGames) viewGames.style.display = 'block';
+    if (viewGallery) viewGallery.style.display = 'none';
+  }
+}
+
+async function fetchAndRenderAdminGallery() {
+  const container = document.getElementById('admin-gallery-items-container');
+  if (!container) return;
+
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando fotos de galería...</p>';
+
+  try {
+    const res = await fetch('/api/gallery');
+    const items = await res.json();
+    customerGalleryStore = items;
+    renderAdminGalleryList(items);
+  } catch (err) {
+    container.innerHTML = '<p style="text-align: center; color: var(--switch-red); padding: 1rem;">Error cargando la galería en admin.</p>';
+  }
+}
+
+function renderAdminGalleryList(items) {
+  const container = document.getElementById('admin-gallery-items-container');
+  if (!container) return;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No hay fotos en la galería.</p>';
+    return;
+  }
+
+  container.innerHTML = items.map(item => `
+    <div class="admin-game-row">
+      <div class="admin-game-info">
+        <img class="admin-game-thumb" src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.user)}">
+        <div class="admin-game-details">
+          <span class="admin-game-title">${escapeHTML(item.user)} (${escapeHTML(item.stars)})</span>
+          <span class="admin-game-sub">${escapeHTML(item.comment)}</span>
+        </div>
+      </div>
+      <div class="admin-game-actions">
+        <button type="button" class="remove-item-btn" onclick="deleteGalleryItem(${item.id})" title="Eliminar reseña de la tienda">
+          🗑️ Eliminar
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleAdminAddGallerySubmit(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+
+  const user = document.getElementById('admin-gallery-user').value.trim();
+  const stars = document.getElementById('admin-gallery-stars').value;
+  const imagen = document.getElementById('admin-gallery-imagen').value.trim();
+  const comment = document.getElementById('admin-gallery-comment').value.trim();
+  const errorMsg = document.getElementById('admin-gallery-error');
+  errorMsg.textContent = '';
+
+  const saveBtn = document.getElementById('save-gallery-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando...';
+
+  try {
+    const res = await fetch('/api/admin/gallery/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user,
+        stars,
+        imagen,
+        comment,
+        username: currentUser.username
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.exito) {
+      errorMsg.textContent = data.error || 'No se pudo publicar la foto.';
+      return;
+    }
+
+    document.getElementById('admin-add-gallery-form').reset();
+    if (data.galeria) {
+      customerGalleryStore = data.galeria;
+      renderAdminGalleryList(customerGalleryStore);
+      renderCustomerGallery(customerGalleryStore);
+    }
+    showToast('¡Foto y reseña agregadas a la galería con éxito! 📸');
+  } catch (err) {
+    errorMsg.textContent = 'Error al conectar con el servidor.';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '📸 Publicar Foto en Galería';
+  }
+}
+
+async function deleteGalleryItem(id) {
+  if (!currentUser || !confirm('¿Estás seguro de eliminar esta reseña de la tienda?')) return;
+
+  try {
+    const res = await fetch('/api/admin/gallery/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, username: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.exito && data.galeria) {
+      customerGalleryStore = data.galeria;
+      renderAdminGalleryList(customerGalleryStore);
+      renderCustomerGallery(customerGalleryStore);
+      showToast('Reseña removida de la galería');
+    }
+  } catch (err) {
+    alert('Error al conectar con el servidor');
+  }
+}

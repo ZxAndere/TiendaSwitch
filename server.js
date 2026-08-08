@@ -23,6 +23,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const GAMES_FILE = path.join(DATA_DIR, 'games.json');
+const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -64,6 +65,14 @@ const gameSchema = new mongoose.Schema({
   visible: { type: Boolean, default: true }
 }, { strict: false });
 
+const gallerySchema = new mongoose.Schema({
+  id: { type: Number, required: true, unique: true },
+  user: String,
+  stars: String,
+  comment: String,
+  imagen: String
+}, { strict: false });
+
 const orderSchema = new mongoose.Schema({
   codigoOrden: { type: String, required: true, unique: true },
   flowOrder: String,
@@ -80,6 +89,7 @@ const orderSchema = new mongoose.Schema({
 
 const UserModel = mongoose.model('User', userSchema);
 const GameModel = mongoose.model('Game', gameSchema);
+const GalleryModel = mongoose.model('Gallery', gallerySchema);
 const OrderModel = mongoose.model('Order', orderSchema);
 
 if (process.env.MONGODB_URI) {
@@ -129,6 +139,20 @@ if (process.env.MONGODB_URI) {
           });
         }
       } catch (e) { console.error('Error cargando juegos MongoDB:', e); }
+
+      // Sincronizar galería de clientes desde MongoDB Atlas
+      try {
+        const mongoGallery = await GalleryModel.find({});
+        if (mongoGallery.length > 0) {
+          GALLERY_STORE = mongoGallery.map(g => g.toObject());
+          fs.writeFileSync(GALLERY_FILE, JSON.stringify(GALLERY_STORE, null, 2));
+          console.log(`📥 Sincronizadas ${GALLERY_STORE.length} fotos de galería desde MongoDB Atlas.`);
+        } else {
+          GALLERY_STORE.forEach(async (g) => {
+            await GalleryModel.findOneAndUpdate({ id: g.id }, g, { upsert: true, returnDocument: 'after' });
+          });
+        }
+      } catch (e) { console.error('Error cargando galería MongoDB:', e); }
     })
     .catch(err => {
       mongoLastError = err.message;
@@ -1011,6 +1035,113 @@ app.post('/api/admin/juegos/update', (req, res) => {
 
   console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado en tiempo real.`);
   res.json({ exito: true, mensaje: `Juego "${game.titulo}" actualizado correctamente en tiempo real.`, juego: game, juegos: GAMES_STORE });
+});
+
+// --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS ---
+const DEFAULT_GALLERY = [
+  {
+    id: 1,
+    user: "@matias_switch",
+    stars: "⭐ ⭐ ⭐ ⭐ ⭐",
+    comment: "Zelda TOTK descargado en 15 min. Licencia primaria 100% funcional. ¡Gracias ZonaSwitchChile!",
+    imagen: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=600&auto=format&fit=crop"
+  },
+  {
+    id: 2,
+    user: "@camila_gimer",
+    stars: "⭐ ⭐ ⭐ ⭐ ⭐",
+    comment: "Compré Mario Wonder y entregaron la cuenta al tiro al correo. Atención rápida por WhatsApp.",
+    imagen: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=600&auto=format&fit=crop"
+  },
+  {
+    id: 3,
+    user: "@nicolas.gamer.cl",
+    stars: "⭐ ⭐ ⭐ ⭐ ⭐",
+    comment: "Excelente servicio. Pagué con Webpay y los pasos de instalación son súper claros. Recomendado 100%.",
+    imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop"
+  },
+  {
+    id: 4,
+    user: "@benja_switch_cl",
+    stars: "⭐ ⭐ ⭐ ⭐ ⭐",
+    comment: "Hollow Knight y Mario Kart funcionando impecable en mi OLED. Precios accesibles y garantizados.",
+    imagen: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=600&auto=format&fit=crop"
+  }
+];
+
+let GALLERY_STORE = [];
+function loadInitialGallery() {
+  if (fs.existsSync(GALLERY_FILE)) {
+    try {
+      GALLERY_STORE = JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf8'));
+    } catch (e) {
+      GALLERY_STORE = [...DEFAULT_GALLERY];
+    }
+  } else {
+    GALLERY_STORE = [...DEFAULT_GALLERY];
+    saveGalleryLocal(GALLERY_STORE);
+  }
+}
+
+function saveGalleryLocal(gallery) {
+  GALLERY_STORE = gallery;
+  try {
+    fs.writeFileSync(GALLERY_FILE, JSON.stringify(gallery, null, 2));
+  } catch (e) {}
+
+  if (isMongoConnected && Array.isArray(gallery)) {
+    gallery.forEach(async (item) => {
+      try {
+        await GalleryModel.findOneAndUpdate({ id: item.id }, item, { upsert: true, returnDocument: 'after' });
+      } catch (e) {}
+    });
+  }
+}
+
+loadInitialGallery();
+
+// Endpoint público: obtener ítems de la galería
+app.get('/api/gallery', (req, res) => {
+  res.json(GALLERY_STORE);
+});
+
+// Endpoint Admin: Agregar nueva foto/reseña a la galería
+app.post('/api/admin/gallery/add', (req, res) => {
+  const { user, stars, comment, imagen, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  if (!user || !comment || !imagen) {
+    return res.status(400).json({ error: "Por favor completa el usuario, comentario y la URL de la foto." });
+  }
+
+  const newItem = {
+    id: Date.now(),
+    user: user.trim(),
+    stars: stars || "⭐ ⭐ ⭐ ⭐ ⭐",
+    comment: comment.trim(),
+    imagen: imagen.trim()
+  };
+
+  GALLERY_STORE.unshift(newItem);
+  saveGalleryLocal(GALLERY_STORE);
+
+  console.log(`🛠️ [ADMIN] Nueva foto agregada a la galería por "${user}"`);
+  res.json({ exito: true, mensaje: "Reseña / Foto agregada a la galería exitosamente.", galeria: GALLERY_STORE });
+});
+
+// Endpoint Admin: Eliminar foto/reseña de la galería
+app.post('/api/admin/gallery/delete', (req, res) => {
+  const { id, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  GALLERY_STORE = GALLERY_STORE.filter(item => item.id !== Number(id));
+  saveGalleryLocal(GALLERY_STORE);
+
+  res.json({ exito: true, mensaje: "Foto removida de la galería.", galeria: GALLERY_STORE });
 });
 
 app.post('/api/checkout', async (req, res) => {
