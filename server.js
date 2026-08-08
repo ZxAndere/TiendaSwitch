@@ -1468,7 +1468,7 @@ app.post('/api/checkout', async (req, res) => {
 
         let codigoConsumido = '';
         if (rawCodigos) {
-          const codigosList = rawCodigos.split(',').map(c => c.trim()).filter(c => c.length > 0);
+          const codigosList = rawCodigos.split(/[\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
           if (codigosList.length > 0) {
             // Extraer y consumir el primer código (de un solo uso ⚡)
             codigoConsumido = codigosList.shift();
