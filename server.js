@@ -1043,7 +1043,7 @@ app.all('/api/flow/return', async (req, res) => {
     params.s = signFlowParams(params);
 
     const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
-      headers: { 'User-Agent': 'ZonaSwitchChile-Web/1.0' }
+      headers: flowHeaders
     });
     const responseText = await flowRes.text();
     let statusData;
@@ -1084,7 +1084,7 @@ app.post('/api/flow/confirm', async (req, res) => {
     params.s = signFlowParams(params);
 
     const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
-      headers: { 'User-Agent': 'ZonaSwitchChile-Web/1.0' }
+      headers: flowHeaders
     });
     const responseText = await flowRes.text();
     let statusData;
