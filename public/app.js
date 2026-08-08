@@ -179,22 +179,27 @@ function formatCLP(num) {
 
 // Inicializar Aplicación al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
-  initEventListeners();
-  initUserSession();
-  fetchSettings();
-  fetchCatalog();
-  fetchAndRenderGallery();
-  updateCartBadge();
-  checkPaymentReturnUrls();
-  initRealtimeCatalogStream();
+  try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
+  try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
+  try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
+  try { fetchSettings(); } catch (e) { console.error('Error fetchSettings:', e); }
+  try { fetchCatalog(); } catch (e) { console.error('Error fetchCatalog:', e); }
+  try { fetchAndRenderGallery(); } catch (e) { console.error('Error fetchAndRenderGallery:', e); }
+  try { updateCartBadge(); } catch (e) { console.error('Error updateCartBadge:', e); }
+  try { checkPaymentReturnUrls(); } catch (e) { console.error('Error checkPaymentReturnUrls:', e); }
+  try { initRealtimeCatalogStream(); } catch (e) { console.error('Error initRealtimeCatalogStream:', e); }
 });
 
 // Registrar Listeners principales
 function initEventListeners() {
   // Abrir / Cerrar Drawer del Carrito
-  document.getElementById('cart-btn').addEventListener('click', openCartDrawer);
-  document.getElementById('close-drawer').addEventListener('click', closeCartDrawer);
-  document.getElementById('drawer-overlay').addEventListener('click', closeCartDrawer);
+  const cartBtn = document.getElementById('cart-btn');
+  const closeDrawerBtn = document.getElementById('close-drawer');
+  const drawerOverlay = document.getElementById('drawer-overlay');
+
+  if (cartBtn) cartBtn.addEventListener('click', openCartDrawer);
+  if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeCartDrawer);
+  if (drawerOverlay) drawerOverlay.addEventListener('click', closeCartDrawer);
 
   // Modal de Selección de Pasarela de Pago
   const openPayModalBtn = document.getElementById('open-payment-modal-btn');
@@ -361,7 +366,7 @@ function initEventListeners() {
   const mobileSearchInput = document.getElementById('mobile-search-input');
   if (mobileSearchInput) {
     mobileSearchInput.addEventListener('input', (e) => {
-      searchTerm = e.target.value.toLowerCase().trim();
+      searchQuery = e.target.value.toLowerCase().trim();
       const desktopSearch = document.getElementById('search-input');
       if (desktopSearch) desktopSearch.value = e.target.value;
       renderCatalog();
