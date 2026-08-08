@@ -883,11 +883,11 @@ app.post('/api/checkout', async (req, res) => {
   saveOrders(orders);
 
   // Determinar protocolo y host para retorno de pasarelas
-  const host = req.get('host') || `localhost:${PORT}`;
-  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase();
+  const isLocal = rawHost.includes('localhost') || rawHost.includes('127.0.0.1');
   const baseUrl = isLocal
-    ? `http://${host}`
-    : 'https://tiendaswitch-production-3bd0.up.railway.app';
+    ? `http://${rawHost || 'localhost:' + PORT}`
+    : (process.env.PUBLIC_URL || 'https://tiendaswitch-production-3bd0.up.railway.app');
 
   // Si el cliente eligió Mercado Pago
   if (metodoPago === 'mercadopago') {
@@ -970,9 +970,7 @@ app.post('/api/checkout', async (req, res) => {
 
   const flowHeaders = {
     'Content-Type': 'application/x-www-form-urlencoded',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7'
+    'User-Agent': 'ZonaSwitchChile-Web/1.0'
   };
 
   try {
@@ -1042,7 +1040,9 @@ app.all('/api/flow/return', async (req, res) => {
     const params = { apiKey: FLOW_API_KEY, token };
     params.s = signFlowParams(params);
 
-    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`);
+    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
+      headers: { 'User-Agent': 'ZonaSwitchChile-Web/1.0' }
+    });
     const responseText = await flowRes.text();
     let statusData;
     try {
@@ -1081,7 +1081,9 @@ app.post('/api/flow/confirm', async (req, res) => {
     const params = { apiKey: FLOW_API_KEY, token };
     params.s = signFlowParams(params);
 
-    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`);
+    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
+      headers: { 'User-Agent': 'ZonaSwitchChile-Web/1.0' }
+    });
     const responseText = await flowRes.text();
     let statusData;
     try {
