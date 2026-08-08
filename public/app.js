@@ -201,6 +201,19 @@ function initEventListeners() {
   if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeCartDrawer);
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeCartDrawer);
 
+  // Código de Descuento en Carrito
+  const applyCouponBtn = document.getElementById('apply-coupon-btn');
+  const couponInput = document.getElementById('coupon-code-input');
+  if (applyCouponBtn) applyCouponBtn.addEventListener('click', handleApplyCoupon);
+  if (couponInput) {
+    couponInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleApplyCoupon();
+      }
+    });
+  }
+
   // Modal de Selección de Pasarela de Pago
   const openPayModalBtn = document.getElementById('open-payment-modal-btn');
   const closePayModalBtn = document.getElementById('close-payment-modal');
@@ -1526,6 +1539,17 @@ function renderPayCarousel() {
   document.getElementById('pay-total-items').textContent = totalItems;
   document.getElementById('pay-total-price').textContent = formatCLP(finalTotal);
 
+  // Cambiar texto de botón según precio ($0 CLP -> Finalizar Pedido)
+  const submitPayBtn = document.getElementById('submit-payment-btn');
+  if (submitPayBtn) {
+    const btnSpan = submitPayBtn.querySelector('span');
+    if (finalTotal === 0) {
+      if (btnSpan) btnSpan.textContent = '¡Finalizar Pedido ($0 CLP)!';
+    } else {
+      if (btnSpan) btnSpan.textContent = 'Continuar al Pago';
+    }
+  }
+
   // Mostrar aviso de Cupón de Descuento debajo de la foto del juego
   const couponNoticeBox = document.getElementById('checkout-coupon-notice');
   const couponDetailText = document.getElementById('checkout-coupon-detail');
@@ -1597,12 +1621,31 @@ async function handlePaymentSubmit(e) {
     });
 
     const data = await res.json();
-    if (data.exito && data.redirectUrl) {
-      const pasarelaNombre = metodoPago === 'mercadopago' ? 'Mercado Pago 💙' : 'Flow Chile 💳';
-      showToast(`¡Redirigiendo a la pasarela segura de ${pasarelaNombre}!`);
-      setTimeout(() => {
-        window.location.href = data.redirectUrl;
-      }, 600);
+    if (data.exito) {
+      // Si el total es $0 CLP (Cupón PRUEBAXD), finalizar de inmediato sin salir del sitio
+      if (montoTotal === 0) {
+        closePaymentModal();
+        cart = [];
+        saveCart();
+        updateCartBadge();
+        openReceiptModal({
+          codigoOrden: data.codigoOrden,
+          cliente: `${nombre} ${apellido}`,
+          usuario: username,
+          total: '$0 CLP',
+          fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        });
+        showToast('¡Pedido de prueba $0 CLP completado exitosamente! 🎉');
+        return;
+      }
+
+      if (data.redirectUrl) {
+        const pasarelaNombre = metodoPago === 'mercadopago' ? 'Mercado Pago 💙' : 'Flow Chile 💳';
+        showToast(`¡Redirigiendo a la pasarela segura de ${pasarelaNombre}!`);
+        setTimeout(() => {
+          window.location.href = data.redirectUrl;
+        }, 600);
+      }
     } else {
       alert(data.error || 'Ocurrió un problema al procesar el pago.');
     }
@@ -1611,7 +1654,7 @@ async function handlePaymentSubmit(e) {
   } finally {
     btn.disabled = false;
     btn.innerHTML = `
-      <span>Continuar al Pago</span>
+      <span>${montoTotal === 0 ? '¡Finalizar Pedido ($0 CLP)!' : 'Continuar al Pago'}</span>
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="5" y1="12" x2="19" y2="12"></line>
         <polyline points="12 5 19 12 12 19"></polyline>
@@ -1813,9 +1856,12 @@ function handleApplyCoupon() {
   const msgEl = document.getElementById('coupon-message');
   if (!input || !msgEl) return;
 
-  const code = input.value.trim().toUpperCase();
+  const rawCode = input.value.trim();
+  const code = rawCode.toUpperCase();
+
   if (!code) {
     msgEl.className = 'coupon-msg error';
+    msgEl.style.color = '#ff4d6d';
     msgEl.textContent = 'Por favor ingresa un código de descuento.';
     return;
   }
@@ -1824,12 +1870,18 @@ function handleApplyCoupon() {
   if (coupon) {
     appliedCoupon = coupon;
     msgEl.className = 'coupon-msg success';
-    msgEl.textContent = `¡Cupón ${coupon.code} aplicado! (${coupon.desc})`;
+    msgEl.style.color = '#34d399';
+    msgEl.textContent = `✓ ¡Código aplicado! (${coupon.desc})`;
     renderCartDrawer();
-    showToast(`¡Cupón ${coupon.code} aplicado con éxito! 🎉`);
+    renderPayCarousel();
+    showToast(`¡Código ${coupon.code} aplicado con éxito! 🎉`);
   } else {
+    appliedCoupon = null;
     msgEl.className = 'coupon-msg error';
-    msgEl.textContent = 'Código no válido o expirado.';
+    msgEl.style.color = '#ff4d6d';
+    msgEl.textContent = '❌ El código de descuento no existe.';
+    renderCartDrawer();
+    renderPayCarousel();
   }
 }
 
