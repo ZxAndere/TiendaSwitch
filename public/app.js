@@ -58,6 +58,7 @@ function formatCLP(num) {
 document.addEventListener('DOMContentLoaded', () => {
   initEventListeners();
   initUserSession();
+  fetchSettings();
   fetchCatalog();
   fetchAndRenderGallery();
   updateCartBadge();
@@ -1818,8 +1819,65 @@ window.addEventListener('scroll', () => {
   lastScrollY = currentScrollY;
 }, { passive: true });
 
-// --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS ---
+// --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS CON SLIDER DE 4 TARJETAS ---
 let customerGalleryStore = [];
+let isGalleryEnabled = false;
+let currentGalleryPage = 0;
+const GALLERY_ITEMS_PER_PAGE = 4;
+
+async function fetchSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (!res.ok) return;
+    const data = await res.json();
+    isGalleryEnabled = !!data.galleryEnabled;
+    applyGalleryVisibility();
+  } catch (err) {}
+}
+
+function applyGalleryVisibility() {
+  const section = document.getElementById('customer-gallery-section');
+  const toggleBtn = document.getElementById('toggle-gallery-status-btn');
+
+  if (section) {
+    section.style.display = isGalleryEnabled ? 'block' : 'none';
+  }
+
+  if (toggleBtn) {
+    if (isGalleryEnabled) {
+      toggleBtn.innerHTML = '🟢 Habilitada (Visible en tienda)';
+      toggleBtn.style.background = 'rgba(52, 211, 153, 0.2)';
+      toggleBtn.style.color = '#34d399';
+      toggleBtn.style.borderColor = '#34d399';
+    } else {
+      toggleBtn.innerHTML = '🔴 Deshabilitada (Oculta)';
+      toggleBtn.style.background = 'rgba(255, 0, 60, 0.2)';
+      toggleBtn.style.color = '#ff4d6d';
+      toggleBtn.style.borderColor = '#ff4d6d';
+    }
+  }
+}
+
+async function handleAdminToggleGallery() {
+  if (!currentUser) return;
+
+  const newStatus = !isGalleryEnabled;
+  try {
+    const res = await fetch('/api/admin/settings/toggle-gallery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: newStatus, username: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.exito) {
+      isGalleryEnabled = newStatus;
+      applyGalleryVisibility();
+      showToast(data.mensaje || 'Visibilidad de la galería actualizada.');
+    }
+  } catch (err) {
+    alert('Error al conectar con el servidor.');
+  }
+}
 
 async function fetchAndRenderGallery() {
   const container = document.getElementById('customer-gallery-grid');
@@ -1837,15 +1895,31 @@ async function fetchAndRenderGallery() {
 
 function renderCustomerGallery(items) {
   const container = document.getElementById('customer-gallery-grid');
+  const pageIndicator = document.getElementById('gallery-page-indicator');
+  const prevBtn = document.getElementById('gallery-prev-btn');
+  const nextBtn = document.getElementById('gallery-next-btn');
+
   if (!container) return;
 
   if (!Array.isArray(items) || items.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); grid-column: 1/-1;">No hay fotos registradas en la galería.</p>';
+    if (pageIndicator) pageIndicator.textContent = '0 / 0';
     return;
   }
 
-  container.innerHTML = items.map(item => `
-    <div class="gallery-card">
+  const totalPages = Math.ceil(items.length / GALLERY_ITEMS_PER_PAGE);
+  if (currentGalleryPage >= totalPages) currentGalleryPage = totalPages - 1;
+  if (currentGalleryPage < 0) currentGalleryPage = 0;
+
+  const startIndex = currentGalleryPage * GALLERY_ITEMS_PER_PAGE;
+  const pageItems = items.slice(startIndex, startIndex + GALLERY_ITEMS_PER_PAGE);
+
+  if (pageIndicator) pageIndicator.textContent = `${currentGalleryPage + 1} / ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = currentGalleryPage === 0;
+  if (nextBtn) nextBtn.disabled = currentGalleryPage >= totalPages - 1;
+
+  container.innerHTML = pageItems.map(item => `
+    <div class="gallery-card in-view">
       <img src="${escapeHTML(item.imagen)}" alt="Setup de ${escapeHTML(item.user)}" loading="lazy">
       <div class="gallery-card-info">
         <div class="gallery-user">${escapeHTML(item.stars || '⭐ ⭐ ⭐ ⭐ ⭐')} <strong>${escapeHTML(item.user)}</strong></div>
@@ -1853,6 +1927,16 @@ function renderCustomerGallery(items) {
       </div>
     </div>
   `).join('');
+}
+
+function slideGallery(delta) {
+  if (!Array.isArray(customerGalleryStore) || customerGalleryStore.length === 0) return;
+  const totalPages = Math.ceil(customerGalleryStore.length / GALLERY_ITEMS_PER_PAGE);
+  const newPage = currentGalleryPage + delta;
+  if (newPage >= 0 && newPage < totalPages) {
+    currentGalleryPage = newPage;
+    renderCustomerGallery(customerGalleryStore);
+  }
 }
 
 // --- FUNCIONES ADMIN PARA LA GALERÍA DE CLIENTES ---

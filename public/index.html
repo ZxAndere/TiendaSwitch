@@ -31,10 +31,10 @@
 
       <!-- Acciones de Navegación Escritorio -->
       <div class="nav-actions">
-        <!-- Botón a Guía de Instalación Paso a Paso -->
-        <button class="nav-faq-btn desktop-only" id="open-install-guide-btn" title="Guía de Instalación Paso a Paso">
+        <!-- Botón a Guía de Instalación en FAQ -->
+        <a href="faq.html#install-guide" class="nav-faq-btn desktop-only" title="Guía de Instalación en FAQ">
           <span>🎮 Guía Instalación</span>
-        </button>
+        </a>
 
         <!-- Botón a Página FAQ (Preguntas Frecuentes) -->
         <a href="faq.html" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
@@ -236,16 +236,24 @@
     </div>
   </main>
 
-  <!-- Galería de Setup / Fotos Reales de Clientes (Ubicada abajo del catálogo) -->
-  <section class="customer-gallery-section">
+  <!-- Galería de Setup / Fotos Reales de Clientes (Deshabilitada por defecto, activable por el admin) -->
+  <section class="customer-gallery-section" id="customer-gallery-section" style="display: none;">
     <div class="gallery-container">
-      <div class="gallery-header">
-        <h2 class="gallery-title">📸 Experiencias y Setups de Nuestros Clientes</h2>
-        <p class="gallery-subtitle">Fotos reales compartidas por compradores de Nintendo Switch en Chile</p>
+      <div class="gallery-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 class="gallery-title">📸 Experiencias y Setups de Nuestros Clientes</h2>
+          <p class="gallery-subtitle">Fotos reales compartidas por compradores de Nintendo Switch en Chile</p>
+        </div>
+        <!-- Controles deslizables (4 tarjetas por página) -->
+        <div class="gallery-controls" style="display: flex; align-items: center; gap: 0.6rem;">
+          <button type="button" class="slider-arrow" id="gallery-prev-btn" onclick="slideGallery(-1)" aria-label="Anterior">❮</button>
+          <span id="gallery-page-indicator" style="font-size: 0.82rem; font-weight: 700; color: var(--joycon-cyan);">1 / 1</span>
+          <button type="button" class="slider-arrow" id="gallery-next-btn" onclick="slideGallery(1)" aria-label="Siguiente">❯</button>
+        </div>
       </div>
 
       <div class="gallery-grid" id="customer-gallery-grid">
-        <!-- Renderizado dinámico de fotos de clientes por JS -->
+        <!-- Renderizado dinámico de 4 reseñas por vista con JS -->
       </div>
     </div>
   </section>
@@ -503,6 +511,17 @@
 
           <!-- Vista Galería Admin -->
           <div id="admin-view-gallery" style="display: none;">
+            <!-- Interruptor para Habilitar / Deshabilitar la Galería en la tienda -->
+            <div class="admin-gallery-toggle-card" style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); padding: 0.9rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <strong style="color: #ffffff; font-size: 0.9rem;">Mostrar Galería de Clientes en la Tienda</strong>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">Activa o desactiva la sección de fotos y reseñas en la página principal.</p>
+              </div>
+              <button type="button" id="toggle-gallery-status-btn" class="pill-btn" onclick="handleAdminToggleGallery()" style="padding: 0.5rem 1rem; font-weight: 800;">
+                🔴 Deshabilitada (Oculta)
+              </button>
+            </div>
+
             <form id="admin-add-gallery-form" class="settings-form" style="margin-bottom: 1.25rem;">
               <h5 style="color: var(--joycon-cyan); font-size: 0.95rem; font-weight: 800;">➕ Agregar Nueva Foto / Reseña a la Galería</h5>
               <div class="form-group-row">

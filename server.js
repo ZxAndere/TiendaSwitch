@@ -24,6 +24,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
 const GAMES_FILE = path.join(DATA_DIR, 'games.json');
 const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -914,18 +915,146 @@ app.post('/api/user/confirm-password-update', (req, res) => {
   res.json({ exito: true, mensaje: "Contraseña actualizada correctamente." });
 });
 
-// Cargar catálogo de juegos desde games.json o inicializar con JUEGOS por defecto
+// Catálogo de Juegos por Defecto
+const DEFAULT_GAMES = [
+  {
+    id: 1,
+    titulo: "The Legend of Zelda: Tears of the Kingdom",
+    categoria: "Acción / Aventura",
+    precioSecundaria: 14990,
+    precioPrimaria: 24990,
+    precioOriginal: 59990,
+    rating: 5,
+    peso: "16.3 GB",
+    imagen: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Explora los cielos y las profundidades de Hyrule en esta aclamada secuela épica.",
+    resumenExtenso: "Embarca en una aventura sin precedentes a través de la tierra y los cielos de Hyrule...",
+    visible: true
+  },
+  {
+    id: 2,
+    titulo: "Super Mario Bros. Wonder",
+    categoria: "Plataformas",
+    precioSecundaria: 12990,
+    precioPrimaria: 21990,
+    precioOriginal: 54990,
+    rating: 5,
+    peso: "4.5 GB",
+    imagen: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Disfruta de la magia de las Flores Maravilla y transforma el mundo de Mario en compañía.",
+    resumenExtenso: "Super Mario Bros. Wonder redefine la experiencia clásica de plataformas 2D...",
+    visible: true
+  },
+  {
+    id: 3,
+    titulo: "Mario Kart 8 Deluxe",
+    categoria: "Multijugador",
+    precioSecundaria: 11990,
+    precioPrimaria: 19990,
+    precioOriginal: 49990,
+    rating: 5,
+    peso: "8.0 GB",
+    imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Compite con tus personajes favoritos en 48 pistas llenas de emoción y objetos locos.",
+    resumenExtenso: "La versión definitiva del juego de carreras más famoso de Nintendo...",
+    visible: true
+  },
+  {
+    id: 4,
+    titulo: "Super Smash Bros. Ultimate",
+    categoria: "Multijugador",
+    precioSecundaria: 13990,
+    precioPrimaria: 22990,
+    precioOriginal: 54990,
+    rating: 5,
+    peso: "17.0 GB",
+    imagen: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "¡Todos están aquí! El mayor crossover de la historia del videojuego con más de 80 luchadores.",
+    resumenExtenso: "Super Smash Bros. Ultimate reúne a icónicos héroes y villanos...",
+    visible: true
+  },
+  {
+    id: 5,
+    titulo: "Pokémon Escarlata",
+    categoria: "Acción / Aventura",
+    precioSecundaria: 12990,
+    precioPrimaria: 21990,
+    precioOriginal: 54990,
+    rating: 5,
+    peso: "10.0 GB",
+    imagen: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Explora la región de Paldea en un mundo abierto sin fronteras y atrapa nuevos Pokémon.",
+    resumenExtenso: "Vive la primera gran aventura de mundo abierto de Pokémon...",
+    visible: true
+  },
+  {
+    id: 6,
+    titulo: "Metroid Dread",
+    categoria: "Acción / Aventura",
+    precioSecundaria: 10990,
+    precioPrimaria: 18990,
+    precioOriginal: 49990,
+    rating: 5,
+    peso: "4.1 GB",
+    imagen: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Acompaña a Samus Aran en su misión más peligrosa huyendo de los mortales robots E.M.M.I.",
+    resumenExtenso: "Metroid Dread marca el regreso de la legendaria caza-recompensas Samus Aran...",
+    visible: true
+  },
+  {
+    id: 7,
+    titulo: "Animal Crossing: New Horizons",
+    categoria: "Simulación",
+    precioSecundaria: 11990,
+    precioPrimaria: 19990,
+    precioOriginal: 49990,
+    rating: 5,
+    peso: "7.0 GB",
+    imagen: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Crea tu propio paraíso en una isla desierta y vive a tu propio ritmo con vecinos encantadores.",
+    resumenExtenso: "Escapa a tu propia isla desierta en Animal Crossing: New Horizons...",
+    visible: true
+  },
+  {
+    id: 8,
+    titulo: "Hollow Knight",
+    categoria: "Indie",
+    precioSecundaria: 4990,
+    precioPrimaria: 8990,
+    precioOriginal: 14990,
+    rating: 5,
+    peso: "5.3 GB",
+    imagen: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=800&auto=format&fit=crop",
+    imagenDetalle: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop",
+    descripcion: "Desciende al oscuro reino de Hallownest en una obra maestra de acción y exploración en 2D.",
+    resumenExtenso: "Hollow Knight es una aventura de acción en 2D de estilo metroidvania...",
+    visible: true
+  }
+];
+
 let GAMES_STORE = [];
 function loadInitialGames() {
   if (fs.existsSync(GAMES_FILE)) {
     try {
       const data = fs.readFileSync(GAMES_FILE, 'utf8');
       GAMES_STORE = JSON.parse(data);
+      if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+        GAMES_STORE = [...DEFAULT_GAMES];
+        saveGamesLocal(GAMES_STORE);
+      }
     } catch (e) {
-      GAMES_STORE = [...JUEGOS];
+      GAMES_STORE = [...DEFAULT_GAMES];
+      saveGamesLocal(GAMES_STORE);
     }
   } else {
-    GAMES_STORE = [...JUEGOS];
+    GAMES_STORE = [...DEFAULT_GAMES];
     saveGamesLocal(GAMES_STORE);
   }
 }
@@ -1099,6 +1228,49 @@ function saveGalleryLocal(gallery) {
 }
 
 loadInitialGallery();
+
+// --- CONFIGURACIÓN GLOBAL (SETTINGS) ---
+let STORED_SETTINGS = {
+  galleryEnabled: false
+};
+
+function loadSettings() {
+  if (fs.existsSync(SETTINGS_FILE)) {
+    try {
+      STORED_SETTINGS = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+    } catch (e) {
+      STORED_SETTINGS = { galleryEnabled: false };
+    }
+  } else {
+    saveSettings(STORED_SETTINGS);
+  }
+}
+
+function saveSettings(settings) {
+  STORED_SETTINGS = settings;
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+  } catch (e) {}
+}
+
+loadSettings();
+
+app.get('/api/settings', (req, res) => {
+  res.json(STORED_SETTINGS);
+});
+
+app.post('/api/admin/settings/toggle-gallery', (req, res) => {
+  const { enabled, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  STORED_SETTINGS.galleryEnabled = !!enabled;
+  saveSettings(STORED_SETTINGS);
+
+  console.log(`🛠️ [ADMIN] Galería cambiada a: ${STORED_SETTINGS.galleryEnabled ? 'HABILITADA' : 'DESHABILITADA'}`);
+  res.json({ exito: true, mensaje: `Galería de clientes ${STORED_SETTINGS.galleryEnabled ? 'habilitada' : 'deshabilitada'} en la tienda.`, settings: STORED_SETTINGS });
+});
 
 // Endpoint público: obtener ítems de la galería
 app.get('/api/gallery', (req, res) => {
