@@ -919,6 +919,37 @@ function saveGamesLocal(games) {
       } catch (e) {}
     });
   }
+
+  // Notificar a todos los clientes conectados a través de Server-Sent Events (SSE)
+  broadcastCatalogUpdate();
+}
+
+// Server-Sent Events (SSE) para sincronización a tiempo real sin refrescar página
+const sseClients = new Set();
+
+app.get('/api/juegos/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (res.flushHeaders) res.flushHeaders();
+
+  sseClients.add(res);
+
+  req.on('close', () => {
+    sseClients.delete(res);
+  });
+});
+
+function broadcastCatalogUpdate() {
+  const visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames })}\n\n`;
+  sseClients.forEach(client => {
+    try {
+      client.write(payload);
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  });
 }
 
 loadInitialGames();
@@ -957,9 +988,9 @@ app.post('/api/admin/juegos/toggle', (req, res) => {
   res.json({ exito: true, mensaje: `Visibilidad de ${game.titulo} actualizada.`, juegos: GAMES_STORE });
 });
 
-// Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto, etc.) en tiempo real
+// Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto Normal, Foto Detalle, etc.) en tiempo real
 app.post('/api/admin/juegos/update', (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, username } = req.body;
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, username } = req.body;
   if ((username || '').toLowerCase() !== 'zxandere') {
     return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
   }
@@ -974,6 +1005,7 @@ app.post('/api/admin/juegos/update', (req, res) => {
   if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
   if (descripcion) game.descripcion = descripcion.trim();
   if (imagen) game.imagen = imagen.trim();
+  if (imagenDetalle) game.imagenDetalle = imagenDetalle.trim();
 
   saveGamesLocal(GAMES_STORE);
 
