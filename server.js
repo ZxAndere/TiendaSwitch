@@ -1,3 +1,4 @@
+const { Resend } = require('resend');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
