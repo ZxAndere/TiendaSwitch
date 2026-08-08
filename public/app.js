@@ -197,6 +197,36 @@ function initEventListeners() {
   const updateOtpForm = document.getElementById('update-otp-form');
   if (updateOtpForm) updateOtpForm.addEventListener('submit', handleUpdateOtpSubmit);
 
+  // Control del Menú Lateral Móvil (3 Rayas ☰)
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const closeMobileDrawerBtn = document.getElementById('close-mobile-drawer');
+  const mobileOverlay = document.getElementById('mobile-drawer-overlay');
+
+  if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMobileDrawer);
+  if (closeMobileDrawerBtn) closeMobileDrawerBtn.addEventListener('click', closeMobileDrawer);
+  if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileDrawer);
+
+  // Sincronización de Búsqueda y Moneda Móvil
+  const mobileSearchInput = document.getElementById('mobile-search-input');
+  if (mobileSearchInput) {
+    mobileSearchInput.addEventListener('input', (e) => {
+      searchTerm = e.target.value.toLowerCase().trim();
+      const desktopSearch = document.getElementById('search-input');
+      if (desktopSearch) desktopSearch.value = e.target.value;
+      renderCatalog();
+    });
+  }
+
+  const mobileCurrencySelect = document.getElementById('mobile-currency-select');
+  if (mobileCurrencySelect) {
+    mobileCurrencySelect.addEventListener('change', (e) => {
+      currentCurrency = e.target.value;
+      const desktopCurrency = document.getElementById('currency-select');
+      if (desktopCurrency) desktopCurrency.value = currentCurrency;
+      renderCatalog();
+    });
+  }
+
   // Tabs de configuración de cuenta
   document.querySelectorAll('.settings-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -260,6 +290,15 @@ function openUserSettingsModal() { document.getElementById('user-settings-modal-
 function closeUserSettingsModal() { document.getElementById('user-settings-modal-backdrop').classList.remove('active'); }
 function openUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.add('active'); }
 function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.remove('active'); }
+
+function openMobileDrawer() {
+  document.getElementById('mobile-nav-drawer').classList.add('active');
+  document.getElementById('mobile-drawer-overlay').classList.add('active');
+}
+function closeMobileDrawer() {
+  document.getElementById('mobile-nav-drawer').classList.remove('active');
+  document.getElementById('mobile-drawer-overlay').classList.remove('active');
+}
 
 // --- GESTIÓN DE CONFIGURACIÓN DE CUENTA Y ÓRDENES ---
 async function fetchAndRenderUserOrders() {
@@ -453,10 +492,10 @@ async function handleUpdateOtpSubmit(e) {
 
 function initUserSession() {
   const userNavArea = document.getElementById('user-nav-area');
-  if (!userNavArea) return;
+  const mobileUserContainer = document.getElementById('mobile-user-nav-container');
 
   if (currentUser) {
-    userNavArea.innerHTML = `
+    const userHtml = `
       <div class="user-profile-menu-container">
         <button class="user-profile-trigger" id="user-menu-trigger">
           <span>👤</span>
@@ -464,22 +503,40 @@ function initUserSession() {
           <span style="font-size: 0.7rem;">▼</span>
         </button>
         <div class="user-dropdown-menu" id="user-dropdown-menu">
-          <button class="dropdown-item" onclick="openUserOrdersModal()">📦 Mis Órdenes</button>
-          <button class="dropdown-item" onclick="openUserSettingsModal()">⚙️ Opciones de Cuenta</button>
-          <button class="dropdown-item danger" onclick="handleLogout()">🚪 Cerrar Sesión</button>
+          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();">📦 Mis Órdenes</button>
+          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();">⚙️ Opciones de Cuenta</button>
+          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();">🚪 Cerrar Sesión</button>
         </div>
       </div>
     `;
 
-    document.getElementById('user-menu-trigger').addEventListener('click', (e) => {
-      e.stopPropagation();
-      document.getElementById('user-dropdown-menu').classList.toggle('active');
-    });
+    if (userNavArea) userNavArea.innerHTML = userHtml;
+    if (mobileUserContainer) {
+      mobileUserContainer.innerHTML = `
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 0.6rem;">
+          <div style="font-weight: 800; font-size: 0.9rem; color: var(--joycon-cyan);">👤 ${escapeHTML(currentUser.username)}</div>
+          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();" style="padding: 0.4rem 0;">📦 Mis Órdenes</button>
+          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();" style="padding: 0.4rem 0;">⚙️ Opciones de Cuenta</button>
+          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();" style="padding: 0.4rem 0;">🚪 Cerrar Sesión</button>
+        </div>
+      `;
+    }
+
+    const trigger = document.getElementById('user-menu-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = document.getElementById('user-dropdown-menu');
+        if (menu) menu.classList.toggle('active');
+      });
+    }
   } else {
-    userNavArea.innerHTML = `
-      <button class="nav-auth-btn login-btn" onclick="openLoginModal()">Iniciar Sesión</button>
-      <button class="nav-auth-btn register-btn" onclick="openRegisterModal()">Registrarse</button>
+    const authHtml = `
+      <button class="nav-auth-btn login-btn" onclick="openLoginModal(); closeMobileDrawer();">Iniciar Sesión</button>
+      <button class="nav-auth-btn register-btn" onclick="openRegisterModal(); closeMobileDrawer();">Registrarse</button>
     `;
+    if (userNavArea) userNavArea.innerHTML = authHtml;
+    if (mobileUserContainer) mobileUserContainer.innerHTML = authHtml;
   }
 }
 

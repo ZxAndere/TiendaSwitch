@@ -52,6 +52,9 @@
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+  overflow-x: hidden;
+  width: 100vw;
+  max-width: 100%;
 }
 
 body {
@@ -60,6 +63,8 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   overflow-x: hidden;
+  width: 100vw;
+  max-width: 100%;
   min-height: 100vh;
   background-image: 
     radial-gradient(circle at 10% 10%, rgba(255, 0, 60, 0.08) 0%, transparent 40%),
@@ -2334,4 +2339,193 @@ body {
     width: 100% !important;
     max-width: 100% !important;
   }
+}
+
+/* ==========================================================================
+   MENÚ LATERAL MÓVIL DESLIZABLE (3 RAYAS ☰) Y VISIBILIDAD
+   ========================================================================== */
+.desktop-only { display: flex !important; }
+.mobile-only { display: none !important; }
+
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: flex !important; }
+}
+
+.mobile-menu-trigger-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-trigger-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--joycon-cyan);
+}
+
+.mobile-drawer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 1100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-drawer-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-nav-drawer {
+  position: fixed;
+  top: 0;
+  left: -320px;
+  width: 295px;
+  height: 100%;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border-subtle);
+  z-index: 1200;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+
+.mobile-nav-drawer.active {
+  transform: translateX(320px);
+}
+
+.mobile-drawer-header {
+  padding: 1.25rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(7, 10, 18, 0.85);
+}
+
+.mobile-drawer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mobile-brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.mobile-drawer-brand h3 {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.mobile-drawer-body {
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.mobile-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-section-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-search-box {
+  position: relative;
+  width: 100%;
+}
+
+.mobile-search-box .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.mobile-search-box .search-input {
+  width: 100%;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.6rem 0.75rem 0.6rem 2.2rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.mobile-search-box .search-input:focus {
+  border-color: var(--joycon-cyan);
+}
+
+.mobile-currency-select {
+  width: 100%;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.mobile-drawer-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.mobile-drawer-link:hover {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: rgba(0, 240, 255, 0.3);
+}
+
+.mobile-user-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mobile-user-container .nav-auth-btn {
+  width: 100%;
+  text-align: center;
+  padding: 0.7rem;
+  font-weight: 800;
 }
