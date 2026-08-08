@@ -31,17 +31,17 @@
 
       <!-- Acciones de Navegación Escritorio -->
       <div class="nav-actions">
-        <!-- Botón a Guía de Instalación en FAQ -->
-        <a href="faq.html#install-guide" class="nav-faq-btn desktop-only" title="Guía de Instalación en FAQ">
-          <span>🎮 Guía Instalación</span>
-        </a>
+        <!-- Buscador integrado en el Header (PRIMERO) -->
+        <div class="header-search-box desktop-only">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Buscar juego..." aria-label="Buscar juegos" autocomplete="off">
+          <div class="search-autocomplete-dropdown" id="search-autocomplete-dropdown"></div>
+        </div>
 
-        <!-- Botón a Página FAQ (Preguntas Frecuentes) -->
-        <a href="faq.html" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
-          <span>❓ FAQ</span>
-        </a>
-
-        <!-- Selector de Conversión de Monedas / Pesos -->
+        <!-- Selector de Conversión de Monedas / Pesos (SEGUNDO) -->
         <div class="currency-select-wrapper desktop-only">
           <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
             <option value="CLP">Chile (CLP)</option>
@@ -54,15 +54,10 @@
           </select>
         </div>
 
-        <!-- Buscador integrado en el Header con Predictivo Auto-complete -->
-        <div class="header-search-box desktop-only">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input type="text" id="search-input" placeholder="Buscar juego..." aria-label="Buscar juegos" autocomplete="off">
-          <div class="search-autocomplete-dropdown" id="search-autocomplete-dropdown"></div>
-        </div>
+        <!-- Botón a Página FAQ (Preguntas Frecuentes) -->
+        <a href="faq.html" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
+          <span>❓ FAQ</span>
+        </a>
 
         <!-- Área de Usuario / Sesión (Cuenta) -->
         <div id="user-nav-area" class="user-nav-area desktop-only">
@@ -759,6 +754,12 @@
               <span class="pay-game-lic" id="pay-carousel-lic">-</span>
             </div>
             <div class="pay-slider-dots" id="pay-slider-dots"></div>
+
+            <!-- Aviso de Código de Descuento debajo de la foto del juego -->
+            <div id="checkout-coupon-notice" class="checkout-coupon-notice" style="display: none;">
+              <span class="coupon-notice-title">🎟️ ¿Ocupar el código de descuento?</span>
+              <strong id="checkout-coupon-detail" class="coupon-notice-detail">¡Sí! Cupón Aplicado en el Carrito</strong>
+            </div>
           </div>
 
           <div class="payment-summary-box">

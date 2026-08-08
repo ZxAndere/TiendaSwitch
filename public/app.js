@@ -1510,10 +1510,34 @@ function renderPayCarousel() {
   }
 
   const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
-  const totalPrice = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percent') {
+      discount = Math.round((subtotal * appliedCoupon.value) / 100);
+    } else if (appliedCoupon.type === 'fixed') {
+      discount = Math.min(subtotal, appliedCoupon.value);
+    }
+  }
+
+  const finalTotal = Math.max(0, subtotal - discount);
 
   document.getElementById('pay-total-items').textContent = totalItems;
-  document.getElementById('pay-total-price').textContent = formatCLP(totalPrice);
+  document.getElementById('pay-total-price').textContent = formatCLP(finalTotal);
+
+  // Mostrar aviso de Cupón de Descuento debajo de la foto del juego
+  const couponNoticeBox = document.getElementById('checkout-coupon-notice');
+  const couponDetailText = document.getElementById('checkout-coupon-detail');
+  if (couponNoticeBox && couponDetailText) {
+    if (appliedCoupon) {
+      couponNoticeBox.style.display = 'flex';
+      const discText = appliedCoupon.type === 'percent' ? `${appliedCoupon.value}% OFF` : `-${formatCLP(appliedCoupon.value)}`;
+      couponDetailText.textContent = `¡Sí! Cupón "${appliedCoupon.code}" aplicado (${discText} - Ahorro: ${formatCLP(discount)})`;
+    } else {
+      couponNoticeBox.style.display = 'none';
+    }
+  }
 }
 
 function navigatePaySlider(direction) {
@@ -1534,6 +1558,8 @@ async function handlePaymentSubmit(e) {
   const apellido = document.getElementById('checkout-surname').value.trim();
   const emailInput = document.getElementById('checkout-email');
   const email = emailInput ? emailInput.value.trim() : '';
+  const selectedGatewayRadio = document.querySelector('input[name="payment_gateway"]:checked');
+  const metodoPago = selectedGatewayRadio ? selectedGatewayRadio.value : 'flow';
 
   if (!nombre || !apellido || !email) {
     alert('Por favor completa tu nombre, apellido y correo electrónico.');
@@ -1547,16 +1573,27 @@ async function handlePaymentSubmit(e) {
     return;
   }
 
+  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percent') {
+      discount = Math.round((subtotal * appliedCoupon.value) / 100);
+    } else if (appliedCoupon.type === 'fixed') {
+      discount = Math.min(subtotal, appliedCoupon.value);
+    }
+  }
+  const montoTotal = Math.max(0, subtotal - discount);
+
   const username = currentUser ? currentUser.username : 'Invitado';
   const btn = document.getElementById('submit-payment-btn');
   btn.disabled = true;
-  btn.innerHTML = `<span>Conectando con ${metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Flow'}...</span>`;
+  btn.innerHTML = `<span>Procesando pedido...</span>`;
 
   try {
     const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: cart })
+      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: cart, montoTotal })
     });
 
     const data = await res.json();
@@ -1764,6 +1801,7 @@ function escapeHTML(str) {
 let appliedCoupon = null;
 
 const AVAILABLE_COUPONS = {
+  PRUEBAXD: { code: 'PRUEBAXD', type: 'percent', value: 100, desc: '100% de descuento (Modo Prueba Pruebaxd)' },
   ZONA10: { code: 'ZONA10', type: 'percent', value: 10, desc: '10% de descuento' },
   SWITCH2026: { code: 'SWITCH2026', type: 'percent', value: 15, desc: '15% de descuento' },
   NINTENDO5: { code: 'NINTENDO5', type: 'fixed', value: 5000, desc: '$5.000 CLP de descuento' },

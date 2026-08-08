@@ -1333,14 +1333,15 @@ app.post('/api/admin/gallery/delete', (req, res) => {
 });
 
 app.post('/api/checkout', async (req, res) => {
-  const { nombre, apellido, email, carrito, username, metodoPago } = req.body;
+  const { nombre, apellido, email, carrito, username, metodoPago, montoTotal } = req.body;
 
   if (!nombre || !apellido || !email || !carrito || carrito.length === 0) {
     return res.status(400).json({ error: "Datos incompletos para procesar la orden." });
   }
 
   const cleanEmail = email.trim();
-  const total = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const subtotal = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const total = typeof montoTotal === 'number' ? Math.max(0, montoTotal) : subtotal;
   const codigoOrden = `ZSC-${Math.floor(100000 + Math.random() * 900000)}`;
 
   const orderData = {
@@ -1353,7 +1354,7 @@ app.post('/api/checkout', async (req, res) => {
     total,
     totalFormatted: `$${total.toLocaleString('es-CL')} CLP`,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    estado: 'pendiente',
+    estado: total === 0 ? 'pagada' : 'pendiente',
     metodoPago: metodoPago || 'flow'
   };
 
@@ -1361,6 +1362,16 @@ app.post('/api/checkout', async (req, res) => {
   const orders = getOrders();
   orders.push(orderData);
   saveOrders(orders);
+
+  // Si el total es 0 CLP (Cupón del 100% como PRUEBAXD), finalizar orden inmediatamente sin cobrar
+  if (total === 0) {
+    return res.json({
+      exito: true,
+      redirectUrl: `/?flow_order=${codigoOrden}&status=2`,
+      codigoOrden,
+      detalles: orderData
+    });
+  }
 
   // Determinar protocolo y host para retorno de pasarelas
   const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase();
