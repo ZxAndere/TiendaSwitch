@@ -114,17 +114,20 @@ app.get('/api/debug/mongo', (req, res) => {
 });
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
-const FLOW_API_KEY = (process.env.FLOW_API_KEY || '').trim();
-const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || '').trim();
+const DEFAULT_FLOW_KEY = '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
+const DEFAULT_FLOW_SECRET = '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
 
-let rawFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/\/+$/, '');
+const FLOW_API_KEY = (process.env.FLOW_API_KEY || DEFAULT_FLOW_KEY).trim().replace(/^["']|["']$/g, '');
+const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || DEFAULT_FLOW_SECRET).trim().replace(/^["']|["']$/g, '');
+
+let rawFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
 if (rawFlowUrl.includes('flow.cl') && !rawFlowUrl.includes('www.flow.cl') && !rawFlowUrl.includes('sandbox')) {
   rawFlowUrl = rawFlowUrl.replace('flow.cl', 'www.flow.cl');
 }
 const FLOW_API_URL = rawFlowUrl;
 
-const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || '').trim();
-const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || '').trim();
+const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad').trim().replace(/^["']|["']$/g, '');
+const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626').trim().replace(/^["']|["']$/g, '');
 
 const ORDERS_STORE = new Map();
 
@@ -963,13 +966,17 @@ app.post('/api/checkout', async (req, res) => {
 
   let flowParams = buildFlowParams(flowEmail);
 
+  const flowHeaders = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7'
+  };
+
   try {
     let flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      },
+      headers: flowHeaders,
       body: new URLSearchParams(flowParams).toString()
     });
 
@@ -992,10 +999,7 @@ app.post('/api/checkout', async (req, res) => {
 
       flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        },
+        headers: flowHeaders,
         body: new URLSearchParams(flowParams).toString()
       });
 
