@@ -273,6 +273,17 @@ function initEventListeners() {
   // Formulario agregar cupón de descuento (Admin)
   const addCouponForm = document.getElementById('admin-add-coupon-form');
   if (addCouponForm) addCouponForm.addEventListener('submit', handleAdminAddCouponSubmit);
+  const saveCouponBtn = document.getElementById('save-coupon-btn');
+  if (saveCouponBtn) {
+    saveCouponBtn.addEventListener('click', (e) => {
+      const form = document.getElementById('admin-add-coupon-form');
+      if (form && form.checkValidity()) {
+        e.preventDefault();
+        handleAdminAddCouponSubmit(e);
+      }
+    });
+  }
+
   const editGameForm = document.getElementById('game-edit-form');
   if (editGameForm) editGameForm.addEventListener('submit', handleGameEditSubmit);
 
@@ -607,14 +618,8 @@ function openGameEditModal(gameId) {
   const correoImg = document.getElementById('edit-game-correo-imagen');
   if (correoImg) correoImg.value = game.correoImagen || '';
 
-  const cuentasTxt = document.getElementById('edit-game-cuentas');
-  if (cuentasTxt) {
-    if (Array.isArray(game.cuentas)) {
-      cuentasTxt.value = game.cuentas.join('\n');
-    } else {
-      cuentasTxt.value = game.cuentas || '';
-    }
-  }
+  // Renderizar la lista dinámica de variantes de cuenta (Cuenta / Contraseña / Código)
+  renderAccountVariantsList(game.cuentas || []);
 
   document.getElementById('game-edit-error').textContent = '';
   document.getElementById('game-edit-modal-backdrop').classList.add('active');
@@ -626,7 +631,7 @@ function closeGameEditModal() {
 
 async function handleGameEditSubmit(e) {
   e.preventDefault();
-  if (!currentUser) return;
+  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
 
   const gameId = document.getElementById('edit-game-id').value;
   const titulo = document.getElementById('edit-game-titulo').value.trim();
@@ -644,8 +649,26 @@ async function handleGameEditSubmit(e) {
   const correoImagenEl = document.getElementById('edit-game-correo-imagen');
   const correoImagen = correoImagenEl ? correoImagenEl.value.trim() : '';
 
-  const cuentasEl = document.getElementById('edit-game-cuentas');
-  const cuentas = cuentasEl ? cuentasEl.value : '';
+  // Extraer todas las variantes de cuentas del creador dinámico
+  const variantCards = document.querySelectorAll('#account-variants-list-container .variant-row-card');
+  const cuentasArray = [];
+
+  variantCards.forEach(card => {
+    const cuentaInp = card.querySelector('.var-input-cuenta');
+    const passInp = card.querySelector('.var-input-pass');
+    const codigoInp = card.querySelector('.var-input-codigo');
+
+    const cuenta = cuentaInp ? cuentaInp.value.trim() : '';
+    const pass = passInp ? passInp.value.trim() : '';
+    const codigo = codigoInp ? codigoInp.value.trim() : '';
+
+    if (cuenta || pass || codigo) {
+      let formattedLine = cuenta;
+      if (pass || codigo) formattedLine += ` / ${pass}`;
+      if (codigo) formattedLine += ` / ${codigo}`;
+      cuentasArray.push(formattedLine);
+    }
+  });
 
   const errorMsg = document.getElementById('game-edit-error');
   errorMsg.textContent = '';
@@ -669,8 +692,8 @@ async function handleGameEditSubmit(e) {
         descripcion,
         correoTexto,
         correoImagen,
-        cuentas,
-        username: currentUser.username
+        cuentas: cuentasArray,
+        username: adminUsername
       })
     });
 
@@ -1954,34 +1977,51 @@ function renderAdminCouponsList(coupons) {
 }
 
 async function handleAdminAddCouponSubmit(e) {
-  e.preventDefault();
-  if (!currentUser) return;
+  if (e) e.preventDefault();
+  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
 
-  const code = document.getElementById('admin-coupon-code').value.trim();
-  const type = document.getElementById('admin-coupon-type').value;
-  const value = document.getElementById('admin-coupon-value').value;
-  const desc = document.getElementById('admin-coupon-desc').value.trim();
+  const codeInp = document.getElementById('admin-coupon-code');
+  const typeInp = document.getElementById('admin-coupon-type');
+  const valueInp = document.getElementById('admin-coupon-value');
+  const descInp = document.getElementById('admin-coupon-desc');
   const errorMsg = document.getElementById('admin-coupon-error');
-  errorMsg.textContent = '';
+
+  if (!codeInp || !valueInp) return;
+
+  const code = codeInp.value.trim();
+  const type = typeInp ? typeInp.value : 'percent';
+  const value = valueInp.value;
+  const desc = descInp ? descInp.value.trim() : '';
+
+  if (errorMsg) errorMsg.textContent = '';
+
+  if (!code || value === undefined || value === '') {
+    if (errorMsg) errorMsg.textContent = 'Por favor completa el código y el valor del descuento.';
+    return;
+  }
 
   const saveBtn = document.getElementById('save-coupon-btn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Guardando...';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+  }
 
   try {
     const res = await fetch('/api/admin/coupons/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, type, value, desc, username: currentUser.username })
+      body: JSON.stringify({ code, type, value, desc, username: adminUsername })
     });
 
     const data = await res.json();
     if (!res.ok || !data.exito) {
-      errorMsg.textContent = data.error || 'No se pudo guardar el cupón.';
+      if (errorMsg) errorMsg.textContent = data.error || 'No se pudo guardar el cupón.';
       return;
     }
 
-    document.getElementById('admin-add-coupon-form').reset();
+    const form = document.getElementById('admin-add-coupon-form');
+    if (form) form.reset();
+
     if (data.cupones) {
       adminCouponsStore = data.cupones;
       renderAdminCouponsList(adminCouponsStore);
@@ -1989,21 +2029,24 @@ async function handleAdminAddCouponSubmit(e) {
     }
     showToast(`¡Cupón "${code.toUpperCase()}" guardado exitosamente! 🎟️`);
   } catch (err) {
-    errorMsg.textContent = 'Error de comunicación con el servidor.';
+    if (errorMsg) errorMsg.textContent = 'Error de comunicación con el servidor.';
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = '🎟️ Guardar Cupón Permanente';
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '🎟️ Guardar Cupón Permanente';
+    }
   }
 }
 
 async function deleteCoupon(code) {
-  if (!currentUser || !confirm(`¿Estás seguro de borrar permanentemente el cupón ${code}?`)) return;
+  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
+  if (!confirm(`¿Estás seguro de borrar permanentemente el cupón ${code}?`)) return;
 
   try {
     const res = await fetch('/api/admin/coupons/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, username: currentUser.username })
+      body: JSON.stringify({ code, username: adminUsername })
     });
     const data = await res.json();
     if (data.exito && data.cupones) {
@@ -2484,4 +2527,149 @@ async function deleteGalleryItem(id) {
   } catch (err) {
     alert('Error al conectar con el servidor');
   }
+}
+
+// --- FUNCIONES PARA LA CONSTRUCCIÓN DINÁMICA DE VARIANTES DE CUENTAS (Cuenta / Contraseña / Código) ---
+function renderAccountVariantsList(cuentasArray) {
+  const container = document.getElementById('account-variants-list-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  let list = Array.isArray(cuentasArray) ? cuentasArray : [];
+  if (list.length === 0) {
+    list = [''];
+  }
+
+  list.forEach((item) => {
+    let cuenta = '';
+    let pass = '';
+    let codigo = '';
+
+    if (typeof item === 'string' && item.trim()) {
+      const parts = item.includes('/') ? item.split('/') : item.split('|');
+      cuenta = (parts[0] || '').trim();
+      pass = (parts[1] || '').trim();
+      codigo = (parts[2] || parts.slice(2).join('/')).trim();
+    }
+
+    appendAccountVariantCard(container, cuenta, pass, codigo);
+  });
+
+  updateVariantBadges();
+}
+
+function appendAccountVariantCard(container, cuenta = '', pass = '', codigo = '') {
+  const card = document.createElement('div');
+  card.className = 'variant-row-card';
+  card.innerHTML = `
+    <div class="variant-row-header">
+      <span class="variant-number-badge">Variante #1</span>
+      <div class="variant-row-actions">
+        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta">➕</button>
+        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante">🗑️</button>
+      </div>
+    </div>
+    <div class="variant-inputs-grid">
+      <div class="variant-field">
+        <label>Cuenta / Correo</label>
+        <input type="text" class="var-input-cuenta" placeholder="mario1@zonaswitch.cl" value="${escapeHTML(cuenta)}">
+      </div>
+      <span class="variant-slash-separator">/</span>
+      <div class="variant-field">
+        <label>Contraseña</label>
+        <input type="text" class="var-input-pass" placeholder="Pass123!" value="${escapeHTML(pass)}">
+      </div>
+      <span class="variant-slash-separator">/</span>
+      <div class="variant-field">
+        <label>Código / OTP / Notas</label>
+        <input type="text" class="var-input-codigo" placeholder="Enviar WhatsApp" value="${escapeHTML(codigo)}">
+      </div>
+    </div>
+  `;
+  container.appendChild(card);
+  updateVariantBadges();
+}
+
+function addAccountVariantRow(cuenta = '', pass = '', codigo = '') {
+  const container = document.getElementById('account-variants-list-container');
+  if (!container) return;
+  appendAccountVariantCard(container, cuenta, pass, codigo);
+  const lastCard = container.querySelector('.variant-row-card:last-child');
+  if (lastCard) {
+    const input = lastCard.querySelector('.var-input-cuenta');
+    if (input) input.focus();
+  }
+}
+
+function addAccountVariantRowAfter(btnEl) {
+  const currentCard = btnEl.closest('.variant-row-card');
+  const container = document.getElementById('account-variants-list-container');
+  if (!currentCard || !container) return;
+
+  const newCard = document.createElement('div');
+  newCard.className = 'variant-row-card';
+  newCard.innerHTML = `
+    <div class="variant-row-header">
+      <span class="variant-number-badge">Variante #1</span>
+      <div class="variant-row-actions">
+        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta">➕</button>
+        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante">🗑️</button>
+      </div>
+    </div>
+    <div class="variant-inputs-grid">
+      <div class="variant-field">
+        <label>Cuenta / Correo</label>
+        <input type="text" class="var-input-cuenta" placeholder="mario2@zonaswitch.cl" value="">
+      </div>
+      <span class="variant-slash-separator">/</span>
+      <div class="variant-field">
+        <label>Contraseña</label>
+        <input type="text" class="var-input-pass" placeholder="Pass123!" value="">
+      </div>
+      <span class="variant-slash-separator">/</span>
+      <div class="variant-field">
+        <label>Código / OTP / Notas</label>
+        <input type="text" class="var-input-codigo" placeholder="Enviar WhatsApp" value="">
+      </div>
+    </div>
+  `;
+
+  currentCard.after(newCard);
+  updateVariantBadges();
+
+  const input = newCard.querySelector('.var-input-cuenta');
+  if (input) input.focus();
+}
+
+function removeAccountVariantRow(btnEl) {
+  const container = document.getElementById('account-variants-list-container');
+  const cards = container ? container.querySelectorAll('.variant-row-card') : [];
+
+  if (cards.length <= 1) {
+    const card = btnEl.closest('.variant-row-card');
+    if (card) {
+      card.querySelectorAll('input').forEach(inp => inp.value = '');
+    }
+    return;
+  }
+
+  const card = btnEl.closest('.variant-row-card');
+  if (card) {
+    card.remove();
+    updateVariantBadges();
+  }
+}
+
+function updateVariantBadges() {
+  const container = document.getElementById('account-variants-list-container');
+  if (!container) return;
+
+  const cards = container.querySelectorAll('.variant-row-card');
+  cards.forEach((card, idx) => {
+    const badge = card.querySelector('.variant-number-badge');
+    if (badge) {
+      badge.textContent = `Variante #${idx + 1}`;
+    }
+  });
 }

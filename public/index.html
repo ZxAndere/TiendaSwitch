@@ -634,19 +634,29 @@
         </div>
 
         <!-- Personalización de Correo y Variantes de Cuentas (Round-Robin) -->
-        <div class="form-section-title" style="margin-top: 1rem;">📩 Personalización de Correo & Cuentas (Round-Robin 🔄)</div>
+        <div class="form-section-title" style="margin-top: 1.25rem;">📩 Personalización del Correo de Entrega</div>
         <div class="form-group">
-          <label>Texto de Instrucciones para el Correo</label>
-          <textarea id="edit-game-correo-texto" rows="2" placeholder="Ej: ¡Gracias por tu compra! Sigue los pasos para instalar tu juego digital..."></textarea>
+          <label>Texto de Descripción / Instrucciones del Correo</label>
+          <textarea id="edit-game-correo-texto" rows="2" placeholder="Ej: ¡Gracias por tu compra! Sigue las instrucciones de la guía para instalar tu juego..."></textarea>
         </div>
         <div class="form-group">
           <label>URL Imagen / Banner para el Correo (Opcional)</label>
-          <input type="url" id="edit-game-correo-imagen" placeholder="https://... (Imagen adjunta al correo de entrega)">
+          <input type="url" id="edit-game-correo-imagen" placeholder="https://... (Imagen o banner para el correo)">
         </div>
-        <div class="form-group">
-          <label>Variantes de Cuentas (Una por línea - Alternan automáticamente en cada compra 🔄)</label>
-          <textarea id="edit-game-cuentas" rows="4" placeholder="Ej:&#10;Cuenta 1: mario1@zonaswitch.cl | Clave: Pass123!&#10;Cuenta 2: mario2@zonaswitch.cl | Clave: Pass123!&#10;Cuenta 3: mario3@zonaswitch.cl | Clave: Pass123!"></textarea>
-          <small style="color: var(--joycon-cyan); font-size: 0.75rem;">Cada comprador recibirá de forma rotativa: Cuenta 1 ➔ Cuenta 2 ➔ Cuenta 3 ➔ Cuenta 1...</small>
+
+        <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <label style="font-weight: 800; color: #ffffff; font-size: 0.9rem;">🔑 Variantes de Cuentas (Formato: Cuenta / Contraseña / Código)</label>
+          <button type="button" class="add-variant-btn-pill" onclick="addAccountVariantRow()" title="Agregar nueva cuenta al listado">
+            ➕ Agregar Variante
+          </button>
+        </div>
+        <p style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Agrega cada variante separando <strong>Cuenta / Contraseña / Código</strong>. Al venderse, alternarán automáticamente entre sí (Round-Robin 🔄).
+        </p>
+
+        <!-- Contenedor de Cuentas / Variantes Dinámicas -->
+        <div id="account-variants-list-container" class="account-variants-list-container">
+          <!-- Filas agregadas dinámicamente por JS -->
         </div>
         <div class="auth-error-msg" id="game-edit-error"></div>
         <button type="submit" class="auth-submit-btn" id="save-game-edit-btn">💾 Guardar Cambios en Tiempo Real</button>
