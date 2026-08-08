@@ -574,9 +574,9 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  opacity: 0;
-  transform: translateY(32px) scale(0.96);
-  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   will-change: opacity, transform;
   cursor: pointer;
 }

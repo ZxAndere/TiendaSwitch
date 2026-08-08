@@ -1100,9 +1100,12 @@ async function fetchCatalog() {
     if (Array.isArray(data) && data.length > 0) {
       catalog = data;
     }
-    renderCatalog();
   } catch (err) {
-    console.warn('Usando catálogo local:', err);
+    console.warn('Cargando catálogo local por defecto:', err);
+    if (!Array.isArray(catalog) || catalog.length === 0) {
+      catalog = [...DEFAULT_GAMES_FRONTEND];
+    }
+  } finally {
     renderCatalog();
   }
 }
@@ -1112,7 +1115,9 @@ function renderCatalog() {
   const countLabel = document.getElementById('games-count');
   if (!grid) return;
 
-  if (!Array.isArray(catalog)) catalog = [];
+  if (!Array.isArray(catalog) || catalog.length === 0) {
+    catalog = [...DEFAULT_GAMES_FRONTEND];
+  }
 
   const filtered = catalog.filter(game => {
     if (!game) return false;
@@ -1124,7 +1129,9 @@ function renderCatalog() {
     return matchCategory && matchSearch;
   });
 
-  if (countLabel) countLabel.textContent = `${filtered.length} juego(s) disponible(s)`;
+  if (countLabel) {
+    countLabel.textContent = `${filtered.length} juego(s) disponible(s)`;
+  }
 
   if (filtered.length === 0) {
     grid.innerHTML = `
@@ -1162,7 +1169,10 @@ function renderCatalog() {
     </article>
   `).join('');
 
-  initScrollObserverForCards();
+  document.querySelectorAll('.game-card').forEach(card => {
+    card.style.opacity = '1';
+    card.style.transform = 'none';
+  });
 }
 
 // Observador para animar tarjetas al scroll (Aparecer gradualmente al estar en vista)
