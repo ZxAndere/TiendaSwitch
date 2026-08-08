@@ -10,6 +10,7 @@ let currentModalImages = [];
 let currentModalImageIndex = 0;
 let payCarouselIndex = 0;
 
+let adminCatalog = []; // Catálogo completo para el panel de administración
 let pendingRegisterData = null; // Guardar datos temporales para confirmación OTP
 let pendingUpdateType = null; // 'email' o 'password'
 
@@ -272,6 +273,26 @@ function initEventListeners() {
   const copyCodeBtn = document.getElementById('copy-code-btn');
   if (copyCodeBtn) copyCodeBtn.addEventListener('click', copyOrderCode);
 
+  // Admin game search input listener
+  const adminSearchInput = document.getElementById('admin-game-search');
+  if (adminSearchInput) {
+    adminSearchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = adminCatalog.filter(g =>
+        g.titulo.toLowerCase().includes(q) ||
+        g.categoria.toLowerCase().includes(q)
+      );
+      renderAdminGamesList(filtered);
+    });
+  }
+
+  // Admin game edit form listener
+  const gameEditForm = document.getElementById('game-edit-form');
+  if (gameEditForm) gameEditForm.addEventListener('submit', handleGameEditSubmit);
+
+  const closeGameEditBtn = document.getElementById('close-game-edit-modal');
+  if (closeGameEditBtn) closeGameEditBtn.addEventListener('click', closeGameEditModal);
+
   // Cerrar menú desplegable al hacer clic afuera
   document.addEventListener('click', (e) => {
     const userMenu = document.getElementById('user-dropdown-menu');
@@ -286,10 +307,188 @@ function openVerifyModal() { document.getElementById('verify-modal-backdrop').cl
 function closeVerifyModal() { document.getElementById('verify-modal-backdrop').classList.remove('active'); }
 function openUserOrdersModal() { fetchAndRenderUserOrders(); document.getElementById('user-orders-modal-backdrop').classList.add('active'); }
 function closeUserOrdersModal() { document.getElementById('user-orders-modal-backdrop').classList.remove('active'); }
-function openUserSettingsModal() { document.getElementById('user-settings-modal-backdrop').classList.add('active'); }
+
+function openUserSettingsModal() {
+  const backdrop = document.getElementById('user-settings-modal-backdrop');
+  const adminTabBtn = document.getElementById('admin-tab-btn');
+  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+
+  if (adminTabBtn) {
+    if (isAdmin) {
+      adminTabBtn.style.display = 'inline-block';
+      fetchAndRenderAdminGames();
+    } else {
+      adminTabBtn.style.display = 'none';
+      if (adminTabBtn.classList.contains('active')) {
+        document.querySelectorAll('.settings-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.settings-tab-content .tab-pane').forEach(p => p.classList.remove('active'));
+        const userBtn = document.querySelector('.settings-tabs .tab-btn[data-tab="tab-username"]');
+        const userPane = document.getElementById('tab-username');
+        if (userBtn) userBtn.classList.add('active');
+        if (userPane) userPane.classList.add('active');
+      }
+    }
+  }
+
+  backdrop.classList.add('active');
+}
+
 function closeUserSettingsModal() { document.getElementById('user-settings-modal-backdrop').classList.remove('active'); }
 function openUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.add('active'); }
 function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.remove('active'); }
+
+// --- FUNCIONES DEL PANEL DE ADMINISTRADOR (SOLO PARA "ZxAndere") ---
+
+async function fetchAndRenderAdminGames() {
+  const container = document.getElementById('admin-games-container');
+  if (!currentUser) return;
+
+  if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando juegos en panel admin...</p>';
+
+  try {
+    const res = await fetch(`/api/admin/juegos?user=${encodeURIComponent(currentUser.username)}`);
+    if (!res.ok) throw new Error('Acceso denegado');
+    adminCatalog = await res.json();
+    renderAdminGamesList(adminCatalog);
+  } catch (err) {
+    if (container) container.innerHTML = '<p style="text-align: center; color: var(--switch-red); padding: 1rem;">No se pudieron cargar los juegos del panel admin.</p>';
+  }
+}
+
+function renderAdminGamesList(gamesList) {
+  const container = document.getElementById('admin-games-container');
+  if (!container) return;
+
+  if (!Array.isArray(gamesList) || gamesList.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No se encontraron juegos.</p>';
+    return;
+  }
+
+  container.innerHTML = gamesList.map(game => {
+    const isVisible = game.visible !== false;
+    return `
+      <div class="admin-game-row ${!isVisible ? 'hidden-game' : ''}">
+        <div class="admin-game-info">
+          <img class="admin-game-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
+          <div class="admin-game-details">
+            <span class="admin-game-title">${escapeHTML(game.titulo)}</span>
+            <span class="admin-game-sub">
+              ${escapeHTML(game.categoria)} | Sec: ${formatCLP(game.precioSecundaria)} - Prim: ${formatCLP(game.precioPrimaria)}
+            </span>
+          </div>
+        </div>
+        <div class="admin-game-actions">
+          <label class="toggle-switch-label" title="Mostrar u Ocultar en la tienda">
+            <span>${isVisible ? '🟢 Visible' : '🔴 Oculto'}</span>
+            <input type="checkbox" ${isVisible ? 'checked' : ''} onchange="toggleGameVisibility(${game.id}, this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <button type="button" class="edit-game-gear-btn" onclick="openGameEditModal(${game.id})" title="Editar datos del juego (Tuerca ⚙️)">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function toggleGameVisibility(gameId, isVisible) {
+  if (!currentUser) return;
+  try {
+    const res = await fetch('/api/admin/juegos/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId, visible: isVisible, username: currentUser.username })
+    });
+    const data = await res.json();
+    if (data.exito && data.juegos) {
+      adminCatalog = data.juegos;
+      renderAdminGamesList(adminCatalog);
+      // Reajustar catálogo de la tienda en tiempo real
+      await fetchCatalog();
+      showToast(data.mensaje || 'Visibilidad actualizada');
+    } else {
+      alert(data.error || 'Error al cambiar visibilidad');
+    }
+  } catch (e) {
+    alert('Error al conectar con el servidor');
+  }
+}
+
+function openGameEditModal(gameId) {
+  const game = adminCatalog.find(g => g.id === Number(gameId)) || catalog.find(g => g.id === Number(gameId));
+  if (!game) return;
+
+  document.getElementById('edit-game-id').value = game.id;
+  document.getElementById('edit-game-titulo').value = game.titulo || '';
+  document.getElementById('edit-game-categoria').value = game.categoria || '';
+  document.getElementById('edit-game-secundaria').value = game.precioSecundaria || '';
+  document.getElementById('edit-game-primaria').value = game.precioPrimaria || '';
+  document.getElementById('edit-game-imagen').value = game.imagen || '';
+  document.getElementById('edit-game-descripcion').value = game.descripcion || '';
+  document.getElementById('game-edit-error').textContent = '';
+
+  document.getElementById('game-edit-modal-backdrop').classList.add('active');
+}
+
+function closeGameEditModal() {
+  document.getElementById('game-edit-modal-backdrop').classList.remove('active');
+}
+
+async function handleGameEditSubmit(e) {
+  e.preventDefault();
+  if (!currentUser) return;
+
+  const gameId = document.getElementById('edit-game-id').value;
+  const titulo = document.getElementById('edit-game-titulo').value.trim();
+  const categoria = document.getElementById('edit-game-categoria').value.trim();
+  const precioSecundaria = document.getElementById('edit-game-secundaria').value;
+  const precioPrimaria = document.getElementById('edit-game-primaria').value;
+  const imagen = document.getElementById('edit-game-imagen').value.trim();
+  const descripcion = document.getElementById('edit-game-descripcion').value.trim();
+  const errorMsg = document.getElementById('game-edit-error');
+  errorMsg.textContent = '';
+
+  const saveBtn = document.getElementById('save-game-edit-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Guardando...';
+
+  try {
+    const res = await fetch('/api/admin/juegos/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameId,
+        titulo,
+        categoria,
+        precioSecundaria,
+        precioPrimaria,
+        imagen,
+        descripcion,
+        username: currentUser.username
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.exito) {
+      errorMsg.textContent = data.error || 'No se pudo guardar la información.';
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Guardar Cambios en Tiempo Real';
+      return;
+    }
+
+    if (data.juegos) adminCatalog = data.juegos;
+    renderAdminGamesList(adminCatalog);
+    await fetchCatalog();
+    closeGameEditModal();
+    showToast(data.mensaje || '¡Juego actualizado con éxito! 🎉');
+  } catch (err) {
+    errorMsg.textContent = 'Error de comunicación con el servidor.';
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Guardar Cambios en Tiempo Real';
+  }
+}
 
 function openMobileDrawer() {
   document.getElementById('mobile-nav-drawer').classList.add('active');

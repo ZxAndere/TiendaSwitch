@@ -377,6 +377,7 @@
         <button type="button" class="tab-btn active" data-tab="tab-username">Usuario</button>
         <button type="button" class="tab-btn" data-tab="tab-email">Correo</button>
         <button type="button" class="tab-btn" data-tab="tab-password">Contraseña</button>
+        <button type="button" class="tab-btn admin-only-tab" id="admin-tab-btn" data-tab="tab-admin" style="display: none;">🛠️ Opciones de Administrador</button>
       </div>
 
       <div class="settings-tab-content">
@@ -417,7 +418,65 @@
           <div class="auth-error-msg" id="change-password-error"></div>
           <button type="submit" class="auth-submit-btn">Enviar Código de Verificación a Mi Correo</button>
         </form>
+
+        <!-- Tab Administrador (Solo para Admin "ZxAndere") -->
+        <div id="tab-admin" class="settings-form tab-pane">
+          <div class="admin-tab-header">
+            <h4>🛠️ Opciones de Administrador</h4>
+            <p>Configura la visibilidad y edita en tiempo real los juegos del catálogo de la tienda.</p>
+          </div>
+
+          <div class="admin-search-box-wrapper">
+            <input type="text" id="admin-game-search" placeholder="🔍 Filtrar juegos en el panel..." class="admin-search-input">
+          </div>
+
+          <div class="admin-games-container" id="admin-games-container">
+            <!-- Juegos cargados dinámicamente -->
+          </div>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDICIÓN DE JUEGO (ADMIN ⚙️) -->
+  <div class="modal-backdrop" id="game-edit-modal-backdrop">
+    <div class="user-modal-card">
+      <button class="modal-close-x" id="close-game-edit-modal">&times;</button>
+      <div class="user-modal-header">
+        <h3>⚙️ Editar Juego en Tiempo Real</h3>
+        <p>Modifica los datos del juego que se mostrarán en la tienda</p>
+      </div>
+      <form id="game-edit-form" class="settings-form">
+        <input type="hidden" id="edit-game-id">
+        <div class="form-group">
+          <label>Nombre / Título del Juego</label>
+          <input type="text" id="edit-game-titulo" required placeholder="Ej: Super Mario Bros. Wonder">
+        </div>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Categoría</label>
+            <input type="text" id="edit-game-categoria" required placeholder="Ej: Plataformas">
+          </div>
+          <div class="form-group">
+            <label>Precio Lic. Secundaria (CLP)</label>
+            <input type="number" id="edit-game-secundaria" required min="0" placeholder="20000">
+          </div>
+          <div class="form-group">
+            <label>Precio Lic. Primaria (CLP)</label>
+            <input type="number" id="edit-game-primaria" required min="0" placeholder="30000">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>URL de la Foto / Imagen</label>
+          <input type="url" id="edit-game-imagen" required placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Descripción Corta</label>
+          <textarea id="edit-game-descripcion" rows="3" required placeholder="Descripción del juego..."></textarea>
+        </div>
+        <div class="auth-error-msg" id="game-edit-error"></div>
+        <button type="submit" class="auth-submit-btn" id="save-game-edit-btn">💾 Guardar Cambios en Tiempo Real</button>
+      </form>
     </div>
   </div>
 
