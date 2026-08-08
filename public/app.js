@@ -93,14 +93,38 @@ function initEventListeners() {
     });
   });
 
-  // Búsqueda en tiempo real (Buscador en el Header)
+  // Búsqueda en tiempo real & Predictivo (Auto-complete)
   const searchInput = document.getElementById('search-input');
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       searchQuery = e.target.value.toLowerCase().trim();
       renderCatalog();
+      handleSearchAutocomplete(searchInput, 'search-autocomplete-dropdown');
     });
   }
+
+  const mobileSearchInput = document.getElementById('mobile-search-input');
+  if (mobileSearchInput) {
+    mobileSearchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      const desktopSearch = document.getElementById('search-input');
+      if (desktopSearch) desktopSearch.value = e.target.value;
+      renderCatalog();
+      handleSearchAutocomplete(mobileSearchInput, 'mobile-search-autocomplete-dropdown');
+    });
+  }
+
+  // Guía de Instalación Modal triggers
+  const openGuideBtn = document.getElementById('open-install-guide-btn');
+  const mobileOpenGuideBtn = document.getElementById('mobile-open-install-guide-btn');
+  const closeGuideBtn = document.getElementById('close-install-guide-modal');
+  if (openGuideBtn) openGuideBtn.addEventListener('click', openInstallGuideModal);
+  if (mobileOpenGuideBtn) mobileOpenGuideBtn.addEventListener('click', () => { closeMobileDrawer(); openInstallGuideModal(); });
+  if (closeGuideBtn) closeGuideBtn.addEventListener('click', closeInstallGuideModal);
+
+  // Cupón de descuento en carrito
+  const applyCouponBtn = document.getElementById('apply-coupon-btn');
+  if (applyCouponBtn) applyCouponBtn.addEventListener('click', handleApplyCoupon);
 
   // Selector de Conversión de Moneda
   const currSelect = document.getElementById('currency-select');
@@ -256,10 +280,16 @@ function initEventListeners() {
   });
 
   const gmodalAddBtn = document.getElementById('gmodal-add-btn');
-  if (gmodalAddBtn) gmodalAddBtn.addEventListener('click', handleAddSelectedLicenseToCart);
+  if (gmodalAddBtn) gmodalAddBtn.addEventListener('click', (e) => {
+    animateButtonSuccess(e.currentTarget, '✓ ¡Añadido al Carrito!');
+    handleAddSelectedLicenseToCart();
+  });
 
   const gmodalBuyBtn = document.getElementById('gmodal-buy-btn');
-  if (gmodalBuyBtn) gmodalBuyBtn.addEventListener('click', handleBuySelectedLicenseNow);
+  if (gmodalBuyBtn) gmodalBuyBtn.addEventListener('click', (e) => {
+    animateButtonSuccess(e.currentTarget, '✓ Redirigiendo...');
+    handleBuySelectedLicenseNow();
+  });
 
   // Checkout & Recibo
   const checkoutForm = document.getElementById('checkout-form');
@@ -1234,6 +1264,28 @@ function renderCartDrawer() {
     `;
   }).join('');
 
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percent') {
+      discount = Math.round((subtotal * appliedCoupon.value) / 100);
+    } else if (appliedCoupon.type === 'fixed') {
+      discount = Math.min(subtotal, appliedCoupon.value);
+    }
+  }
+
+  const total = Math.max(0, subtotal - discount);
+
+  const discountRow = document.getElementById('cart-discount-row');
+  const discountVal = document.getElementById('summary-discount');
+  if (discountRow && discountVal) {
+    if (discount > 0) {
+      discountRow.style.display = 'flex';
+      discountVal.textContent = `- ${formatCLP(discount)}`;
+    } else {
+      discountRow.style.display = 'none';
+    }
+  }
+
   document.getElementById('summary-total').textContent = formatCLP(total);
 }
 
@@ -1571,3 +1623,190 @@ function escapeHTML(str) {
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
 }
+
+// --- SISTEMA DE CUPONES DE DESCUENTO ---
+let appliedCoupon = null;
+
+const AVAILABLE_COUPONS = {
+  ZONA10: { code: 'ZONA10', type: 'percent', value: 10, desc: '10% de descuento' },
+  SWITCH2026: { code: 'SWITCH2026', type: 'percent', value: 15, desc: '15% de descuento' },
+  NINTENDO5: { code: 'NINTENDO5', type: 'fixed', value: 5000, desc: '$5.000 CLP de descuento' },
+  DESCUENTO: { code: 'DESCUENTO', type: 'percent', value: 10, desc: '10% de descuento' }
+};
+
+function handleApplyCoupon() {
+  const input = document.getElementById('coupon-code-input');
+  const msgEl = document.getElementById('coupon-message');
+  if (!input || !msgEl) return;
+
+  const code = input.value.trim().toUpperCase();
+  if (!code) {
+    msgEl.className = 'coupon-msg error';
+    msgEl.textContent = 'Por favor ingresa un código de descuento.';
+    return;
+  }
+
+  const coupon = AVAILABLE_COUPONS[code];
+  if (coupon) {
+    appliedCoupon = coupon;
+    msgEl.className = 'coupon-msg success';
+    msgEl.textContent = `¡Cupón ${coupon.code} aplicado! (${coupon.desc})`;
+    renderCartDrawer();
+    showToast(`¡Cupón ${coupon.code} aplicado con éxito! 🎉`);
+  } else {
+    msgEl.className = 'coupon-msg error';
+    msgEl.textContent = 'Código no válido o expirado.';
+  }
+}
+
+// --- BUSCADOR PREDICTIVO INSTANTÁNEO (AUTO-COMPLETE) ---
+function handleSearchAutocomplete(inputEl, dropdownId) {
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown || !inputEl) return;
+
+  const q = inputEl.value.toLowerCase().trim();
+  if (!q) {
+    dropdown.classList.remove('active');
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  const matches = catalog.filter(g =>
+    g.titulo.toLowerCase().includes(q) || g.categoria.toLowerCase().includes(q)
+  ).slice(0, 5);
+
+  if (matches.length === 0) {
+    dropdown.classList.remove('active');
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(game => `
+    <div class="autocomplete-item" onclick="selectAutocompleteResult(${game.id}, '${dropdownId}')">
+      <img class="autocomplete-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
+      <div class="autocomplete-info">
+        <span class="autocomplete-title">${escapeHTML(game.titulo)}</span>
+        <span class="autocomplete-sub">${escapeHTML(game.categoria)} • desde ${formatCLP(game.precioSecundaria)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  dropdown.classList.add('active');
+}
+
+function selectAutocompleteResult(gameId, dropdownId) {
+  const dropdown = document.getElementById(dropdownId);
+  if (dropdown) dropdown.classList.remove('active');
+
+  const desktopSearch = document.getElementById('search-input');
+  const mobileSearch = document.getElementById('mobile-search-input');
+  if (desktopSearch) desktopSearch.value = '';
+  if (mobileSearch) mobileSearch.value = '';
+  searchQuery = '';
+  renderCatalog();
+
+  openGameModal(gameId);
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box')) {
+    document.querySelectorAll('.search-autocomplete-dropdown').forEach(d => d.classList.remove('active'));
+  }
+});
+
+// --- GUÍA DE INSTALACIÓN PASO A PASO ---
+function openInstallGuideModal() {
+  switchGuideTab('secundaria');
+  document.getElementById('install-guide-modal-backdrop').classList.add('active');
+}
+
+function closeInstallGuideModal() {
+  document.getElementById('install-guide-modal-backdrop').classList.remove('active');
+}
+
+function switchGuideTab(type) {
+  const btnSec = document.getElementById('guide-tab-sec');
+  const btnPrim = document.getElementById('guide-tab-prim');
+  const content = document.getElementById('guide-body-content');
+  if (!content) return;
+
+  if (type === 'secundaria') {
+    if (btnSec) btnSec.classList.add('active');
+    if (btnPrim) btnPrim.classList.remove('active');
+
+    content.innerHTML = `
+      <div class="guide-step-card">
+        <h5>1️⃣ Paso 1: Crear Usuario en tu Consola</h5>
+        <p>Ve a <strong>Configuración de la Consola -> Usuarios -> Agregar usuario -> Crear un nuevo usuario</strong>. Elige cualquier ícono y apodo.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>2️⃣ Paso 2: Vincular Cuenta de Nintendo</h5>
+        <p>Selecciona <strong>"Vincular una cuenta de Nintendo"</strong> e ingresa el correo y la contraseña que te enviamos tras tu compra.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>3️⃣ Paso 3: Descargar el Juego desde eShop</h5>
+        <p>Abre <strong>Nintendo eShop</strong> usando el nuevo usuario creado. Haz clic en el ícono de perfil arriba a la derecha -> <strong>Volver a descargar</strong> -> Selecciona tu juego y presiona Descargar.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>4️⃣ Paso 4: Cómo Jugar (Licencia Secundaria)</h5>
+        <p>Para jugar, debes abrir el juego usando el usuario entregado y tener tu consola conectada a Internet al iniciar el juego.</p>
+      </div>
+    `;
+  } else {
+    if (btnPrim) btnPrim.classList.add('active');
+    if (btnSec) btnSec.classList.remove('active');
+
+    content.innerHTML = `
+      <div class="guide-step-card">
+        <h5>1️⃣ Paso 1: Crear Usuario y Vincular</h5>
+        <p>Agrega un nuevo usuario en la consola e ingresa los datos de la Cuenta Primaria enviados a tu correo.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>2️⃣ Paso 2: Confirmar Consola Principal</h5>
+        <p>Ingresa a Nintendo eShop. La cuenta se registrará automáticamente como <strong>Consola Principal</strong>.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>3️⃣ Paso 3: Descargar el Juego</h5>
+        <p>Ve a <strong>Perfil de eShop -> Volver a descargar</strong> y presiona el botón de descarga.</p>
+      </div>
+      <div class="guide-step-card">
+        <h5>4️⃣ Paso 4: ¡Juega con tu Cuenta Personal!</h5>
+        <p>¡Listo! Puedes cambiar a tu perfil personal de siempre. El juego funcionará con tu usuario personal, trofeos propios y sin necesidad de internet.</p>
+      </div>
+    `;
+  }
+}
+
+// --- MICROINTERACCIONES DE BOTONES ---
+function animateButtonSuccess(btn, successText = '✓ ¡Listo!') {
+  if (!btn) return;
+  const originalHtml = btn.innerHTML;
+  btn.classList.add('btn-success-clicked');
+  btn.innerHTML = `<span>${successText}</span>`;
+  setTimeout(() => {
+    btn.classList.remove('btn-success-clicked');
+    btn.innerHTML = originalHtml;
+  }, 1200);
+}
+
+// --- SMART STICKY NAVBAR SCROLL HANDLER ---
+let lastScrollY = window.scrollY;
+window.addEventListener('scroll', () => {
+  const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
+  const currentScrollY = window.scrollY;
+
+  if (currentScrollY > 150) {
+    if (currentScrollY > lastScrollY + 5) {
+      navbar.classList.add('nav-hidden');
+    } else if (currentScrollY < lastScrollY - 5) {
+      navbar.classList.remove('nav-hidden');
+      navbar.classList.add('nav-scrolled');
+    }
+  } else {
+    navbar.classList.remove('nav-hidden');
+    navbar.classList.remove('nav-scrolled');
+  }
+
+  lastScrollY = currentScrollY;
+}, { passive: true });
