@@ -2563,8 +2563,8 @@ function appendAccountVariantCard(container, cuenta = '', pass = '', codigo = ''
       </div>
       <span class="variant-slash-separator">/</span>
       <div class="variant-field">
-        <label>Código / OTP / Notas</label>
-        <input type="text" class="var-input-codigo" placeholder="Enviar WhatsApp" value="${escapeHTML(codigo)}">
+        <label>Códigos OTP (1 uso x coma)</label>
+        <input type="text" class="var-input-codigo" placeholder="123, 456, 789, 012" value="${escapeHTML(codigo)}">
       </div>
     </div>
   `;
@@ -2610,8 +2610,8 @@ function addAccountVariantRowAfter(btnEl) {
       </div>
       <span class="variant-slash-separator">/</span>
       <div class="variant-field">
-        <label>Código / OTP / Notas</label>
-        <input type="text" class="var-input-codigo" placeholder="Enviar WhatsApp" value="">
+        <label>Códigos OTP (1 uso x coma)</label>
+        <input type="text" class="var-input-codigo" placeholder="123, 456, 789, 012" value="">
       </div>
     </div>
   `;

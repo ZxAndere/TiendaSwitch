@@ -1458,7 +1458,38 @@ app.post('/api/checkout', async (req, res) => {
           gameInStore.siguienteVarianteIndex = 0;
         }
         const varIdx = gameInStore.siguienteVarianteIndex % gameInStore.cuentas.length;
-        varianteAsignada = gameInStore.cuentas[varIdx];
+        const rawVariant = gameInStore.cuentas[varIdx];
+
+        // Parsear la cadena: "Cuenta / Contraseña / ListaCodigosComa"
+        const parts = rawVariant.includes('/') ? rawVariant.split('/') : rawVariant.split('|');
+        const cuentaVal = (parts[0] || '').trim();
+        const passVal = (parts[1] || '').trim();
+        const rawCodigos = (parts[2] || parts.slice(2).join('/')).trim();
+
+        let codigoConsumido = '';
+        if (rawCodigos) {
+          const codigosList = rawCodigos.split(',').map(c => c.trim()).filter(c => c.length > 0);
+          if (codigosList.length > 0) {
+            // Extraer y consumir el primer código (de un solo uso ⚡)
+            codigoConsumido = codigosList.shift();
+
+            // Reconstruir la lista con los códigos restantes
+            const codigosRestantes = codigosList.join(', ');
+            let updatedVariantStr = cuentaVal;
+            if (passVal || codigosRestantes) updatedVariantStr += ` / ${passVal}`;
+            if (codigosRestantes) updatedVariantStr += ` / ${codigosRestantes}`;
+
+            // Actualizar la variante en el inventario permanente del servidor
+            gameInStore.cuentas[varIdx] = updatedVariantStr;
+          }
+        }
+
+        // Armar el string que se entrega exclusivamente en esta compra específica al cliente
+        let finalAssigned = cuentaVal;
+        if (passVal) finalAssigned += ` / ${passVal}`;
+        if (codigoConsumido) finalAssigned += ` / Código OTP: ${codigoConsumido}`;
+
+        varianteAsignada = finalAssigned;
 
         // Incrementar índice para el próximo comprador (Round-Robin)
         gameInStore.siguienteVarianteIndex = (gameInStore.siguienteVarianteIndex + 1) % gameInStore.cuentas.length;
