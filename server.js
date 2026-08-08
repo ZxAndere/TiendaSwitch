@@ -388,7 +388,7 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
           'content-type': 'application/json'
         },
         body: JSON.stringify({
-          sender: { name: "ZonaSwitchChile", email: process.env.BREVO_SENDER_EMAIL || "tiendaswitchchile@gmail.com" },
+          sender: { name: "ZonaSwitchChile", email: process.env.BREVO_SENDER_EMAIL || "zx.andereacc@gmail.com" },
           to: [{ email: toEmail }],
           subject: `🔐 ${subjectTitle}`,
           htmlContent: htmlContent
