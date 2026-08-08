@@ -377,7 +377,7 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
     </div>
   `;
 
-  // 1. Enviar usando Brevo API REST (si BREVO_API_KEY está presente en el servidor o Railway)
+  // 1. Enviar usando Brevo API REST (si BREVO_API_KEY está presente)
   if (process.env.BREVO_API_KEY) {
     try {
       const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -399,10 +399,34 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
         console.log(`📩 Correo enviado REALMENTE con Brevo (ID: ${data.messageId}) a ${toEmail}`);
         return true;
       } else {
-        console.warn('📌 Brevo API Error:', data);
+        console.warn('📌 Brevo API Warning:', data.message || data);
       }
     } catch (err) {
       console.error('Error enviando con Brevo:', err);
+    }
+  }
+
+  // 2. Enviar usando Gmail SMTP (si GMAIL_USER y GMAIL_PASS están presentes)
+  if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER.trim(),
+          pass: process.env.GMAIL_PASS.trim()
+        }
+      });
+      await transporter.sendMail({
+        from: `"ZonaSwitchChile" <${process.env.GMAIL_USER.trim()}>`,
+        to: toEmail,
+        subject: `🔐 ${subjectTitle}`,
+        html: htmlContent
+      });
+      console.log(`📩 Correo enviado REALMENTE con Gmail SMTP a ${toEmail}`);
+      return true;
+    } catch (err) {
+      console.error('Error enviando con Gmail SMTP:', err);
     }
   }
 
