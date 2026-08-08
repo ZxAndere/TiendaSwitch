@@ -130,11 +130,11 @@ if (process.env.MONGODB_URI) {
       // Sincronizar catálogo de juegos desde MongoDB Atlas
       try {
         const mongoGames = await GameModel.find({});
-        if (mongoGames.length > 0) {
+        if (mongoGames && mongoGames.length > 0) {
           GAMES_STORE = mongoGames.map(g => g.toObject());
           fs.writeFileSync(GAMES_FILE, JSON.stringify(GAMES_STORE, null, 2));
           console.log(`📥 Sincronizados ${GAMES_STORE.length} juegos desde MongoDB Atlas.`);
-        } else {
+        } else if (Array.isArray(GAMES_STORE) && GAMES_STORE.length > 0) {
           GAMES_STORE.forEach(async (g) => {
             await GameModel.findOneAndUpdate({ id: g.id }, g, { upsert: true, returnDocument: 'after' });
           });
@@ -1111,7 +1111,16 @@ loadInitialGames();
 
 // Endpoint Público: Retorna solo juegos visibles para los clientes
 app.get('/api/juegos', (req, res) => {
-  const visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+    GAMES_STORE = [...DEFAULT_GAMES];
+    saveGamesLocal(GAMES_STORE);
+  }
+  let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  if (visibleGames.length === 0) {
+    GAMES_STORE = DEFAULT_GAMES.map(g => ({ ...g, visible: true }));
+    saveGamesLocal(GAMES_STORE);
+    visibleGames = GAMES_STORE;
+  }
   res.json(visibleGames);
 });
 
