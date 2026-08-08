@@ -30,6 +30,7 @@ if (!fs.existsSync(ORDERS_FILE)) {
 
 // --- CONEXIÓN Y MODELOS MONGODB ATLAS (TIEMPO REAL EN LA NUBE) ---
 let isMongoConnected = false;
+let mongoLastError = null;
 
 const userSchema = new mongoose.Schema({
   id: String,
@@ -61,6 +62,7 @@ if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI.trim())
     .then(async () => {
       isMongoConnected = true;
+      mongoLastError = null;
       console.log('🍃 Conectado exitosamente a MongoDB Atlas (Base de Datos en Tiempo Real)');
       
       // Sincronizar usuarios desde MongoDB Atlas
@@ -90,8 +92,21 @@ if (process.env.MONGODB_URI) {
         }
       } catch (e) { console.error('Error cargando órdenes MongoDB:', e); }
     })
-    .catch(err => console.error('❌ Error de conexión a MongoDB Atlas:', err.message));
+    .catch(err => {
+      mongoLastError = err.message;
+      console.error('❌ Error de conexión a MongoDB Atlas:', err.message);
+    });
 }
+
+// Endpoint de diagnóstico de MongoDB
+app.get('/api/debug/mongo', (req, res) => {
+  res.json({
+    connected: isMongoConnected,
+    hasUri: !!process.env.MONGODB_URI,
+    uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.trim().length : 0,
+    lastError: mongoLastError
+  });
+});
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
 const FLOW_API_KEY = '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
