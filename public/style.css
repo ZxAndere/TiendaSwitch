@@ -1375,6 +1375,48 @@ body {
 }
 .summary-row.total span:last-child { color: var(--accent-green); }
 
+.submit-order-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.15rem 1.5rem;
+  background: linear-gradient(135deg, #00f0ff 0%, #0088ff 100%);
+  color: #070a12;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 6px 22px rgba(0, 240, 255, 0.4);
+  transition: all 0.25s ease;
+  margin-top: 0.5rem;
+}
+
+.submit-order-btn:hover {
+  background: linear-gradient(135deg, #33f3ff 0%, #1a94ff 100%);
+  box-shadow: 0 10px 30px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.submit-order-btn:active {
+  transform: translateY(0);
+}
+
+.submit-order-btn svg {
+  transition: transform 0.2s ease;
+  stroke: #070a12;
+  stroke-width: 2.8px;
+}
+
+.submit-order-btn:hover svg {
+  transform: translateX(4px);
+}
+
 .checkout-form { display: flex; flex-direction: column; gap: 0.75rem; }
 .form-title { font-size: 0.85rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
 
