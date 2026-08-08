@@ -185,13 +185,13 @@ function initEventListeners() {
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
   // Settings Forms
-  const usernameForm = document.getElementById('change-username-form');
+  const usernameForm = document.getElementById('tab-username');
   if (usernameForm) usernameForm.addEventListener('submit', handleUsernameChangeSubmit);
 
-  const emailForm = document.getElementById('change-email-form');
+  const emailForm = document.getElementById('tab-email');
   if (emailForm) emailForm.addEventListener('submit', handleEmailChangeSubmit);
 
-  const passwordForm = document.getElementById('change-password-form');
+  const passwordForm = document.getElementById('tab-password');
   if (passwordForm) passwordForm.addEventListener('submit', handlePasswordChangeSubmit);
 
   const updateOtpForm = document.getElementById('update-otp-form');
@@ -204,7 +204,8 @@ function initEventListeners() {
       document.querySelectorAll('.settings-tab-content .tab-pane').forEach(p => p.classList.remove('active'));
       e.target.classList.add('active');
       const tabId = e.target.dataset.tab;
-      document.getElementById(tabId).classList.add('active');
+      const pane = document.getElementById(tabId);
+      if (pane) pane.classList.add('active');
     });
   });
 
