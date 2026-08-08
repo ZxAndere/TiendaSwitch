@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ZonaSwitchChile | Juegos de Nintendo Switch Chile</title>
   <meta name="description" content="Tu tienda preferida en Chile de juegos de Nintendo Switch en formato digital. Cuentas Primarias y Secundarias 100% garantizadas.">
   
@@ -29,15 +29,15 @@
         </div>
       </a>
 
-      <!-- Acciones de Navegación -->
+      <!-- Acciones de Navegación Escritorio -->
       <div class="nav-actions">
         <!-- Botón a Página FAQ (Preguntas Frecuentes) -->
-        <a href="faq.html" class="nav-faq-btn" title="Preguntas Frecuentes">
+        <a href="faq.html" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
           <span>❓ FAQ</span>
         </a>
 
         <!-- Selector de Conversión de Monedas / Pesos -->
-        <div class="currency-select-wrapper">
+        <div class="currency-select-wrapper desktop-only">
           <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
             <option value="CLP">🇨🇱 Chile (CLP)</option>
             <option value="ARS">🇦🇷 Argentina (ARS)</option>
@@ -50,7 +50,7 @@
         </div>
 
         <!-- Buscador integrado en el Header -->
-        <div class="header-search-box">
+        <div class="header-search-box desktop-only">
           <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -59,7 +59,7 @@
         </div>
 
         <!-- Área de Usuario / Sesión (Cuenta) -->
-        <div id="user-nav-area" class="user-nav-area">
+        <div id="user-nav-area" class="user-nav-area desktop-only">
           <button class="nav-auth-btn login-btn" id="open-login-btn">Iniciar Sesión</button>
           <button class="nav-auth-btn register-btn" id="open-register-btn">Registrarse</button>
         </div>
@@ -74,9 +74,75 @@
           <span class="cart-btn-text">Carrito</span>
           <span class="cart-badge" id="cart-count">0</span>
         </button>
+
+        <!-- Botón Menú Hamburguesa Móvil ☰ (3 Rayas) -->
+        <button class="mobile-menu-trigger-btn mobile-only" id="mobile-menu-btn" aria-label="Abrir Menú de Navegación">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- MENÚ LATERAL DESLIZABLE MÓVIL (3 RAYAS ☰) -->
+  <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+  <aside class="mobile-nav-drawer" id="mobile-nav-drawer" aria-hidden="true">
+    <div class="mobile-drawer-header">
+      <div class="mobile-drawer-brand">
+        <img src="logo.jpg" alt="Logo" class="mobile-brand-logo">
+        <h3>ZonaSwitchChile</h3>
+      </div>
+      <button class="drawer-close-btn" id="close-mobile-drawer" aria-label="Cerrar Menú">&times;</button>
+    </div>
+
+    <div class="mobile-drawer-body">
+      <!-- 🔍 Búsqueda Móvil -->
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">🔍 Buscar en el Catálogo</label>
+        <div class="mobile-search-box">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="mobile-search-input" placeholder="Buscar juego o saga..." aria-label="Buscar juegos móvil">
+        </div>
+      </div>
+
+      <!-- 💱 Conversión de Monedas Móvil -->
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">💱 Conversión de Moneda</label>
+        <select id="mobile-currency-select" class="mobile-currency-select" aria-label="Seleccionar moneda móvil">
+          <option value="CLP">🇨🇱 Chile (CLP)</option>
+          <option value="ARS">🇦🇷 Argentina (ARS)</option>
+          <option value="BRL">🇧🇷 Brasil (BRL)</option>
+          <option value="MXN">🇲🇽 México (MXN)</option>
+          <option value="COP">🇨🇴 Colombia (COP)</option>
+          <option value="PEN">🇵🇪 Perú (PEN)</option>
+          <option value="HNL">🇭🇳 Honduras (HNL)</option>
+        </select>
+      </div>
+
+      <!-- ❓ Enlace FAQ Móvil -->
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">ℹ️ Información</label>
+        <a href="faq.html" class="mobile-drawer-link">
+          <span>❓ Preguntas Frecuentes (FAQ)</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </a>
+      </div>
+
+      <!-- 👤 Mi Cuenta / Usuario Móvil -->
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">👤 Mi Cuenta</label>
+        <div id="mobile-user-nav-container" class="mobile-user-container">
+          <!-- Renderizado dinámico por JS -->
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <!-- Banner de Ancho Completo (Clickable para ir a juegos) -->
   <section class="full-width-banner-section">
