@@ -2396,25 +2396,6 @@ function slideGallery(delta) {
 
 // --- FUNCIONES ADMIN PARA LA GALERÍA DE CLIENTES ---
 
-function switchAdminSubtab(viewName) {
-  const btnGames = document.getElementById('btn-subtab-games');
-  const btnGallery = document.getElementById('btn-subtab-gallery');
-  const viewGames = document.getElementById('admin-view-games');
-  const viewGallery = document.getElementById('admin-view-gallery');
-
-  if (viewName === 'gallery') {
-    if (btnGallery) btnGallery.classList.add('active');
-    if (btnGames) btnGames.classList.remove('active');
-    if (viewGallery) viewGallery.style.display = 'block';
-    if (viewGames) viewGames.style.display = 'none';
-    fetchAndRenderAdminGallery();
-  } else {
-    if (btnGames) btnGames.classList.add('active');
-    if (btnGallery) btnGallery.classList.remove('active');
-    if (viewGames) viewGames.style.display = 'block';
-    if (viewGallery) viewGallery.style.display = 'none';
-  }
-}
 
 async function fetchAndRenderAdminGallery() {
   const container = document.getElementById('admin-gallery-items-container');
