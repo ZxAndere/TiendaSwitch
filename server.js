@@ -1094,7 +1094,14 @@ app.get('/api/juegos/stream', (req, res) => {
 });
 
 function broadcastCatalogUpdate() {
-  const visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+    GAMES_STORE = [...DEFAULT_GAMES];
+  }
+  let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  if (visibleGames.length === 0) {
+    GAMES_STORE = DEFAULT_GAMES.map(g => ({ ...g, visible: true }));
+    visibleGames = GAMES_STORE;
+  }
   const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames })}\n\n`;
   sseClients.forEach(client => {
     try {

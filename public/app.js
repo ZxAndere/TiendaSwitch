@@ -1750,7 +1750,7 @@ function initRealtimeCatalogStream() {
       evtSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'CATALOG_UPDATED' && Array.isArray(data.games)) {
+          if (data.type === 'CATALOG_UPDATED' && Array.isArray(data.games) && data.games.length > 0) {
             catalog = data.games;
             renderCatalog();
             if (currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'))) {
