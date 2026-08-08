@@ -35,7 +35,7 @@ const CURRENCY_RATES = {
   BRL: { symbol: 'R$ ', code: 'BRL', rate: 0.005582, decimals: 2 },
   MXN: { symbol: '$', code: 'MXN', rate: 0.018757, decimals: 2 },
   COP: { symbol: '$', code: 'COP', rate: 3.47445, decimals: 0 },
-  PEN: { symbol: 'S/ ', code: 'PEN', rate: 0.003697, decimals: 2 },
+  PEN: { symbol: 'S/. ', code: 'PEN', rate: 0.003697, decimals: 2 },
   HNL: { symbol: 'L ', code: 'HNL', rate: 0.029421, decimals: 2 }
 };
 
@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchCatalog();
   updateCartBadge();
   checkPaymentReturnUrls();
+  initRealtimeCatalogStream();
 });
 
 // Registrar Listeners principales
@@ -425,6 +426,8 @@ function openGameEditModal(gameId) {
   document.getElementById('edit-game-secundaria').value = game.precioSecundaria || '';
   document.getElementById('edit-game-primaria').value = game.precioPrimaria || '';
   document.getElementById('edit-game-imagen').value = game.imagen || '';
+  const imgDet = document.getElementById('edit-game-imagen-detalle');
+  if (imgDet) imgDet.value = game.imagenDetalle || game.imagen || '';
   document.getElementById('edit-game-descripcion').value = game.descripcion || '';
   document.getElementById('game-edit-error').textContent = '';
 
@@ -445,6 +448,8 @@ async function handleGameEditSubmit(e) {
   const precioSecundaria = document.getElementById('edit-game-secundaria').value;
   const precioPrimaria = document.getElementById('edit-game-primaria').value;
   const imagen = document.getElementById('edit-game-imagen').value.trim();
+  const imgDetEl = document.getElementById('edit-game-imagen-detalle');
+  const imagenDetalle = imgDetEl ? imgDetEl.value.trim() : '';
   const descripcion = document.getElementById('edit-game-descripcion').value.trim();
   const errorMsg = document.getElementById('game-edit-error');
   errorMsg.textContent = '';
@@ -464,6 +469,7 @@ async function handleGameEditSubmit(e) {
         precioSecundaria,
         precioPrimaria,
         imagen,
+        imagenDetalle,
         descripcion,
         username: currentUser.username
       })
@@ -1338,13 +1344,18 @@ async function handlePaymentSubmit(e) {
 
   const nombre = document.getElementById('checkout-name').value.trim();
   const apellido = document.getElementById('checkout-surname').value.trim();
-  const email = document.getElementById('checkout-email').value.trim();
-  
-  const gatewayRadio = document.querySelector('input[name="payment_gateway"]:checked');
-  const metodoPago = gatewayRadio ? gatewayRadio.value : 'flow';
+  const emailInput = document.getElementById('checkout-email');
+  const email = emailInput ? emailInput.value.trim() : '';
 
   if (!nombre || !apellido || !email) {
     alert('Por favor completa tu nombre, apellido y correo electrónico.');
+    return;
+  }
+
+  // Validación estricta de correo electrónico (debe incluir @ y formato válido)
+  if (!email.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Por favor ingresa un correo electrónico válido (debe incluir @ y un dominio válido, ej: tuusuario@gmail.com).');
+    if (emailInput) emailInput.focus();
     return;
   }
 
@@ -1447,17 +1458,115 @@ function copyOrderCode() {
   });
 }
 
-function showToast(message) {
+function showToast(message, duration = 3500) {
   const container = document.getElementById('toast-container');
+  if (!container) return;
+
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.innerHTML = `<span>🇨🇱</span><span>${escapeHTML(message)}</span>`;
+  toast.innerHTML = `
+    <div class="toast-content">
+      <span class="toast-icon">🇨🇱</span>
+      <span class="toast-text">${escapeHTML(message)}</span>
+      <button class="toast-close-btn" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="toast-progress-bar-wrapper">
+      <div class="toast-progress-bar" style="animation-duration: ${duration}ms;"></div>
+    </div>
+  `;
+
   container.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
+
+  // Animación de entrada
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  // Temporizador para auto-remover
+  const autoRemoveTimer = setTimeout(() => {
+    dismissToast(toast, 'right');
+  }, duration);
+
+  // Botón de cierre manual
+  const closeBtn = toast.querySelector('.toast-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      clearTimeout(autoRemoveTimer);
+      dismissToast(toast, 'right');
+    });
+  }
+
+  // --- GESTOS DE DESLIZAMIENTO (SWIPE LEFT/RIGHT CON MOUSE O TOUCH) ---
+  let startX = 0;
+  let currentX = 0;
+  let isDragging = false;
+
+  function onPointerDown(e) {
+    isDragging = true;
+    startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    toast.style.transition = 'none';
+  }
+
+  function onPointerMove(e) {
+    if (!isDragging) return;
+    currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const deltaX = currentX - startX;
+    const opacity = Math.max(0, 1 - Math.abs(deltaX) / 180);
+    toast.style.transform = `translateX(${deltaX}px)`;
+    toast.style.opacity = opacity;
+  }
+
+  function onPointerEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    const deltaX = currentX - startX;
+
+    if (Math.abs(deltaX) > 40) {
+      clearTimeout(autoRemoveTimer);
+      const direction = deltaX > 0 ? 'right' : 'left';
+      dismissToast(toast, direction);
+    } else {
+      toast.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+      toast.style.transform = 'translateX(0)';
+      toast.style.opacity = '1';
+    }
+  }
+
+  toast.addEventListener('touchstart', onPointerDown, { passive: true });
+  toast.addEventListener('touchmove', onPointerMove, { passive: true });
+  toast.addEventListener('touchend', onPointerEnd);
+
+  toast.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerEnd);
+}
+
+function dismissToast(toast, direction = 'right') {
+  toast.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease';
+  toast.style.transform = direction === 'left' ? 'translateX(-350px)' : 'translateX(350px)';
+  toast.style.opacity = '0';
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, 300);
+}
+
+// Sincronización del catálogo a tiempo real mediante Server-Sent Events (SSE)
+function initRealtimeCatalogStream() {
+  if ('EventSource' in window) {
+    try {
+      const evtSource = new EventSource('/api/juegos/stream');
+      evtSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'CATALOG_UPDATED' && Array.isArray(data.games)) {
+            catalog = data.games;
+            renderCatalog();
+            if (currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'))) {
+              fetchAndRenderAdminGames();
+            }
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+  }
 }
 
 function escapeHTML(str) {

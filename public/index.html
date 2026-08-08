@@ -39,13 +39,13 @@
         <!-- Selector de Conversión de Monedas / Pesos -->
         <div class="currency-select-wrapper desktop-only">
           <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
-            <option value="CLP">🇨🇱 Chile (CLP)</option>
-            <option value="ARS">🇦🇷 Argentina (ARS)</option>
-            <option value="BRL">🇧🇷 Brasil (BRL)</option>
-            <option value="MXN">🇲🇽 México (MXN)</option>
-            <option value="COP">🇨🇴 Colombia (COP)</option>
-            <option value="PEN">🇵🇪 Perú (PEN)</option>
-            <option value="HNL">🇭🇳 Honduras (HNL)</option>
+            <option value="CLP">Chile (CLP)</option>
+            <option value="ARS">Argentina (ARS)</option>
+            <option value="BRL">Brasil (BRL)</option>
+            <option value="MXN">México (MXN)</option>
+            <option value="COP">Colombia (COP)</option>
+            <option value="PEN">Perú (PEN)</option>
+            <option value="HNL">Honduras (HNL)</option>
           </select>
         </div>
 
@@ -115,13 +115,13 @@
       <div class="mobile-drawer-section">
         <label class="mobile-section-label">💱 Conversión de Moneda</label>
         <select id="mobile-currency-select" class="mobile-currency-select" aria-label="Seleccionar moneda móvil">
-          <option value="CLP">🇨🇱 Chile (CLP)</option>
-          <option value="ARS">🇦🇷 Argentina (ARS)</option>
-          <option value="BRL">🇧🇷 Brasil (BRL)</option>
-          <option value="MXN">🇲🇽 México (MXN)</option>
-          <option value="COP">🇨🇴 Colombia (COP)</option>
-          <option value="PEN">🇵🇪 Perú (PEN)</option>
-          <option value="HNL">🇭🇳 Honduras (HNL)</option>
+          <option value="CLP">Chile (CLP)</option>
+          <option value="ARS">Argentina (ARS)</option>
+          <option value="BRL">Brasil (BRL)</option>
+          <option value="MXN">México (MXN)</option>
+          <option value="COP">Colombia (COP)</option>
+          <option value="PEN">Perú (PEN)</option>
+          <option value="HNL">Honduras (HNL)</option>
         </select>
       </div>
 
@@ -466,9 +466,15 @@
             <input type="number" id="edit-game-primaria" required min="0" placeholder="30000">
           </div>
         </div>
-        <div class="form-group">
-          <label>URL de la Foto / Imagen</label>
-          <input type="url" id="edit-game-imagen" required placeholder="https://...">
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Foto Normal (Catálogo)</label>
+            <input type="url" id="edit-game-imagen" required placeholder="https://... (Foto tarjeta en tienda)">
+          </div>
+          <div class="form-group">
+            <label>Foto Detalle (Modal en Grande)</label>
+            <input type="url" id="edit-game-imagen-detalle" required placeholder="https://... (Foto banner al hacer clic)">
+          </div>
         </div>
         <div class="form-group">
           <label>Descripción Corta</label>
