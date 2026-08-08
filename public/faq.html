@@ -87,7 +87,7 @@
       line-height: 1.6;
     }
     .faq-item.active .faq-answer {
-      max-height: 300px;
+      max-height: 2500px;
       padding: 0 1.5rem 1.25rem;
     }
     .back-home-banner {
@@ -272,13 +272,32 @@
   </footer>
 
   <script>
-    // Accordion Interaction
+    // Accordion Interaction con altura dinámica infinita
     document.querySelectorAll('.faq-question').forEach(btn => {
       btn.addEventListener('click', () => {
         const item = btn.parentElement;
-        item.classList.toggle('active');
+        const answer = item.querySelector('.faq-answer');
+        const isActive = item.classList.contains('active');
+
+        if (isActive) {
+          item.classList.remove('active');
+          if (answer) answer.style.maxHeight = null;
+        } else {
+          item.classList.add('active');
+          if (answer) answer.style.maxHeight = (answer.scrollHeight + 80) + 'px';
+        }
       });
     });
+
+    // Abrir automáticamente si se llega por hash (#install-guide)
+    if (window.location.hash === '#install-guide') {
+      const installItem = document.getElementById('install-guide');
+      if (installItem) {
+        installItem.classList.add('active');
+        const ans = installItem.querySelector('.faq-answer');
+        if (ans) ans.style.maxHeight = (ans.scrollHeight + 80) + 'px';
+      }
+    }
 
     // Sync Currency Selector
     const currSelect = document.getElementById('currency-select');
