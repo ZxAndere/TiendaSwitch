@@ -384,15 +384,15 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
     });
 
     if (error) {
-      console.error('Aviso de Resend API:', error.message || error);
-      console.log(`🔑 [CÓDIGO DE VERIFICACIÓN DE RESPALDO PARA ${toEmail}]: ${code}`);
+      console.warn('📌 Resend (Modo Pruebas / Restricción de Dominio):', error.message || error);
+      console.log(`🔑 [CÓDIGO DE VERIFICACIÓN GENERADO PARA ${toEmail}]: ${code}`);
     } else {
-      console.log(`📩 Correo de verificación enviado con exito (ID: ${data.id}) a ${toEmail}`);
+      console.log(`📩 Correo de verificación enviado con éxito (ID: ${data?.id}) a ${toEmail}`);
     }
     return true;
   } catch (err) {
-    console.error('Excepción enviando correo Resend:', err.message || err);
-    console.log(`🔑 [CÓDIGO DE VERIFICACIÓN DE RESPALDO PARA ${toEmail}]: ${code}`);
+    console.warn('📌 Excepción en envío Resend:', err.message || err);
+    console.log(`🔑 [CÓDIGO DE VERIFICACIÓN GENERADO PARA ${toEmail}]: ${code}`);
     return true;
   }
 }
