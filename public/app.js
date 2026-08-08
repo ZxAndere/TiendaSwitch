@@ -162,6 +162,15 @@ function initEventListeners() {
     e.preventDefault(); closeRegisterModal(); openLoginModal();
   });
 
+  // Validaciones de formulario de registro
+  const regUsernameInput = document.getElementById('register-username');
+  const regEmailInput = document.getElementById('register-email');
+  const regPasswordInput = document.getElementById('register-password');
+
+  if (regUsernameInput) regUsernameInput.addEventListener('input', validateRegisterPasswordForm);
+  if (regEmailInput) regEmailInput.addEventListener('input', validateRegisterPasswordForm);
+  if (regPasswordInput) regPasswordInput.addEventListener('input', validateRegisterPasswordForm);
+
   // Forms & Botones OTP y Usuario
   const regForm = document.getElementById('register-form');
   if (regForm) regForm.addEventListener('submit', handleRegisterSubmit);
@@ -652,7 +661,10 @@ async function handleLoginSubmit(e) {
 
 function openLoginModal() { document.getElementById('login-modal-backdrop').classList.add('active'); }
 function closeLoginModal() { document.getElementById('login-modal-backdrop').classList.remove('active'); }
-function openRegisterModal() { document.getElementById('register-modal-backdrop').classList.add('active'); }
+function openRegisterModal() { 
+  document.getElementById('register-modal-backdrop').classList.add('active'); 
+  validateRegisterPasswordForm();
+}
 function closeRegisterModal() { document.getElementById('register-modal-backdrop').classList.remove('active'); }
 
 // --- CATÁLOGO DE JUEGOS ---
