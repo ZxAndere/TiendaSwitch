@@ -2548,3 +2548,190 @@ body {
   padding: 0.7rem;
   font-weight: 800;
 }
+
+/* ==========================================================================
+   Opciones de Administrador & Edición en Tiempo Real (Admin Panel)
+   ========================================================================== */
+.admin-only-tab {
+  background: rgba(255, 0, 60, 0.15) !important;
+  color: #ff4d6d !important;
+  border: 1px solid rgba(255, 0, 60, 0.4) !important;
+  font-weight: 700 !important;
+}
+.admin-only-tab.active {
+  background: var(--switch-red) !important;
+  color: #ffffff !important;
+  box-shadow: var(--glow-red) !important;
+}
+
+.admin-tab-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.admin-tab-header h4 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.admin-tab-header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.admin-search-box-wrapper {
+  margin-bottom: 1rem;
+}
+.admin-search-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+.admin-search-input:focus {
+  outline: none;
+  border-color: var(--joycon-cyan);
+}
+
+.admin-games-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.admin-game-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  transition: var(--transition-fast);
+}
+.admin-game-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.admin-game-row.hidden-game {
+  opacity: 0.55;
+  filter: grayscale(40%);
+  border-style: dashed;
+}
+
+.admin-game-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+.admin-game-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.admin-game-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-game-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-game-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.admin-game-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Interruptor Toggle (Switch Mostrar / Ocultar) */
+.toggle-switch-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.toggle-switch-label span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 55px;
+  text-align: right;
+}
+.toggle-switch-label input[type="checkbox"] {
+  display: none;
+}
+.toggle-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toggle-switch-label input:checked + .toggle-slider {
+  background-color: var(--accent-green);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.4);
+}
+.toggle-switch-label input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+/* Botón Tuerca ⚙️ (Editar) */
+.edit-game-gear-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  color: var(--joycon-cyan);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.edit-game-gear-btn:hover {
+  background: var(--joycon-cyan);
+  color: #000000;
+  transform: rotate(45deg);
+  box-shadow: var(--glow-cyan);
+}

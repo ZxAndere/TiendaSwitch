@@ -22,6 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+const GAMES_FILE = path.join(DATA_DIR, 'games.json');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -43,8 +44,25 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true },
   passwordHash: String,
   password: String,
+  role: { type: String, default: 'user' },
   createdAt: { type: Date, default: Date.now }
 });
+
+const gameSchema = new mongoose.Schema({
+  id: { type: Number, required: true, unique: true },
+  titulo: String,
+  categoria: String,
+  precioSecundaria: Number,
+  precioPrimaria: Number,
+  precioOriginal: Number,
+  rating: Number,
+  peso: String,
+  imagen: String,
+  imagenDetalle: String,
+  descripcion: String,
+  resumenExtenso: String,
+  visible: { type: Boolean, default: true }
+}, { strict: false });
 
 const orderSchema = new mongoose.Schema({
   codigoOrden: { type: String, required: true, unique: true },
@@ -61,6 +79,7 @@ const orderSchema = new mongoose.Schema({
 }, { strict: false });
 
 const UserModel = mongoose.model('User', userSchema);
+const GameModel = mongoose.model('Game', gameSchema);
 const OrderModel = mongoose.model('Order', orderSchema);
 
 if (process.env.MONGODB_URI) {
@@ -96,6 +115,20 @@ if (process.env.MONGODB_URI) {
           console.log(`📥 Sincronizadas ${mongoOrders.length} órdenes desde MongoDB Atlas.`);
         }
       } catch (e) { console.error('Error cargando órdenes MongoDB:', e); }
+
+      // Sincronizar catálogo de juegos desde MongoDB Atlas
+      try {
+        const mongoGames = await GameModel.find({});
+        if (mongoGames.length > 0) {
+          GAMES_STORE = mongoGames.map(g => g.toObject());
+          fs.writeFileSync(GAMES_FILE, JSON.stringify(GAMES_STORE, null, 2));
+          console.log(`📥 Sincronizados ${GAMES_STORE.length} juegos desde MongoDB Atlas.`);
+        } else {
+          GAMES_STORE.forEach(async (g) => {
+            await GameModel.findOneAndUpdate({ id: g.id }, g, { upsert: true, returnDocument: 'after' });
+          });
+        }
+      } catch (e) { console.error('Error cargando juegos MongoDB:', e); }
     })
     .catch(err => {
       mongoLastError = err.message;
@@ -664,11 +697,13 @@ app.post('/api/auth/verify-register-code', (req, res) => {
   }
 
   const users = getUsers();
+  const isZxAndere = otpData.username.toLowerCase() === 'zxandere';
   const newUser = {
     id: `USR-${Date.now()}`,
     username: otpData.username,
     email: otpData.email,
     passwordHash: otpData.passwordHash,
+    role: isZxAndere ? 'admin' : 'user',
     createdAt: new Date().toISOString()
   };
 
@@ -679,7 +714,7 @@ app.post('/api/auth/verify-register-code', (req, res) => {
   res.json({
     exito: true,
     mensaje: "¡Registro completado con éxito!",
-    usuario: { id: newUser.id, username: newUser.username, email: newUser.email }
+    usuario: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role }
   });
 });
 
@@ -701,10 +736,17 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(401).json({ error: "Usuario/correo o contraseña incorrectos." });
   }
 
+  const isZxAndere = user.username.toLowerCase() === 'zxandere';
+  const role = isZxAndere ? 'admin' : (user.role || 'user');
+  if (isZxAndere && user.role !== 'admin') {
+    user.role = 'admin';
+    saveUsers(users);
+  }
+
   res.json({
     exito: true,
     mensaje: `¡Bienvenido de nuevo, ${user.username}!`,
-    usuario: { id: user.id, username: user.username, email: user.email }
+    usuario: { id: user.id, username: user.username, email: user.email, role }
   });
 });
 
@@ -848,8 +890,95 @@ app.post('/api/user/confirm-password-update', (req, res) => {
   res.json({ exito: true, mensaje: "Contraseña actualizada correctamente." });
 });
 
+// Cargar catálogo de juegos desde games.json o inicializar con JUEGOS por defecto
+let GAMES_STORE = [];
+function loadInitialGames() {
+  if (fs.existsSync(GAMES_FILE)) {
+    try {
+      const data = fs.readFileSync(GAMES_FILE, 'utf8');
+      GAMES_STORE = JSON.parse(data);
+    } catch (e) {
+      GAMES_STORE = [...JUEGOS];
+    }
+  } else {
+    GAMES_STORE = [...JUEGOS];
+    saveGamesLocal(GAMES_STORE);
+  }
+}
+
+function saveGamesLocal(games) {
+  GAMES_STORE = games;
+  try {
+    fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
+  } catch (e) {}
+
+  if (isMongoConnected && Array.isArray(games)) {
+    games.forEach(async (g) => {
+      try {
+        await GameModel.findOneAndUpdate({ id: g.id }, g, { upsert: true, returnDocument: 'after' });
+      } catch (e) {}
+    });
+  }
+}
+
+loadInitialGames();
+
+// --- ENDPOINTS DE CATÁLOGO Y ADMINISTRACIÓN DE JUEGOS ---
+
+// Endpoint Público: Retorna solo juegos visibles para los clientes
 app.get('/api/juegos', (req, res) => {
-  res.json(JUEGOS);
+  const visibleGames = GAMES_STORE.filter(g => g.visible !== false);
+  res.json(visibleGames);
+});
+
+// Endpoint Admin: Retorna TODOS los juegos (visibles y ocultos) para el panel de administración
+app.get('/api/admin/juegos', (req, res) => {
+  const username = (req.query.user || '').toLowerCase();
+  if (username !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+  res.json(GAMES_STORE);
+});
+
+// Endpoint Admin: Cambiar visibilidad (Mostrar / Ocultar) en tiempo real
+app.post('/api/admin/juegos/toggle', (req, res) => {
+  const { gameId, visible, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  const game = GAMES_STORE.find(g => g.id === Number(gameId));
+  if (!game) return res.status(404).json({ error: "Juego no encontrado." });
+
+  game.visible = !!visible;
+  saveGamesLocal(GAMES_STORE);
+
+  console.log(`🛠️ [ADMIN] Visibilidad de "${game.titulo}" cambiada a: ${game.visible ? 'VISIBLE' : 'OCULTO'}`);
+  res.json({ exito: true, mensaje: `Visibilidad de ${game.titulo} actualizada.`, juegos: GAMES_STORE });
+});
+
+// Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto, etc.) en tiempo real
+app.post('/api/admin/juegos/update', (req, res) => {
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, username } = req.body;
+  if ((username || '').toLowerCase() !== 'zxandere') {
+    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+  }
+
+  const gameIndex = GAMES_STORE.findIndex(g => g.id === Number(gameId));
+  if (gameIndex === -1) return res.status(404).json({ error: "Juego no encontrado." });
+
+  const game = GAMES_STORE[gameIndex];
+  if (titulo) game.titulo = titulo.trim();
+  if (categoria) game.categoria = categoria.trim();
+  if (precioSecundaria !== undefined && precioSecundaria !== '') game.precioSecundaria = Number(precioSecundaria);
+  if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
+  if (descripcion) game.descripcion = descripcion.trim();
+  if (imagen) game.imagen = imagen.trim();
+
+  saveGamesLocal(GAMES_STORE);
+
+  console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado en tiempo real.`);
+  res.json({ exito: true, mensaje: `Juego "${game.titulo}" actualizado correctamente en tiempo real.`, juego: game, juegos: GAMES_STORE });
 });
 
 app.post('/api/checkout', async (req, res) => {
