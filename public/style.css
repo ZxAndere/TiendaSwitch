@@ -2095,3 +2095,243 @@ body {
   font-weight: 800;
   font-size: 0.95rem;
 }
+
+/* ==========================================================================
+   ADAPTACIÓN MÓVIL Y ESTILO DE CARTUCHOS NINTENDO SWITCH (2x2)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Layout General */
+  .main-container {
+    padding: 0 0.75rem !important;
+    margin-bottom: 2rem !important;
+  }
+
+  .hero-section {
+    margin: 1rem auto 1.25rem !important;
+    padding: 0 0.75rem !important;
+  }
+
+  .hero-content h1 {
+    font-size: 1.35rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.85rem !important;
+  }
+
+  /* Header & Navegación */
+  .navbar {
+    padding: 0.6rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .logo-text {
+    font-size: 1.05rem !important;
+  }
+
+  .logo-img {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .nav-center {
+    order: 3;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .search-container {
+    max-width: 100% !important;
+  }
+
+  .search-input {
+    padding: 0.5rem 0.75rem 0.5rem 2.2rem !important;
+    font-size: 0.825rem !important;
+  }
+
+  /* Categorías Deslizables Táctiles */
+  .category-pills {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    padding-bottom: 0.4rem !important;
+    gap: 0.4rem !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .category-pills::-webkit-scrollbar { display: none; }
+
+  .pill-btn {
+    flex-shrink: 0 !important;
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.775rem !important;
+  }
+
+  .section-header {
+    padding: 0.85rem 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .section-title {
+    font-size: 1.15rem !important;
+  }
+
+  /* ==========================================
+     FORMATO DE CARTUCHOS NINTENDO SWITCH (2x2)
+     ========================================== */
+  .games-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
+
+  .game-card {
+    border-radius: 12px 12px 14px 14px !important;
+    background: linear-gradient(180deg, #18202e 0%, #0d121c 100%) !important;
+    border: 2px solid rgba(0, 240, 255, 0.25) !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.6) !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  /* Muesca superior del cartucho Nintendo Switch */
+  .game-card::before {
+    content: "NINTENDO SWITCH" !important;
+    display: block !important;
+    background: linear-gradient(90deg, #ff003c 0%, #cc0030 100%) !important;
+    color: #ffffff !important;
+    font-family: var(--font-heading) !important;
+    font-size: 0.525rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    text-align: center !important;
+    padding: 3px 0 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+  }
+
+  .card-media {
+    height: 125px !important;
+    margin: 5px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .card-tag {
+    font-size: 0.6rem !important;
+    padding: 2px 5px !important;
+    top: 5px !important;
+    left: 5px !important;
+  }
+
+  .card-size-tag {
+    font-size: 0.6rem !important;
+    padding: 2px 5px !important;
+    bottom: 5px !important;
+    left: 5px !important;
+  }
+
+  .card-content {
+    padding: 0.6rem !important;
+  }
+
+  .card-title {
+    font-size: 0.825rem !important;
+    line-height: 1.25 !important;
+    height: 2.1rem !important;
+    margin-bottom: 0.3rem !important;
+    font-weight: 800 !important;
+  }
+
+  /* Ocultar descripción larga en cartuchos pequeños para mantener simetría limpia */
+  .card-desc {
+    display: none !important;
+  }
+
+  .card-license-hint {
+    font-size: 0.675rem !important;
+    padding: 3px 4px !important;
+    height: 1.9rem !important;
+    margin-bottom: 0.4rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .card-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.4rem !important;
+    padding-top: 0.4rem !important;
+  }
+
+  .price-container {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .original-price {
+    font-size: 0.675rem !important;
+  }
+
+  .current-price {
+    font-size: 0.975rem !important;
+  }
+
+  .buy-card-btn {
+    width: 100% !important;
+    padding: 0.5rem 0.4rem !important;
+    font-size: 0.775rem !important;
+    text-align: center !important;
+    justify-content: center !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  /* ==========================================
+     MODALES RESPONSIVOS EN CELULAR
+     ========================================== */
+  .modal-backdrop {
+    padding: 0.5rem !important;
+  }
+
+  .payment-modal-card {
+    height: 92vh !important;
+    max-height: 700px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .payment-modal-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+    overflow-y: auto !important;
+  }
+
+  .payment-left-col {
+    padding: 1.25rem 1rem !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+
+  .payment-right-col {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .user-modal-card {
+    padding: 1.25rem 1rem !important;
+    max-width: 98% !important;
+  }
+
+  .auth-modal-card {
+    padding: 1.5rem 1.25rem !important;
+    max-width: 96% !important;
+  }
+
+  .otp-input-large {
+    font-size: 1.6rem !important;
+    letter-spacing: 6px !important;
+  }
+
+  .cart-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
