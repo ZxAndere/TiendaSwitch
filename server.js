@@ -361,7 +361,7 @@ const JUEGOS = [
 ];
 
 // --- INTEGRACIÓN RESEND API Y CÓDIGOS DE VERIFICACIÓN (OTP) ---
-const resend = new Resend(RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
 const OTP_STORE = new Map();
 
 async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de Verificación - ZonaSwitchChile') {
