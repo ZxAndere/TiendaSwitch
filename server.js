@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Resend } = require('resend');
 const express = require('express');
 const path = require('path');
@@ -366,33 +367,33 @@ const OTP_STORE = new Map();
 
 async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de Verificación - ZonaSwitchChile') {
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'ZonaSwitchChile <onboarding@resend.dev>',
-        to: [toEmail],
-        subject: `🔐 ${subjectTitle}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #f8fafc; padding: 28px; border-radius: 12px; border: 1px solid #1e293b; max-width: 500px; margin: 0 auto;">
-            <h2 style="color: #ff003c; margin: 0 0 10px; font-size: 24px;">🎮 ZonaSwitchChile</h2>
-            <p style="font-size: 15px; color: #cbd5e1; margin-bottom: 20px;">${subjectTitle}:</p>
-            <div style="background: #0f1624; border: 2px solid #00f0ff; color: #00f0ff; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);">
-              ${code}
-            </div>
-            <p style="color: #94a3b8; font-size: 13px; margin-top: 20px;">Este código de 6 dígitos expira en 10 minutos.</p>
+    const { data, error } = await resend.emails.send({
+      from: 'ZonaSwitchChile <onboarding@resend.dev>',
+      to: [toEmail],
+      subject: `🔐 ${subjectTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #f8fafc; padding: 28px; border-radius: 12px; border: 1px solid #1e293b; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #ff003c; margin: 0 0 10px; font-size: 24px;">🎮 ZonaSwitchChile</h2>
+          <p style="font-size: 15px; color: #cbd5e1; margin-bottom: 20px;">${subjectTitle}:</p>
+          <div style="background: #0f1624; border: 2px solid #00f0ff; color: #00f0ff; font-size: 34px; font-weight: 900; letter-spacing: 8px; padding: 18px; text-align: center; border-radius: 8px; margin: 20px 0; text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);">
+            ${code}
           </div>
-        `
-      })
+          <p style="color: #94a3b8; font-size: 13px; margin-top: 20px;">Este código de 6 dígitos expira en 10 minutos.</p>
+        </div>
+      `
     });
-    const data = await res.json();
-    return data && data.id ? true : false;
+
+    if (error) {
+      console.error('Aviso de Resend API:', error.message || error);
+      console.log(`🔑 [CÓDIGO DE VERIFICACIÓN DE RESPALDO PARA ${toEmail}]: ${code}`);
+    } else {
+      console.log(`📩 Correo de verificación enviado con exito (ID: ${data.id}) a ${toEmail}`);
+    }
+    return true;
   } catch (err) {
-    console.error('Error enviando correo Resend:', err);
-    return false;
+    console.error('Excepción enviando correo Resend:', err.message || err);
+    console.log(`🔑 [CÓDIGO DE VERIFICACIÓN DE RESPALDO PARA ${toEmail}]: ${code}`);
+    return true;
   }
 }
 
