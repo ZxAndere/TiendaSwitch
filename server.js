@@ -15,6 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Asegurar directorio de datos
@@ -113,12 +114,12 @@ app.get('/api/debug/mongo', (req, res) => {
 });
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
-const FLOW_API_KEY = '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
-const FLOW_SECRET_KEY = '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
-const FLOW_API_URL = 'https://www.flow.cl/api';
+const FLOW_API_KEY = process.env.FLOW_API_KEY || '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
+const FLOW_SECRET_KEY = process.env.FLOW_SECRET_KEY || '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
+const FLOW_API_URL = process.env.FLOW_API_URL || 'https://www.flow.cl/api';
 
-const MP_PUBLIC_KEY = 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad';
-const MP_ACCESS_TOKEN = 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626';
+const MP_PUBLIC_KEY = process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad';
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626';
 
 const ORDERS_STORE = new Map();
 
@@ -162,12 +163,25 @@ function saveUsers(users) {
 }
 
 function signFlowParams(params) {
-  const keys = Object.keys(params).sort();
+  const keys = Object.keys(params)
+    .filter(k => k !== 's' && params[k] !== undefined && params[k] !== null)
+    .sort();
   let toSign = '';
   keys.forEach(k => {
     toSign += k + params[k];
   });
   return crypto.createHmac('sha256', FLOW_SECRET_KEY).update(toSign).digest('hex');
+}
+
+function formatFlowErrorMessage(flowData) {
+  if (!flowData) return "No se pudo iniciar la transacción con Flow.";
+  if (flowData.code === 1620) {
+    return "El correo electrónico ingresado no es válido o su servidor de correo no fue verificado por Flow. Por favor usa un email válido (ej: tuusuario@gmail.com).";
+  }
+  if (flowData.code === 101 || flowData.code === 501) {
+    return "Error de autenticación con la pasarela Flow (las llaves API ingresadas no son válidas).";
+  }
+  return flowData.message ? `Error Flow: ${flowData.message}` : "No se pudo procesar la transacción con la pasarela Flow.";
 }
 
 // Helper de Hashing seguro para contraseñas
@@ -924,29 +938,61 @@ app.post('/api/checkout', async (req, res) => {
   // Por defecto: Flow Chile
   const labelJuegos = orderData.articulos === 1 ? 'juego' : 'juegos';
 
-  const flowParams = {
-    apiKey: FLOW_API_KEY,
-    commerceOrder: codigoOrden,
-    subject: `Compra ZonaSwitchChile (${orderData.articulos} ${labelJuegos})`,
-    currency: 'CLP',
-    amount: total,
-    email: cleanEmail,
-    urlConfirmation: `${baseUrl}/api/flow/confirm`,
-    urlReturn: `${baseUrl}/api/flow/return`
+  const FLOW_DEFAULT_EMAIL = process.env.FLOW_DEFAULT_EMAIL || 'zx.andereacc@gmail.com';
+  let flowEmail = (cleanEmail && cleanEmail.includes('@')) ? cleanEmail : FLOW_DEFAULT_EMAIL;
+
+  const buildFlowParams = (emailToUse) => {
+    const params = {
+      apiKey: FLOW_API_KEY,
+      commerceOrder: codigoOrden,
+      subject: `Compra ZonaSwitchChile (${orderData.articulos} ${labelJuegos})`,
+      currency: 'CLP',
+      amount: total,
+      email: emailToUse,
+      urlConfirmation: `${baseUrl}/api/flow/confirm`,
+      urlReturn: `${baseUrl}/api/flow/return`
+    };
+    params.s = signFlowParams(params);
+    return params;
   };
 
-  flowParams.s = signFlowParams(flowParams);
+  let flowParams = buildFlowParams(flowEmail);
 
   try {
-    const flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
+    let flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(flowParams).toString()
     });
 
-    const flowData = await flowRes.json();
+    let responseText = await flowRes.text();
+    let flowData;
+    try {
+      flowData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('❌ Respuesta no-JSON recibida de Flow API:', responseText);
+      return res.status(502).json({
+        error: "La pasarela Flow devolvió una respuesta no válida. Inténtalo de nuevo más tarde."
+      });
+    }
 
-    if (flowData && flowData.url && flowData.token) {
+    // Si Flow rechaza el correo por error 1620 (sin MX / no válido), reintentar de inmediato con el email seguro del comercio
+    if (!flowRes.ok && flowData && flowData.code === 1620 && flowEmail !== FLOW_DEFAULT_EMAIL) {
+      console.warn(`⚠️ Flow rechazó email cliente (${flowEmail}). Reintentando automáticamente con email de contingencia (${FLOW_DEFAULT_EMAIL})...`);
+      flowEmail = FLOW_DEFAULT_EMAIL;
+      flowParams = buildFlowParams(flowEmail);
+
+      flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(flowParams).toString()
+      });
+
+      responseText = await flowRes.text();
+      try { flowData = JSON.parse(responseText); } catch (e) {}
+    }
+
+    if (flowRes.ok && flowData && flowData.url && flowData.token) {
       orderData.flowOrder = flowData.flowOrder;
       orderData.token = flowData.token;
       saveOrders(orders);
@@ -958,14 +1004,13 @@ app.post('/api/checkout', async (req, res) => {
         detalles: orderData
       });
     } else {
-      console.error('Error al crear pago en Flow:', flowData);
-      return res.status(400).json({
-        error: flowData.message ? `Flow Error: ${flowData.message}` : "No se pudo iniciar la transacción con Flow."
-      });
+      console.error('❌ Error al crear pago en Flow:', flowData);
+      const friendlyError = formatFlowErrorMessage(flowData);
+      return res.status(400).json({ error: friendlyError });
     }
   } catch (err) {
-    console.error('Error de conexión con Flow:', err);
-    return res.status(500).json({ error: "Error de comunicación con la pasarela de pago Flow." });
+    console.error('❌ Error de conexión de red con Flow:', err);
+    return res.status(500).json({ error: "Error de comunicación con la pasarela de pago Flow. Revisa tu conexión de red." });
   }
 });
 
@@ -981,7 +1026,14 @@ app.all('/api/flow/return', async (req, res) => {
     params.s = signFlowParams(params);
 
     const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`);
-    const statusData = await flowRes.json();
+    const responseText = await flowRes.text();
+    let statusData;
+    try {
+      statusData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('❌ Error parseando estado de Flow:', responseText);
+      return res.redirect('/');
+    }
 
     const orders = getOrders();
     const orderIndex = orders.findIndex(o => o.token === token || o.codigoOrden === statusData.commerceOrder);
@@ -998,14 +1050,14 @@ app.all('/api/flow/return', async (req, res) => {
 
     res.redirect(`/?flow_order=${orderCode}&status=${status}`);
   } catch (err) {
-    console.error('Error en callback de retorno Flow:', err);
+    console.error('❌ Error en callback de retorno Flow:', err);
     res.redirect('/');
   }
 });
 
 // Confirmación asíncrona de Flow (Webhook servidor a servidor)
 app.post('/api/flow/confirm', async (req, res) => {
-  const token = req.body?.token;
+  const token = req.body?.token || req.query?.token;
   if (!token) return res.status(400).send('Token no proporcionado.');
 
   try {
@@ -1013,7 +1065,13 @@ app.post('/api/flow/confirm', async (req, res) => {
     params.s = signFlowParams(params);
 
     const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`);
-    const statusData = await flowRes.json();
+    const responseText = await flowRes.text();
+    let statusData;
+    try {
+      statusData = JSON.parse(responseText);
+    } catch (e) {
+      return res.status(500).send('Error');
+    }
 
     const orders = getOrders();
     const orderIndex = orders.findIndex(o => o.token === token || o.codigoOrden === statusData.commerceOrder);
