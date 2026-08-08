@@ -109,12 +109,34 @@ function getOrders() {
 
 function saveOrders(ordersList) {
   if (Array.isArray(ordersList)) {
-    ordersList.forEach(o => {
+    ordersList.forEach(async (o) => {
       if (o && o.codigoOrden) {
         ORDERS_STORE.set(o.codigoOrden, o);
         if (isMongoConnected) {
-          OrderModel.updateOne({ codigoOrden: o.codigoOrden }, o, { upsert: true }).catch(() => {});
+          try {
+            await OrderModel.findOneAndUpdate({ codigoOrden: o.codigoOrden }, o, { upsert: true, new: true });
+            console.log(`🍃 Orden ${o.codigoOrden} guardada en MongoDB Atlas.`);
+          } catch (err) {
+            console.error('❌ Error guardando orden en Mongo:', err.message);
+          }
         }
+      }
+    });
+  }
+}
+
+function saveUsers(users) {
+  try {
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  } catch (e) {}
+
+  if (isMongoConnected && Array.isArray(users)) {
+    users.forEach(async (u) => {
+      try {
+        await UserModel.findOneAndUpdate({ email: u.email }, u, { upsert: true, new: true });
+        console.log(`🍃 Usuario ${u.username} (${u.email}) guardado en MongoDB Atlas.`);
+      } catch (err) {
+        console.error('❌ Error guardando usuario en Mongo:', err.message);
       }
     });
   }
