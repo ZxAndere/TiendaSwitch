@@ -232,16 +232,22 @@ function renderGameDetailView() {
     `;
   }
 
-  const specSize = document.getElementById('jd-spec-size');
-  if (specSize) specSize.textContent = game.peso || '15 GB';
-
   const specCat = document.getElementById('jd-spec-category');
   if (specCat) specCat.textContent = game.categoria || 'Acción / Aventura';
 
-  // Tráiler Teaser Listener
-  const trailerBtn = document.getElementById('jd-trailer-btn');
-  if (trailerBtn) {
-    trailerBtn.onclick = () => openTrailerModal(game);
+  // Video Tráiler Embebido Directamente en la Página
+  const videoWrapper = document.getElementById('jd-video-wrapper');
+  if (videoWrapper) {
+    const videoUrl = getYouTubeEmbedUrl(game);
+    videoWrapper.innerHTML = `
+      <iframe
+        src="${videoUrl}"
+        title="Tráiler Oficial de ${escapeHTML(game.titulo)}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
+    `;
   }
 }
 
@@ -393,49 +399,52 @@ function renderRelatedGames() {
   }).join('');
 }
 
-function parseYouTubeEmbedUrl(url) {
+function parseYouTubeVideoId(url) {
   if (!url) return null;
-  let videoId = '';
+  const str = String(url).trim();
+  if (!str) return null;
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+
   try {
-    if (url.includes('youtu.be/')) {
-      videoId = url.split('youtu.be/')[1].split('?')[0].split('&')[0];
-    } else if (url.includes('youtube.com/watch')) {
-      const u = new URL(url);
-      videoId = u.searchParams.get('v');
-    } else if (url.includes('youtube.com/embed/')) {
-      videoId = url.split('youtube.com/embed/')[1].split('?')[0];
-    } else if (url.includes('youtube.com/shorts/')) {
-      videoId = url.split('youtube.com/shorts/')[1].split('?')[0];
+    if (str.includes('youtu.be/')) {
+      return str.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
+    }
+    if (str.includes('youtube.com/watch')) {
+      const u = new URL(str);
+      return u.searchParams.get('v');
+    }
+    if (str.includes('youtube.com/embed/')) {
+      return str.split('youtube.com/embed/')[1].split('?')[0].split('#')[0];
+    }
+    if (str.includes('youtube.com/shorts/')) {
+      return str.split('youtube.com/shorts/')[1].split('?')[0].split('#')[0];
     }
   } catch (e) {}
-
-  if (videoId) {
-    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
-  }
-  return url;
+  return null;
 }
 
-function openTrailerModal(game) {
-  const modal = document.getElementById('trailer-modal-backdrop');
-  const wrapper = document.getElementById('trailer-video-wrapper');
-  if (!modal || !wrapper) return;
+function getYouTubeEmbedUrl(game) {
+  if (!game) return 'https://www.youtube.com/embed/uHGShqcAHlQ?autoplay=0&rel=0&modestbranding=1&enablejsapi=1';
 
-  const customYt = parseYouTubeEmbedUrl(game.youtubeUrl || game.videoTrailerUrl);
+  const customYt = game.youtubeUrl || game.videoTrailerUrl;
+  let videoId = parseYouTubeVideoId(customYt);
 
   const trailerMap = {
-    1: 'https://www.youtube-nocookie.com/embed/uHGShqcAHlQ?autoplay=1', // Zelda TOTK
-    2: 'https://www.youtube-nocookie.com/embed/JStAYvbe_3s?autoplay=1', // Mario Wonder
-    3: 'https://www.youtube-nocookie.com/embed/tKlRN2YpxRE?autoplay=1', // Mario Kart 8 Deluxe
-    4: 'https://www.youtube-nocookie.com/embed/WShCN-AYHqA?autoplay=1', // Smash Ultimate
-    5: 'https://www.youtube-nocookie.com/embed/7V20G0S_Y4w?autoplay=1', // Pokémon Escarlata
-    6: 'https://www.youtube-nocookie.com/embed/8wjY0q01uOk?autoplay=1'  // Metroid Dread
+    1: 'uHGShqcAHlQ', // Zelda TOTK
+    2: 'JStAYvbe_3s', // Mario Wonder
+    3: 'tKlRN2YpxRE', // Mario Kart 8 Deluxe
+    4: 'WShCN-AYHqA', // Smash Ultimate
+    5: '7V20G0S_Y4w', // Pokémon Escarlata
+    6: '8wjY0q01uOk'  // Metroid Dread
   };
 
-  const videoUrl = customYt || trailerMap[game.id] || 'https://www.youtube-nocookie.com/embed/uHGShqcAHlQ?autoplay=1';
+  if (!videoId) {
+    videoId = trailerMap[game.id] || 'uHGShqcAHlQ';
+  }
 
-  wrapper.innerHTML = `
-    <iframe src="${videoUrl}" title="Tráiler de ${escapeHTML(game.titulo)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-  `;
+  return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`;
+}
 
   modal.classList.add('active');
 
