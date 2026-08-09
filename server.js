@@ -1650,9 +1650,16 @@ function slugify(text) {
 
 // Endpoint Público: Retorna solo juegos visibles para los clientes
 app.get('/api/juegos', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = [...DEFAULT_GAMES];
-    saveGamesLocal(GAMES_STORE);
+    GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
+    if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+      GAMES_STORE = [...DEFAULT_GAMES];
+      saveGamesLocal(GAMES_STORE);
+    }
   }
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
   if (visibleGames.length === 0) {
@@ -1665,12 +1672,19 @@ app.get('/api/juegos', (req, res) => {
 
 // Endpoint Público: Retorna un juego específico por ID o por Slug (título normalizado)
 app.get('/api/juegos/:identifier', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   const param = req.params.identifier;
   if (!param) return res.status(400).json({ error: "Identificador no proporcionado." });
 
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = [...DEFAULT_GAMES];
-    saveGamesLocal(GAMES_STORE);
+    GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
+    if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+      GAMES_STORE = [...DEFAULT_GAMES];
+      saveGamesLocal(GAMES_STORE);
+    }
   }
 
   const cleanParam = param.toLowerCase().trim();

@@ -2054,9 +2054,39 @@ function initRealtimeCatalogStream() {
           const data = JSON.parse(event.data);
           if (data.type === 'CATALOG_UPDATED' && Array.isArray(data.games) && data.games.length > 0) {
             catalog = data.games;
-            renderCatalog();
+            if (typeof renderCatalog === 'function') renderCatalog();
+
+            // Sincronizar detalle de juego si el usuario está en la vista de detalle
+            if (typeof currentDetailGame !== 'undefined' && currentDetailGame) {
+              const updatedGame = catalog.find(g => Number(g.id) === Number(currentDetailGame.id));
+              if (updatedGame) {
+                currentDetailGame = updatedGame;
+                if (typeof renderGameDetailView === 'function') {
+                  renderGameDetailView();
+                }
+              }
+            }
+
+            // Sincronizar precios de los ítems en el carrito de compras
+            if (Array.isArray(cart) && cart.length > 0) {
+              cart.forEach(item => {
+                const fresh = catalog.find(g => Number(g.id) === Number(item.id));
+                if (fresh) {
+                  item.precioSecundaria = fresh.precioSecundaria;
+                  item.precioPrimaria = fresh.precioPrimaria;
+                  item.precioOriginal = fresh.precioOriginal;
+                  item.imagen = fresh.imagen;
+                  item.titulo = fresh.titulo;
+                }
+              });
+              saveCart();
+              renderCartDrawer();
+            }
+
             if (currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'))) {
-              fetchAndRenderAdminGames();
+              if (typeof fetchAndRenderAdminGames === 'function') {
+                fetchAndRenderAdminGames();
+              }
             }
           }
         } catch (e) { }
