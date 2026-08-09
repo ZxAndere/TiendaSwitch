@@ -1636,18 +1636,16 @@ function renderCartDrawer() {
 
   const total = Math.max(0, subtotal - discount);
 
-  const discountRow = document.getElementById('cart-discount-row');
-  const discountVal = document.getElementById('summary-discount');
-  if (discountRow && discountVal) {
-    if (discount > 0) {
-      discountRow.style.display = 'flex';
-      discountVal.textContent = `- ${formatCLP(discount)}`;
-    } else {
-      discountRow.style.display = 'none';
-    }
-  }
+  const discountRows = document.querySelectorAll('#cart-discount-row, #drawer-discount-row');
+  const discountVals = document.querySelectorAll('#summary-discount, #drawer-discount');
+  discountRows.forEach(el => el.style.display = discount > 0 ? 'flex' : 'none');
+  discountVals.forEach(el => el.textContent = `- ${formatCLP(discount)}`);
 
-  document.getElementById('summary-total').textContent = formatCLP(total);
+  const subtotalEls = document.querySelectorAll('#summary-subtotal, #drawer-subtotal');
+  subtotalEls.forEach(el => el.textContent = formatCLP(subtotal));
+
+  const totalEls = document.querySelectorAll('#summary-total, #drawer-total');
+  totalEls.forEach(el => el.textContent = formatCLP(total));
 }
 
 function changeQuantity(cartItemId, delta) {

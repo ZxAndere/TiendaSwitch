@@ -316,6 +316,7 @@ function updateLicenseAccordionContent() {
 function handleAddDetailToCart() {
   if (!currentDetailGame) return;
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
+  openCartDrawer();
 }
 
 function handleDirectDetailCheckout() {
