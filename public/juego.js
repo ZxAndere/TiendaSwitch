@@ -123,6 +123,7 @@ async function initJuegoPage() {
 
   renderGameDetailView();
   renderRelatedGames();
+  initAdminQuickGearButton();
 }
 
 function renderGameDetailView() {
@@ -140,13 +141,14 @@ function renderGameDetailView() {
   heroImg.alt = game.titulo;
 
   // Badge de descuento animado
-  const orig = Number(game.precioOriginal) || (Number(game.precioPrimaria) * 1.5);
+  const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
   const cur = Number(game.precioSecundaria) || 10000;
   const pct = Math.max(10, Math.round(((orig - cur) / orig) * 100));
   document.getElementById('jd-discount-badge').textContent = `-${pct}% OFF`;
 
   document.getElementById('jd-hero-size-badge').textContent = `📦 ${game.peso || '15 GB'}`;
-  document.getElementById('jd-hero-rating-badge').textContent = `⭐ ${game.rating || 5.0} / 5.0`;
+  const ratingElem = document.getElementById('jd-hero-rating-badge');
+  if (ratingElem) ratingElem.style.display = 'none';
 
   // Tira de miniaturas
   const strip = document.getElementById('jd-thumbnails-strip');
@@ -160,7 +162,8 @@ function renderGameDetailView() {
   document.getElementById('jd-category-tag').textContent = game.categoria || 'Nintendo Switch';
   document.getElementById('jd-title').textContent = game.titulo;
   document.getElementById('jd-peso-val').textContent = game.peso || '15 GB';
-  document.getElementById('jd-rating-val').textContent = (game.rating || 5.0).toFixed(1);
+  const ratingVal = document.getElementById('jd-rating-val');
+  if (ratingVal && ratingVal.parentElement) ratingVal.parentElement.style.display = 'none';
 
   // Precios y Ahorro
   const selectedPrice = currentSelectedLicense === 'primaria' ? game.precioPrimaria : game.precioSecundaria;
@@ -262,7 +265,7 @@ function updateLicenseAccordionContent() {
     label.textContent = 'Cuenta Primaria';
     content.innerHTML = `
       <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
-        <li>⭐ <strong>Tu Perfil Personal:</strong> Juegas con tu perfil personal de siempre, acumulando tus propios trofeos, partidas guardadas e historial de horas.</li>
+        <li>🎮 <strong>Tu Perfil Personal:</strong> Juegas con tu perfil personal de siempre, acumulando tus propios trofeos y partidas guardadas.</li>
         <li>✈️ <strong>Modo Offline / Sin Wi-Fi:</strong> Juegas en cualquier lugar sin necesidad de estar conectado a internet.</li>
         <li>🌐 <strong>Multijugador Online:</strong> Compatible 100% con tu suscripción a Nintendo Switch Online.</li>
         <li>🛡️ <strong>Garantía VIP:</strong> Licencia permanente con garantía de por vida ZonaSwitchChile.</li>
@@ -273,16 +276,12 @@ function updateLicenseAccordionContent() {
 
 function handleAddDetailToCart() {
   if (!currentDetailGame) return;
-
-  const licenseName = currentSelectedLicense === 'primaria' ? 'Primaria' : 'Secundaria';
-  const price = currentSelectedLicense === 'primaria' ? currentDetailGame.precioPrimaria : currentDetailGame.precioSecundaria;
-
-  addToCart(currentDetailGame.id, licenseName, price);
-  showToast(`¡${currentDetailGame.titulo} (${licenseName}) añadido al carrito! 🛒`);
+  addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
 }
 
 function handleDirectDetailCheckout() {
-  handleAddDetailToCart();
+  if (!currentDetailGame) return;
+  addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
   openCartDrawer();
 }
 
@@ -303,31 +302,61 @@ function switchDetailTab(tabId) {
 
 function renderRelatedGames() {
   const container = document.getElementById('jd-related-grid');
-  if (!container || !currentDetailGame) return;
+  if (!container || !currentDetailGame || !Array.isArray(catalog)) return;
 
-  const related = catalog.filter(g => g.id !== currentDetailGame.id && g.categoria === currentDetailGame.categoria);
-  const displayList = related.length >= 2 ? related.slice(0, 4) : catalog.filter(g => g.id !== currentDetailGame.id).slice(0, 4);
+  const otherGames = catalog.filter(g => g.id !== currentDetailGame.id && g.visible !== false);
+  if (otherGames.length === 0) return;
 
-  container.innerHTML = displayList.map(g => `
-    <article class="game-card in-view" onclick="window.location.href='/${slugify(g.titulo)}'">
-      <div class="card-media">
-        <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy">
-        <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>
-        <span class="card-size-tag">📦 ${escapeHTML(g.peso || 'N/A')}</span>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">${escapeHTML(g.titulo || '')}</h3>
-        <p class="card-desc">${escapeHTML(g.descripcion || '')}</p>
-        <div class="card-footer">
-          <div class="price-container">
-            <span class="original-price">${formatCLP(g.precioOriginal || g.precioSecundaria * 1.5)}</span>
-            <span class="current-price">${formatCLP(g.precioSecundaria)}</span>
-          </div>
-          <button class="btn-card-buy" type="button">Ver Detalle →</button>
+  // Seleccionar 4 juegos al azar del catálogo existente
+  const shuffled = [...otherGames].sort(() => 0.5 - Math.random());
+  const displayList = shuffled.slice(0, 4);
+
+  container.innerHTML = displayList.map(g => {
+    const orig = Number(g.precioOriginal) || (Number(g.precioSecundaria) * 1.5);
+    const cur = Number(g.precioSecundaria);
+    return `
+      <article class="game-card in-view" onclick="window.location.href='juego.html?id=${g.id}'">
+        <div class="card-media">
+          <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy">
+          <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>
+          <span class="card-size-tag">📦 ${escapeHTML(g.peso || 'N/A')}</span>
         </div>
-      </div>
-    </article>
-  `).join('');
+        <div class="card-content">
+          <h3 class="card-title">${escapeHTML(g.titulo || '')}</h3>
+          <p class="card-desc">${escapeHTML(g.descripcion || '')}</p>
+          <div class="card-footer">
+            <div class="price-container">
+              <span class="original-price">${formatCLP(orig)}</span>
+              <span class="current-price">${formatCLP(cur)}</span>
+            </div>
+            <button class="btn-card-buy" type="button">Ver Detalle →</button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function parseYouTubeEmbedUrl(url) {
+  if (!url) return null;
+  let videoId = '';
+  try {
+    if (url.includes('youtu.be/')) {
+      videoId = url.split('youtu.be/')[1].split('?')[0].split('&')[0];
+    } else if (url.includes('youtube.com/watch')) {
+      const u = new URL(url);
+      videoId = u.searchParams.get('v');
+    } else if (url.includes('youtube.com/embed/')) {
+      videoId = url.split('youtube.com/embed/')[1].split('?')[0];
+    } else if (url.includes('youtube.com/shorts/')) {
+      videoId = url.split('youtube.com/shorts/')[1].split('?')[0];
+    }
+  } catch (e) {}
+
+  if (videoId) {
+    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+  }
+  return url;
 }
 
 function openTrailerModal(game) {
@@ -335,7 +364,8 @@ function openTrailerModal(game) {
   const wrapper = document.getElementById('trailer-video-wrapper');
   if (!modal || !wrapper) return;
 
-  // Renderizar trailer YouTube Embed según el juego
+  const customYt = parseYouTubeEmbedUrl(game.youtubeUrl || game.videoTrailerUrl);
+
   const trailerMap = {
     1: 'https://www.youtube-nocookie.com/embed/uHGShqcAHlQ?autoplay=1', // Zelda TOTK
     2: 'https://www.youtube-nocookie.com/embed/JStAYvbe_3s?autoplay=1', // Mario Wonder
@@ -345,7 +375,7 @@ function openTrailerModal(game) {
     6: 'https://www.youtube-nocookie.com/embed/8wjY0q01uOk?autoplay=1'  // Metroid Dread
   };
 
-  const videoUrl = trailerMap[game.id] || 'https://www.youtube-nocookie.com/embed/uHGShqcAHlQ?autoplay=1';
+  const videoUrl = customYt || trailerMap[game.id] || 'https://www.youtube-nocookie.com/embed/uHGShqcAHlQ?autoplay=1';
 
   wrapper.innerHTML = `
     <iframe src="${videoUrl}" title="Tráiler de ${escapeHTML(game.titulo)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -361,3 +391,154 @@ function openTrailerModal(game) {
     };
   }
 }
+
+// --- MODO ADMINISTRADOR: BOTÓN CON TUERCA ABAJO A LA IZQUIERDA Y MODAL QUICK-EDIT ---
+function initAdminQuickGearButton() {
+  const gearBtn = document.getElementById('admin-game-gear-btn');
+  if (!gearBtn || !currentDetailGame) return;
+
+  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+
+  if (isAdmin) {
+    gearBtn.style.display = 'flex';
+    gearBtn.onclick = () => openAdminQuickGameModal();
+  } else {
+    gearBtn.style.display = 'none';
+  }
+
+  const closeBtn = document.getElementById('close-admin-game-modal');
+  if (closeBtn) {
+    closeBtn.onclick = closeAdminQuickGameModal;
+  }
+
+  const form = document.getElementById('admin-quick-game-form');
+  if (form) {
+    form.onsubmit = handleAdminQuickGameSubmit;
+  }
+}
+
+function openAdminQuickGameModal() {
+  if (!verifyAdminSecurity()) return;
+
+  const modal = document.getElementById('admin-game-modal-backdrop');
+  if (!modal || !currentDetailGame) return;
+
+  document.getElementById('admin-quick-game-title').textContent = `Editar Juego: ${currentDetailGame.titulo}`;
+  document.getElementById('admin-qg-imagen').value = currentDetailGame.imagen || '';
+  document.getElementById('admin-qg-imagen-detalle').value = currentDetailGame.imagenDetalle || '';
+  document.getElementById('admin-qg-youtube').value = currentDetailGame.youtubeUrl || currentDetailGame.videoTrailerUrl || '';
+
+  const extraContainer = document.getElementById('admin-qg-extra-images-container');
+  extraContainer.innerHTML = '';
+
+  const existingExtra = Array.isArray(currentDetailGame.imagenesDetalle) ? currentDetailGame.imagenesDetalle : [];
+  if (existingExtra.length > 0) {
+    existingExtra.forEach(img => addAdminQuickImageInput(img));
+  } else {
+    addAdminQuickImageInput();
+  }
+
+  modal.classList.add('active');
+}
+
+function closeAdminQuickGameModal() {
+  const modal = document.getElementById('admin-game-modal-backdrop');
+  if (modal) modal.classList.remove('active');
+}
+
+function addAdminQuickImageInput(val = '') {
+  const container = document.getElementById('admin-qg-extra-images-container');
+  if (!container) return;
+
+  const div = document.createElement('div');
+  div.className = 'extra-img-row';
+  div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+  div.innerHTML = `
+    <input type="url" class="admin-extra-img-input" placeholder="https://..." value="${escapeHTML(val)}" style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #fff; padding: 0.55rem; border-radius: 4px;">
+    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️</button>
+  `;
+  container.appendChild(div);
+}
+
+async function handleAdminQuickGameSubmit(e) {
+  if (e) e.preventDefault();
+
+  if (!verifyAdminSecurity()) return;
+  if (!currentDetailGame) return;
+
+  const imagen = document.getElementById('admin-qg-imagen').value.trim();
+  const imagenDetalle = document.getElementById('admin-qg-imagen-detalle').value.trim();
+  const youtubeUrl = document.getElementById('admin-qg-youtube').value.trim();
+  const errorMsg = document.getElementById('admin-quick-game-error');
+  if (errorMsg) errorMsg.textContent = '';
+
+  const extraInputs = document.querySelectorAll('.admin-extra-img-input');
+  const imagenesDetalle = [];
+  extraInputs.forEach(inp => {
+    const val = inp.value.trim();
+    if (val) imagenesDetalle.push(val);
+  });
+
+  const saveBtn = document.getElementById('save-admin-quick-game-btn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+  }
+
+  try {
+    const res = await apiFetch('/api/admin/juegos/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gameId: currentDetailGame.id,
+        imagen,
+        imagenDetalle,
+        imagenesDetalle,
+        youtubeUrl
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.exito) {
+      if (res.status === 401 || res.status === 403) {
+        triggerSecurityViolation();
+        return;
+      }
+      if (errorMsg) errorMsg.textContent = data.error || 'Error al actualizar juego.';
+      return;
+    }
+
+    if (data.juego) {
+      currentDetailGame = data.juego;
+    } else {
+      currentDetailGame.imagen = imagen;
+      currentDetailGame.imagenDetalle = imagenDetalle;
+      currentDetailGame.imagenesDetalle = imagenesDetalle;
+      currentDetailGame.youtubeUrl = youtubeUrl;
+    }
+
+    detailImagesList = [];
+    if (currentDetailGame.imagen) detailImagesList.push(currentDetailGame.imagen);
+    if (currentDetailGame.imagenDetalle && currentDetailGame.imagenDetalle !== currentDetailGame.imagen) {
+      detailImagesList.push(currentDetailGame.imagenDetalle);
+    }
+    if (Array.isArray(currentDetailGame.imagenesDetalle)) {
+      currentDetailGame.imagenesDetalle.forEach(img => {
+        if (img && !detailImagesList.includes(img)) detailImagesList.push(img);
+      });
+    }
+
+    detailActiveThumbIndex = 0;
+    renderGameDetailView();
+    closeAdminQuickGameModal();
+    showToast('¡Imágenes y tráiler del juego actualizados con éxito! ⚙️🎉');
+  } catch (err) {
+    if (errorMsg) errorMsg.textContent = 'Error de conexión con el servidor.';
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 Guardar Cambios en Juego';
+    }
+  }
+}
+

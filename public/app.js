@@ -537,8 +537,44 @@ function closeVerifyModal() { document.getElementById('verify-modal-backdrop').c
 function openUserOrdersModal() { fetchAndRenderUserOrders(); document.getElementById('user-orders-modal-backdrop').classList.add('active'); }
 function closeUserOrdersModal() { document.getElementById('user-orders-modal-backdrop').classList.remove('active'); }
 
+// --- SEGURIDAD Y VERIFICACIÓN DE ADMINISTRADOR ---
+function verifyAdminSecurity() {
+  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+  if (!isAdmin) {
+    triggerSecurityViolation();
+    return false;
+  }
+  return true;
+}
+
+function triggerSecurityViolation() {
+  showToast('⛔ Identidad no verificada. Has sido deslogueado por seguridad.');
+  handleLogout();
+  closeUserSettingsModal();
+  const gearBtn = document.getElementById('admin-game-gear-btn');
+  if (gearBtn) gearBtn.style.display = 'none';
+  const adminModal = document.getElementById('admin-game-modal-backdrop');
+  if (adminModal) adminModal.classList.remove('active');
+}
+
+let adminCouponsVisible = false;
+function toggleAdminCouponsVisibility() {
+  if (!verifyAdminSecurity()) return;
+  adminCouponsVisible = !adminCouponsVisible;
+  const container = document.getElementById('admin-coupons-items-container');
+  const btn = document.getElementById('toggle-coupons-btn');
+  if (container) {
+    container.style.display = adminCouponsVisible ? 'block' : 'none';
+  }
+  if (btn) {
+    btn.textContent = adminCouponsVisible ? '🔒 Ocultar Cupones' : '👁️ Ver Cupones';
+  }
+}
+
 function openUserSettingsModal() {
   const backdrop = document.getElementById('user-settings-modal-backdrop');
+  if (!backdrop) return;
+  const modalCard = backdrop.querySelector('.user-modal-card');
   const adminTabBtn = document.getElementById('admin-tab-btn');
   const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
 
@@ -559,6 +595,15 @@ function openUserSettingsModal() {
     }
   }
 
+  const activeTab = backdrop.querySelector('.settings-tabs .tab-btn.active');
+  if (modalCard) {
+    if (activeTab && activeTab.getAttribute('data-tab') === 'tab-admin' && isAdmin) {
+      modalCard.classList.add('wide-admin');
+    } else {
+      modalCard.classList.remove('wide-admin');
+    }
+  }
+
   backdrop.classList.add('active');
 }
 
@@ -569,14 +614,17 @@ function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backd
 // --- FUNCIONES DEL PANEL DE ADMINISTRADOR (SOLO PARA "ZxAndere") ---
 
 async function fetchAndRenderAdminGames() {
+  if (!verifyAdminSecurity()) return;
   const container = document.getElementById('admin-games-container');
-  if (!currentUser) return;
 
   if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando juegos en panel admin...</p>';
 
   try {
     const res = await apiFetch('/api/admin/juegos');
-    if (!res.ok) throw new Error('Acceso denegado');
+    if (!res.ok) {
+      triggerSecurityViolation();
+      return;
+    }
     adminCatalog = await res.json();
     renderAdminGamesList(adminCatalog);
   } catch (err) {
@@ -2104,7 +2152,8 @@ async function handleAdminAddCouponSubmit(e) {
 }
 
 async function deleteCoupon(code) {
-  if (!confirm(`¿Estás seguro de borrar permanentemente el cupón ${code}?`)) return;
+  if (!verifyAdminSecurity()) return;
+  if (!confirm(`¿Estás seguro de borrar permanentemente el cupón "${code}" de los datos?`)) return;
 
   try {
     const res = await apiFetch('/api/admin/coupons/delete', {
@@ -2113,18 +2162,31 @@ async function deleteCoupon(code) {
       body: JSON.stringify({ code })
     });
     const data = await res.json();
+    if (!res.ok || res.status === 401 || res.status === 403) {
+      triggerSecurityViolation();
+      return;
+    }
     if (data.exito && data.cupones) {
       adminCouponsStore = data.cupones;
       renderAdminCouponsList(adminCouponsStore);
       await fetchCoupons();
-      showToast(`Cupón ${code} eliminado`);
+
+      // Si el cupón estaba aplicado en el carrito, removerlo y actualizar totales
+      if (appliedCoupon && appliedCoupon.code.toUpperCase() === code.toUpperCase()) {
+        appliedCoupon = null;
+        updateCartBadge();
+      }
+
+      showToast(`¡Cupón "${code}" eliminado permanentemente de los datos! 🎟️❌`);
     }
   } catch (err) {
-    alert('Error al conectar con el servidor');
+    showToast('Error al conectar con el servidor.');
   }
 }
 
 function switchAdminSubtab(subtab) {
+  if (!verifyAdminSecurity()) return;
+
   const btnGames = document.getElementById('btn-subtab-games');
   const btnCoupons = document.getElementById('btn-subtab-coupons');
   const btnGallery = document.getElementById('btn-subtab-gallery');

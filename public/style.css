@@ -3482,3 +3482,62 @@ body {
   margin: 0;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
+
+/* ==========================================================================
+   Estilos Adicionales: Admin Gear Flotante, Modal Estirado Horizontal y Cupones
+   ========================================================================== */
+
+/* Botón Flotante Tuerca de Admin (Abajo a la Izquierda) */
+.admin-quick-gear-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 1000;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2.5px solid var(--joycon-cyan);
+  color: var(--joycon-cyan);
+  font-size: 1.5rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), 0 4px 15px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+}
+
+.admin-quick-gear-btn:hover {
+  transform: scale(1.12) rotate(45deg);
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.7), 0 6px 20px rgba(0, 0, 0, 0.8);
+  background: rgba(0, 240, 255, 0.15);
+}
+
+/* Opciones de Administrador Estiradas Horizontalmente (Wide Admin Layout) */
+.user-modal-card.wide-admin {
+  max-width: 1100px !important;
+  width: 92vw !important;
+  transition: max-width 0.3s ease, width 0.3s ease;
+}
+
+.user-modal-card.wide-admin .admin-games-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.auth-modal-card.wide-admin-game {
+  max-width: 680px !important;
+  width: 92vw !important;
+}
+
+/* Ocultar Estrellas en Todo el Sitio */
+.star-rating-badge,
+.jd-hero-rating-badge,
+#jd-hero-rating-badge,
+#jd-rating-val,
+.rating-stars {
+  display: none !important;
+}
+

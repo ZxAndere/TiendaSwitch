@@ -1682,9 +1682,9 @@ app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
   res.json({ exito: true, mensaje: `Visibilidad de ${game.titulo} actualizada.`, juegos: GAMES_STORE });
 });
 
-// Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto Normal, Foto Detalle, etc.) en tiempo real
+// Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Fotos, YouTube URL, etc.) en tiempo real
 app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, correoTexto, correoImagen, cuentas } = req.body;
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, imagenesDetalle, youtubeUrl, videoTrailerUrl, correoTexto, correoImagen, cuentas } = req.body;
 
   const gameIndex = GAMES_STORE.findIndex(g => g.id === Number(gameId));
   if (gameIndex === -1) return res.status(404).json({ error: "Juego no encontrado." });
@@ -1697,6 +1697,18 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   if (isString(descripcion)) game.descripcion = descripcion.trim();
   if (isString(imagen)) game.imagen = imagen.trim();
   if (isString(imagenDetalle)) game.imagenDetalle = imagenDetalle.trim();
+
+  // Guardar arreglo de imágenes adicionales (ej: para packs o galerías)
+  if (Array.isArray(imagenesDetalle)) {
+    game.imagenesDetalle = imagenesDetalle.filter(img => isString(img) && img.trim().length > 0).map(img => img.trim());
+  } else if (typeof imagenesDetalle === 'string') {
+    game.imagenesDetalle = imagenesDetalle.split('\n').map(i => i.trim()).filter(i => i.length > 0);
+  }
+
+  // Guardar link del video de youtube
+  const ytLink = youtubeUrl || videoTrailerUrl;
+  if (isString(ytLink)) game.youtubeUrl = ytLink.trim();
+
   if (correoTexto !== undefined && isString(correoTexto)) game.correoTexto = correoTexto.trim();
   if (correoImagen !== undefined && isString(correoImagen)) game.correoImagen = correoImagen.trim();
 
@@ -1713,7 +1725,7 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   saveGamesLocal(GAMES_STORE);
   broadcastCatalogUpdate();
 
-  console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado. ${game.cuentas ? game.cuentas.length : 0} variante(s) de cuenta guardadas.`);
+  console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado. Fotos: ${game.imagenesDetalle ? game.imagenesDetalle.length : 0}, YouTube: ${game.youtubeUrl || 'no'}`);
   res.json({ exito: true, mensaje: `Juego ${game.titulo} actualizado exitosamente.`, juegos: GAMES_STORE, juego: game });
 });
 
