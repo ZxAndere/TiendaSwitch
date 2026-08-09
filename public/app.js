@@ -1281,8 +1281,11 @@ function renderCatalog() {
     return;
   }
 
-  grid.innerHTML = filtered.map((game) => `
-    <article class="game-card in-view" onclick="openGameModal(${game.id})">
+  grid.innerHTML = filtered.map((game) => {
+    const slug = slugify(game.titulo || '');
+    const gameUrl = slug ? `/${slug}` : `juego.html?id=${game.id}`;
+    return `
+    <a href="${gameUrl}" class="game-card in-view">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -1299,13 +1302,14 @@ function renderCatalog() {
             <span class="original-price">${formatCLP(game.precioOriginal || game.precioSecundaria)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
-          <button class="buy-card-btn" onclick="openGameModal(${game.id}); event.stopPropagation();">
-            Comprar
-          </button>
+          <span class="buy-card-btn">
+            Ver Detalle →
+          </span>
         </div>
       </div>
-    </article>
-  `).join('');
+    </a>
+  `;
+  }).join('');
 
   document.querySelectorAll('.game-card').forEach(card => {
     card.style.opacity = '1';
@@ -2204,15 +2208,19 @@ function handleSearchAutocomplete(inputEl, dropdownId) {
     return;
   }
 
-  dropdown.innerHTML = matches.map(game => `
-    <div class="autocomplete-item" onclick="selectAutocompleteResult(${game.id}, '${dropdownId}')">
+  dropdown.innerHTML = matches.map(game => {
+    const slug = slugify(game.titulo || '');
+    const gameUrl = slug ? `/${slug}` : `juego.html?id=${game.id}`;
+    return `
+    <a href="${gameUrl}" class="autocomplete-item" style="text-decoration: none; color: inherit; display: flex;">
       <img class="autocomplete-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
       <div class="autocomplete-info">
         <span class="autocomplete-title">${escapeHTML(game.titulo)}</span>
         <span class="autocomplete-sub">${escapeHTML(game.categoria)} • desde ${formatCLP(game.precioSecundaria)}</span>
       </div>
-    </div>
-  `).join('');
+    </a>
+  `;
+  }).join('');
 
   dropdown.classList.add('active');
 }
