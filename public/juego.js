@@ -132,36 +132,53 @@ function renderGameDetailView() {
   const game = currentDetailGame;
 
   // Breadcrumbs
-  document.getElementById('jd-crumb-category').textContent = game.categoria || 'Nintendo';
-  document.getElementById('jd-crumb-title').textContent = game.titulo;
+  const crumbCat = document.getElementById('jd-crumb-category');
+  if (crumbCat) crumbCat.textContent = game.categoria || 'Nintendo';
+
+  const crumbTitle = document.getElementById('jd-crumb-title');
+  if (crumbTitle) crumbTitle.textContent = game.titulo;
 
   // Hero Media
   const heroImg = document.getElementById('jd-hero-img');
-  heroImg.src = detailImagesList[detailActiveThumbIndex] || game.imagen;
-  heroImg.alt = game.titulo;
+  if (heroImg) {
+    heroImg.src = detailImagesList[detailActiveThumbIndex] || game.imagen;
+    heroImg.alt = game.titulo;
+  }
 
   // Badge de descuento animado
   const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
   const cur = Number(game.precioSecundaria) || 10000;
   const pct = Math.max(10, Math.round(((orig - cur) / orig) * 100));
-  document.getElementById('jd-discount-badge').textContent = `-${pct}% OFF`;
 
-  document.getElementById('jd-hero-size-badge').textContent = `📦 ${game.peso || '15 GB'}`;
+  const discBadge = document.getElementById('jd-discount-badge');
+  if (discBadge) discBadge.textContent = `-${pct}% OFF`;
+
+  const sizeBadge = document.getElementById('jd-hero-size-badge');
+  if (sizeBadge) sizeBadge.textContent = `📦 ${game.peso || '15 GB'}`;
+
   const ratingElem = document.getElementById('jd-hero-rating-badge');
   if (ratingElem) ratingElem.style.display = 'none';
 
   // Tira de miniaturas
   const strip = document.getElementById('jd-thumbnails-strip');
-  strip.innerHTML = detailImagesList.map((imgUrl, idx) => `
-    <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
-      <img src="${escapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
-    </div>
-  `).join('');
+  if (strip) {
+    strip.innerHTML = detailImagesList.map((imgUrl, idx) => `
+      <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
+        <img src="${escapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
+      </div>
+    `).join('');
+  }
 
   // Encabezado
-  document.getElementById('jd-category-tag').textContent = game.categoria || 'Nintendo Switch';
-  document.getElementById('jd-title').textContent = game.titulo;
-  document.getElementById('jd-peso-val').textContent = game.peso || '15 GB';
+  const catTag = document.getElementById('jd-category-tag');
+  if (catTag) catTag.textContent = game.categoria || 'Nintendo Switch';
+
+  const titleEl = document.getElementById('jd-title');
+  if (titleEl) titleEl.textContent = game.titulo;
+
+  const pesoVal = document.getElementById('jd-peso-val');
+  if (pesoVal) pesoVal.textContent = game.peso || '15 GB';
+
   const ratingVal = document.getElementById('jd-rating-val');
   if (ratingVal && ratingVal.parentElement) ratingVal.parentElement.style.display = 'none';
 
@@ -171,25 +188,39 @@ function renderGameDetailView() {
   const convertedOld = formatCLP(orig);
   const savingsAmount = Math.max(0, orig - selectedPrice);
 
-  document.getElementById('jd-price-current').textContent = convertedCurrent;
-  document.getElementById('jd-price-old').textContent = convertedOld;
-  document.getElementById('jd-savings-tag').textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
+  const priceCur = document.getElementById('jd-price-current');
+  if (priceCur) priceCur.textContent = convertedCurrent;
+
+  const priceOld = document.getElementById('jd-price-old');
+  if (priceOld) priceOld.textContent = convertedOld;
+
+  const savingsTag = document.getElementById('jd-savings-tag');
+  if (savingsTag) savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
 
   // Precios en las tarjetas de licencias
-  document.getElementById('jd-lic-price-sec').textContent = formatCLP(game.precioSecundaria);
-  document.getElementById('jd-lic-price-prim').textContent = formatCLP(game.precioPrimaria);
+  const licPriceSec = document.getElementById('jd-lic-price-sec');
+  if (licPriceSec) licPriceSec.textContent = formatCLP(game.precioSecundaria);
+
+  const licPricePrim = document.getElementById('jd-lic-price-prim');
+  if (licPricePrim) licPricePrim.textContent = formatCLP(game.precioPrimaria);
 
   // Acordeón texto
   updateLicenseAccordionContent();
 
   // Tabs contenido
-  document.getElementById('jd-desc-content').innerHTML = `
-    <p style="margin-bottom: 1rem;">${escapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
-    <p>Disfruta de la máxima calidad de Nintendo Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de Nintendo eShop con garantía de uso permanente ZonaSwitchChile.</p>
-  `;
+  const descContent = document.getElementById('jd-desc-content');
+  if (descContent) {
+    descContent.innerHTML = `
+      <p style="margin-bottom: 1rem;">${escapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
+      <p>Disfruta de la máxima calidad de Nintendo Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de Nintendo eShop con garantía de uso permanente ZonaSwitchChile.</p>
+    `;
+  }
 
-  document.getElementById('jd-spec-size').textContent = game.peso || '15 GB';
-  document.getElementById('jd-spec-category').textContent = game.categoria || 'Acción / Aventura';
+  const specSize = document.getElementById('jd-spec-size');
+  if (specSize) specSize.textContent = game.peso || '15 GB';
+
+  const specCat = document.getElementById('jd-spec-category');
+  if (specCat) specCat.textContent = game.categoria || 'Acción / Aventura';
 
   // Tráiler Teaser Listener
   const trailerBtn = document.getElementById('jd-trailer-btn');
@@ -202,18 +233,22 @@ function selectDetailThumbnail(index) {
   if (index >= 0 && index < detailImagesList.length) {
     detailActiveThumbIndex = index;
     const heroImg = document.getElementById('jd-hero-img');
-    heroImg.style.opacity = '0.4';
-    setTimeout(() => {
-      heroImg.src = detailImagesList[detailActiveThumbIndex];
-      heroImg.style.opacity = '1';
-    }, 150);
+    if (heroImg) {
+      heroImg.style.opacity = '0.4';
+      setTimeout(() => {
+        heroImg.src = detailImagesList[detailActiveThumbIndex];
+        heroImg.style.opacity = '1';
+      }, 150);
+    }
 
     const strip = document.getElementById('jd-thumbnails-strip');
-    const items = strip.querySelectorAll('.jd-thumb-item');
-    items.forEach((item, idx) => {
-      if (idx === index) item.classList.add('active');
-      else item.classList.remove('active');
-    });
+    if (strip) {
+      const items = strip.querySelectorAll('.jd-thumb-item');
+      items.forEach((item, idx) => {
+        if (idx === index) item.classList.add('active');
+        else item.classList.remove('active');
+      });
+    }
   }
 }
 
@@ -226,15 +261,15 @@ function selectDetailLicense(type) {
   const radioPrim = document.getElementById('jd-radio-primaria');
 
   if (type === 'secundaria') {
-    cardSec.classList.add('active');
-    cardPrim.classList.remove('active');
-    radioSec.checked = true;
-    radioPrim.checked = false;
+    if (cardSec) cardSec.classList.add('active');
+    if (cardPrim) cardPrim.classList.remove('active');
+    if (radioSec) radioSec.checked = true;
+    if (radioPrim) radioPrim.checked = false;
   } else {
-    cardPrim.classList.add('active');
-    cardSec.classList.remove('active');
-    radioPrim.checked = true;
-    radioSec.checked = false;
+    if (cardPrim) cardPrim.classList.add('active');
+    if (cardSec) cardSec.classList.remove('active');
+    if (radioPrim) radioPrim.checked = true;
+    if (radioSec) radioSec.checked = false;
   }
 
   renderGameDetailView();
@@ -243,8 +278,8 @@ function selectDetailLicense(type) {
 function toggleLicenseAccordion() {
   const body = document.getElementById('jd-accordion-body');
   const arrow = document.getElementById('jd-accordion-arrow');
-  body.classList.toggle('open');
-  arrow.classList.toggle('open');
+  if (body) body.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open');
 }
 
 function updateLicenseAccordionContent() {
@@ -252,25 +287,29 @@ function updateLicenseAccordionContent() {
   const content = document.getElementById('jd-accordion-content-text');
 
   if (currentSelectedLicense === 'secundaria') {
-    label.textContent = 'Cuenta Secundaria';
-    content.innerHTML = `
-      <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
-        <li>🎮 <strong>Modo de Juego:</strong> Juegas directamente iniciando el juego desde el perfil enviado por la tienda.</li>
-        <li>🌐 <strong>Conexión a Internet:</strong> Se requiere conexión Wi-Fi/Internet al iniciar el juego para validar la licencia digital.</li>
-        <li>💰 <strong>Ahorro Máximo:</strong> La opción más económica para disfrutar del juego completo al 100%.</li>
-        <li>🛡️ <strong>Garantía:</strong> Soporte permanente y reemplazo ante cualquier inconveniente.</li>
-      </ul>
-    `;
+    if (label) label.textContent = 'Cuenta Secundaria';
+    if (content) {
+      content.innerHTML = `
+        <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <li>🎮 <strong>Modo de Juego:</strong> Juegas directamente iniciando el juego desde el perfil enviado por la tienda.</li>
+          <li>🌐 <strong>Conexión a Internet:</strong> Se requiere conexión Wi-Fi/Internet al iniciar el juego para validar la licencia digital.</li>
+          <li>💰 <strong>Ahorro Máximo:</strong> La opción más económica para disfrutar del juego completo al 100%.</li>
+          <li>🛡️ <strong>Garantía:</strong> Soporte permanente y reemplazo ante cualquier inconveniente.</li>
+        </ul>
+      `;
+    }
   } else {
-    label.textContent = 'Cuenta Primaria';
-    content.innerHTML = `
-      <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
-        <li>🎮 <strong>Tu Perfil Personal:</strong> Juegas con tu perfil personal de siempre, acumulando tus propios trofeos y partidas guardadas.</li>
-        <li>✈️ <strong>Modo Offline / Sin Wi-Fi:</strong> Juegas en cualquier lugar sin necesidad de estar conectado a internet.</li>
-        <li>🌐 <strong>Multijugador Online:</strong> Compatible 100% con tu suscripción a Nintendo Switch Online.</li>
-        <li>🛡️ <strong>Garantía VIP:</strong> Licencia permanente con garantía de por vida ZonaSwitchChile.</li>
-      </ul>
-    `;
+    if (label) label.textContent = 'Cuenta Primaria';
+    if (content) {
+      content.innerHTML = `
+        <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
+          <li>🎮 <strong>Tu Perfil Personal:</strong> Juegas con tu perfil personal de siempre, acumulando tus propios trofeos y partidas guardadas.</li>
+          <li>✈️ <strong>Modo Offline / Sin Wi-Fi:</strong> Juegas en cualquier lugar sin necesidad de estar conectado a internet.</li>
+          <li>🌐 <strong>Multijugador Online:</strong> Compatible 100% con tu suscripción a Nintendo Switch Online.</li>
+          <li>🛡️ <strong>Garantía VIP:</strong> Licencia permanente con garantía de por vida ZonaSwitchChile.</li>
+        </ul>
+      `;
+    }
   }
 }
 
