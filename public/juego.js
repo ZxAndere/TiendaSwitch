@@ -55,30 +55,46 @@ async function initJuegoPage() {
     }
   }
 
-  // Intentar cargar catálogo desde el servidor si aún no está cargado
-  if (!Array.isArray(catalog) || catalog.length === 0) {
+  // 1. Consultar endpoint directo /api/juegos/:identifier por ID o Slug
+  if (rawParam) {
     try {
-      const res = await apiFetch('/api/juegos');
+      const res = await fetch(`/api/juegos/${encodeURIComponent(rawParam)}`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) catalog = data;
+        if (data && data.id) {
+          currentDetailGame = data;
+        }
       }
     } catch (e) {}
   }
 
-  if (!Array.isArray(catalog) || catalog.length === 0) {
-    catalog = [...DEFAULT_GAMES_FRONTEND];
-  }
-
-  if (rawParam) {
-    const clean = rawParam.toLowerCase().trim();
-    currentDetailGame = catalog.find(g =>
-      slugify(g.titulo).toLowerCase() === clean ||
-      String(g.id) === clean
-    );
-  }
-
+  // 2. Fallback a catálogo completo si la API individual no responde
   if (!currentDetailGame) {
+    if (!Array.isArray(catalog) || catalog.length === 0) {
+      try {
+        const res = await apiFetch('/api/juegos');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) catalog = data;
+        }
+      } catch (e) {}
+    }
+
+    if (!Array.isArray(catalog) || catalog.length === 0) {
+      catalog = [...DEFAULT_GAMES_FRONTEND];
+    }
+
+    if (rawParam) {
+      const clean = rawParam.toLowerCase().trim();
+      currentDetailGame = catalog.find(g =>
+        slugify(g.titulo).toLowerCase() === clean ||
+        String(g.id) === clean ||
+        clean.includes(slugify(g.titulo).toLowerCase())
+      );
+    }
+  }
+
+  if (!currentDetailGame && Array.isArray(catalog) && catalog.length > 0) {
     currentDetailGame = catalog[0];
   }
 

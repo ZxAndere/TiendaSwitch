@@ -1663,6 +1663,38 @@ app.get('/api/juegos', (req, res) => {
   res.json(visibleGames);
 });
 
+// Endpoint Público: Retorna un juego específico por ID o por Slug (título normalizado)
+app.get('/api/juegos/:identifier', (req, res) => {
+  const param = req.params.identifier;
+  if (!param) return res.status(400).json({ error: "Identificador no proporcionado." });
+
+  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+    GAMES_STORE = [...DEFAULT_GAMES];
+    saveGamesLocal(GAMES_STORE);
+  }
+
+  const cleanParam = param.toLowerCase().trim();
+
+  // 1. Buscar por ID si es número
+  let game = GAMES_STORE.find(g => String(g.id) === cleanParam);
+
+  // 2. Si no se encuentra por ID, buscar coincidencias por Slug (título normalizado)
+  if (!game) {
+    game = GAMES_STORE.find(g => slugify(g.titulo).toLowerCase() === cleanParam);
+  }
+
+  // 3. Fallback: Búsqueda flexible conteniendo texto del slug
+  if (!game) {
+    game = GAMES_STORE.find(g => slugify(g.titulo).toLowerCase().includes(cleanParam) || cleanParam.includes(slugify(g.titulo).toLowerCase()));
+  }
+
+  if (!game) {
+    return res.status(404).json({ error: "Juego no encontrado." });
+  }
+
+  res.json(game);
+});
+
 // Endpoint Admin: Retorna TODOS los juegos (visibles y ocultos) para el panel de administración
 app.get('/api/admin/juegos', verifyAdmin, (req, res) => {
   res.json(GAMES_STORE);
