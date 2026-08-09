@@ -1159,7 +1159,7 @@ app.post('/api/admin/juegos/toggle', (req, res) => {
 
 // Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto Normal, Foto Detalle, etc.) en tiempo real
 app.post('/api/admin/juegos/update', (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, username } = req.body;
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, correoTexto, correoImagen, cuentas, username } = req.body;
   if ((username || '').toLowerCase() !== 'zxandere') {
     return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
   }
