@@ -20,6 +20,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 let isMongoConnected = false;
 
@@ -446,7 +447,7 @@ async function saveSingleOrder(orderData) {
 
   if (isMongoConnected) {
     try {
-      await OrderModel.findOneAndUpdate({ codigoOrden: orderData.codigoOrden }, orderData, { upsert: true, new: true });
+      await OrderModel.findOneAndUpdate({ codigoOrden: orderData.codigoOrden }, orderData, { upsert: true, returnDocument: 'after' });
       console.log(`🍃 Orden ${orderData.codigoOrden} guardada/actualizada en MongoDB Atlas.`);
     } catch (err) {
       console.error('❌ Error guardando orden en Mongo:', err.message);
@@ -489,7 +490,7 @@ function saveUsers(users) {
           role: u.role || 'user',
           tokenVersion: u.tokenVersion || 0
         };
-        await UserModel.findOneAndUpdate({ id: u.id }, cleanUser, { upsert: true, new: true });
+        await UserModel.findOneAndUpdate({ id: u.id }, cleanUser, { upsert: true, returnDocument: 'after' });
         console.log(`🍃 Usuario ${u.username} sincronizado en MongoDB Atlas.`);
       } catch (err) {
         console.error(`❌ Error guardando usuario ${u.username} en Mongo:`, err.message);
