@@ -683,6 +683,12 @@ async function sendOrderConfirmationEmail(order) {
       }).join('')
     : '';
 
+  console.log(`✉️ Intentando enviar correo de confirmación de orden ${order.codigoOrden} a ${order.email}...`);
+
+  const clienteName = (order.cliente && typeof order.cliente === 'string')
+    ? order.cliente.split(' ')[0]
+    : 'Cliente';
+
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #cbd5e1; padding: 0; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden;">
       <div style="position: relative; background-color: #ff003c; text-align: center; padding: 24px 16px;">
@@ -692,7 +698,7 @@ async function sendOrderConfirmationEmail(order) {
       </div>
 
       <div style="padding: 24px;">
-        <p style="font-size: 15px; color: #ffffff; margin-top: 0;">¡Hola, <strong>${order.cliente.split(' ')[0]}</strong>!</p>
+        <p style="font-size: 15px; color: #ffffff; margin-top: 0;">¡Hola, <strong>${clienteName}</strong>!</p>
         <p style="font-size: 14px; color: #cbd5e1; line-height: 1.5; margin-bottom: 20px;">
           Tu compra ha sido procesada con éxito. A continuación te entregamos los datos de acceso e instrucciones para que comiences a jugar en tu consola Nintendo Switch:
         </p>
@@ -719,6 +725,18 @@ async function sendOrderConfirmationEmail(order) {
 
   const subject = `🎮 Pedido Completado (${order.codigoOrden}) - ZonaSwitchChile`;
 
+  // Helper local para imprimir credenciales de emergencia si falla el correo por restricción de sandbox
+  const logBackupCredentials = () => {
+    console.log(`\n🔑 [DATOS DE ACCESO DE RESPALDO (Orden: ${order.codigoOrden}) - CLIENTE: ${order.email}]:`);
+    if (Array.isArray(order.carrito)) {
+      order.carrito.forEach(item => {
+        console.log(`   🎮 Juego: ${item.titulo} (${item.licencia})`);
+        console.log(`   🔑 Acceso: ${item.varianteAsignada}`);
+      });
+    }
+    console.log('');
+  };
+
   // 1. Enviar usando Brevo API REST (si BREVO_API_KEY está presente)
   if (process.env.BREVO_API_KEY) {
     try {
@@ -740,6 +758,8 @@ async function sendOrderConfirmationEmail(order) {
       if (res.ok) {
         console.log(`📩 Correo de entrega enviado con Brevo a ${order.email} (Orden: ${order.codigoOrden})`);
         return true;
+      } else {
+        console.warn('📌 Brevo API Warning:', data.message || data);
       }
     } catch (err) {
       console.error('Error enviando correo de entrega con Brevo:', err);
@@ -781,12 +801,14 @@ async function sendOrderConfirmationEmail(order) {
 
     if (error) {
       console.warn('📌 Resend (Modo Pruebas / Restricción de Dominio):', error.message || error);
+      logBackupCredentials();
     } else {
       console.log(`📩 Correo de entrega enviado con Resend a ${order.email} (ID: ${data?.id})`);
     }
     return true;
   } catch (err) {
     console.warn('📌 Excepción en envío Resend de entrega:', err.message || err);
+    logBackupCredentials();
     return true;
   }
 }
