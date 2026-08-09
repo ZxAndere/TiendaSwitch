@@ -1065,6 +1065,10 @@ function initUserSession() {
     if (userNavArea) userNavArea.innerHTML = authHtml;
     if (mobileUserContainer) mobileUserContainer.innerHTML = authHtml;
   }
+
+  if (typeof window.initAdminQuickGearButton === 'function') {
+    window.initAdminQuickGearButton();
+  }
 }
 
 function handleLogout() {
@@ -1545,6 +1549,8 @@ function renderCartDrawer() {
   const container = document.getElementById('cart-items-container');
   const checkoutWrapper = document.getElementById('checkout-wrapper');
 
+  if (!container) return;
+
   if (cart.length === 0) {
     container.innerHTML = `
       <div class="empty-cart-view">
@@ -1553,11 +1559,11 @@ function renderCartDrawer() {
         <p style="font-size: 0.85rem;">Explora el catálogo y selecciona tu juego y tipo de cuenta.</p>
       </div>
     `;
-    checkoutWrapper.style.display = 'none';
+    if (checkoutWrapper) checkoutWrapper.style.display = 'none';
     return;
   }
 
-  checkoutWrapper.style.display = 'block';
+  if (checkoutWrapper) checkoutWrapper.style.display = 'block';
 
   let subtotal = 0;
 

@@ -395,11 +395,12 @@ function openTrailerModal(game) {
 // --- MODO ADMINISTRADOR: BOTÓN CON TUERCA ABAJO A LA IZQUIERDA Y MODAL QUICK-EDIT ---
 function initAdminQuickGearButton() {
   const gearBtn = document.getElementById('admin-game-gear-btn');
-  if (!gearBtn || !currentDetailGame) return;
+  if (!gearBtn) return;
 
-  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+  const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
+  const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
 
-  if (isAdmin) {
+  if (isAdmin && currentDetailGame) {
     gearBtn.style.display = 'flex';
     gearBtn.onclick = () => openAdminQuickGameModal();
   } else {
@@ -416,6 +417,7 @@ function initAdminQuickGearButton() {
     form.onsubmit = handleAdminQuickGameSubmit;
   }
 }
+window.initAdminQuickGearButton = initAdminQuickGearButton;
 
 function openAdminQuickGameModal() {
   if (!verifyAdminSecurity()) return;
