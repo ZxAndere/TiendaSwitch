@@ -711,7 +711,7 @@ async function sendOrderConfirmationEmail(order) {
         ${itemsHtml}
 
         <div style="text-align: center; margin: 28px 0 10px 0;">
-          <a href="https://tiendaswitch-production-3bd0.up.railway.app/faq.html#install-guide" style="background: linear-gradient(135deg, #ff003c, #d60033); color: #ffffff; font-weight: 800; text-decoration: none; padding: 12px 24px; border-radius: 24px; display: inline-block; box-shadow: 0 4px 15px rgba(255, 0, 60, 0.4);">
+          <a href="${process.env.PUBLIC_URL || 'https://zonaswitchchile.com'}/faq.html#install-guide" style="background: linear-gradient(135deg, #ff003c, #d60033); color: #ffffff; font-weight: 800; text-decoration: none; padding: 12px 24px; border-radius: 24px; display: inline-block; box-shadow: 0 4px 15px rgba(255, 0, 60, 0.4);">
             ❓ Ver Guía Interactiva Completa
           </a>
         </div>
@@ -1698,7 +1698,7 @@ app.post('/api/checkout', async (req, res) => {
   const isLocal = rawHost.includes('localhost') || rawHost.includes('127.0.0.1');
   const baseUrl = isLocal
     ? `http://${rawHost || 'localhost:' + PORT}`
-    : (process.env.PUBLIC_URL || 'https://tiendaswitch-production-3bd0.up.railway.app');
+    : (process.env.PUBLIC_URL || 'https://zonaswitchchile.com');
 
   // Si el cliente eligió Mercado Pago
   if (metodoPago === 'mercadopago') {
