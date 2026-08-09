@@ -1283,9 +1283,9 @@ function renderCatalog() {
 
   grid.innerHTML = filtered.map((game) => {
     const slug = slugify(game.titulo || '');
-    const gameUrl = slug ? `/${slug}` : `juego.html?id=${game.id}`;
+    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     return `
-    <a href="${gameUrl}" class="game-card in-view">
+    <a href="${targetUrl}" class="game-card in-view" onclick="window.location.href='${targetUrl}'; return true;">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -1302,7 +1302,7 @@ function renderCatalog() {
             <span class="original-price">${formatCLP(game.precioOriginal || game.precioSecundaria)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
-          <span class="buy-card-btn">
+          <span class="buy-card-btn" onclick="window.location.href='${targetUrl}'; event.stopPropagation();">
             Ver Detalle →
           </span>
         </div>
@@ -1361,7 +1361,7 @@ function openGameModal(gameId) {
   const game = Array.isArray(catalog) ? catalog.find(g => Number(g.id) === Number(gameId)) : null;
   if (game && game.titulo) {
     const slug = slugify(game.titulo);
-    window.location.href = `/${slug}`;
+    window.location.href = `juego.html?id=${gameId}&slug=${encodeURIComponent(slug)}`;
   } else if (gameId) {
     window.location.href = `juego.html?id=${gameId}`;
   }
@@ -2210,9 +2210,9 @@ function handleSearchAutocomplete(inputEl, dropdownId) {
 
   dropdown.innerHTML = matches.map(game => {
     const slug = slugify(game.titulo || '');
-    const gameUrl = slug ? `/${slug}` : `juego.html?id=${game.id}`;
+    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     return `
-    <a href="${gameUrl}" class="autocomplete-item" style="text-decoration: none; color: inherit; display: flex;">
+    <a href="${targetUrl}" class="autocomplete-item" onclick="window.location.href='${targetUrl}'; return true;" style="text-decoration: none; color: inherit; display: flex;">
       <img class="autocomplete-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
       <div class="autocomplete-info">
         <span class="autocomplete-title">${escapeHTML(game.titulo)}</span>
