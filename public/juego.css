@@ -1,0 +1,861 @@
+/* ==========================================================================
+   ZonaSwitchChile - Juego Detail Pro Level CSS (2-Column Responsive Layout)
+   ========================================================================== */
+
+/* Wrapper Principal */
+.juego-detail-wrapper {
+  padding: 2rem 1.5rem 4rem 1.5rem;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.juego-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+/* --- BREADCRUMBS BAR --- */
+.jd-breadcrumbs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: rgba(15, 22, 36, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.jd-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 0, 60, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 0, 60, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.jd-back-btn:hover {
+  background: var(--switch-red);
+  color: #ffffff;
+  box-shadow: var(--glow-red);
+  transform: translateX(-3px);
+}
+
+.jd-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.jd-breadcrumbs a {
+  color: var(--joycon-cyan);
+  text-decoration: none;
+}
+.jd-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.jd-breadcrumbs .sep {
+  color: var(--text-dim);
+}
+
+.jd-breadcrumbs .active {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* --- MAIN 2-COLUMN GRID (55% / 45%) --- */
+.jd-main-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* --- COLUMNA IZQUIERDA: MEDIA & GALERÍA (55%) --- */
+.jd-media-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.jd-hero-card {
+  position: relative;
+  background: rgba(15, 22, 36, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), var(--glow-cyan);
+  transition: var(--transition-normal);
+}
+
+.jd-hero-card:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 240, 255, 0.4);
+}
+
+.jd-discount-badge {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 10;
+  background: linear-gradient(135deg, #ff003c 0%, #ff4500 100%);
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 900;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  box-shadow: var(--glow-red);
+  animation: pulseBadge 2s infinite alternate;
+}
+
+@keyframes pulseBadge {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(255,0,60,0.5); }
+  100% { transform: scale(1.06); box-shadow: 0 0 25px rgba(255,0,60,0.9); }
+}
+
+.jd-hero-img-container {
+  width: 100%;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: #000000;
+  position: relative;
+}
+
+.jd-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.5s ease;
+}
+
+.jd-hero-card:hover .jd-hero-img {
+  transform: scale(1.02);
+}
+
+.jd-hero-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.25rem;
+  background: rgba(10, 15, 25, 0.9);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.jd-hero-meta-item {
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jd-hero-meta-item.highlight-cyan {
+  color: var(--joycon-cyan);
+}
+
+/* Carousel de Miniaturas (Thumbnails Strip) */
+.jd-gallery-strip-container {
+  background: rgba(15, 22, 36, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.jd-gallery-title {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  color: #ffffff;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.jd-thumbnails-strip {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scroll-behavior: smooth;
+}
+
+.jd-thumbnails-strip::-webkit-scrollbar {
+  height: 5px;
+}
+.jd-thumbnails-strip::-webkit-scrollbar-thumb {
+  background: var(--joycon-cyan-dark);
+  border-radius: 3px;
+}
+
+.jd-thumb-item {
+  width: 110px;
+  height: 65px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: var(--transition-fast);
+  background: #000000;
+}
+
+.jd-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jd-thumb-item:hover, .jd-thumb-item.active {
+  opacity: 1;
+  border-color: var(--joycon-cyan);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px);
+}
+
+/* Botón Teaser Tráiler */
+.jd-trailer-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(255, 0, 60, 0.12) 100%);
+  border: 1px solid var(--joycon-cyan);
+  color: #ffffff;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+  text-align: left;
+}
+
+.jd-trailer-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(255, 0, 60, 0.25) 100%);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px);
+}
+
+.jd-trailer-btn .play-icon {
+  font-size: 1.5rem;
+  color: var(--joycon-cyan);
+  width: 42px;
+  height: 42px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trailer-btn-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+.trailer-btn-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* --- COLUMNA DERECHA: PANEL DE COMPRA (45%) --- */
+.jd-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.jd-header-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.jd-category-pill {
+  align-self: flex-start;
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--joycon-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+}
+
+.jd-title {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.jd-meta-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.jd-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.jd-pill.gold {
+  border-color: rgba(255, 183, 3, 0.4);
+  color: #ffb703;
+}
+.jd-pill.green {
+  border-color: rgba(52, 211, 153, 0.4);
+  color: #34d399;
+}
+
+/* Box de Precios */
+.jd-price-box {
+  background: linear-gradient(135deg, rgba(15, 22, 36, 0.95) 0%, rgba(20, 30, 48, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.jd-price-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.jd-price-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.jd-savings-tag {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.jd-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+}
+
+.jd-price-current {
+  font-family: var(--font-heading);
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--joycon-cyan);
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.jd-price-old {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.jd-price-subtext {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* Selector Interactivo de Licencias */
+.jd-license-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.jd-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.jd-section-label .req-star {
+  color: var(--switch-red);
+  font-size: 0.78rem;
+}
+
+.jd-license-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.jd-lic-card {
+  background: rgba(15, 22, 36, 0.7);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.jd-lic-card:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(21, 30, 48, 0.85);
+}
+
+.jd-lic-card.active {
+  border-color: var(--switch-red);
+  background: rgba(255, 0, 60, 0.08);
+  box-shadow: var(--glow-red);
+}
+
+.jd-card-secundaria.active {
+  border-color: var(--joycon-cyan);
+  background: rgba(0, 240, 255, 0.08);
+  box-shadow: var(--glow-cyan);
+}
+
+.jd-lic-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.jd-lic-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.jd-lic-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+.jd-lic-price {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--joycon-cyan);
+}
+
+.jd-lic-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+}
+
+.jd-lic-badge.sec {
+  background: rgba(0, 240, 255, 0.15);
+  color: var(--joycon-cyan);
+}
+
+.jd-lic-badge.prim {
+  background: linear-gradient(135deg, #ff003c 0%, #ff4500 100%);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 0, 60, 0.5);
+}
+
+.jd-lic-desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Acordeón Informativo */
+.jd-accordion-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.jd-accordion-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.jd-accordion-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.jd-accordion-arrow {
+  color: var(--joycon-cyan);
+  transition: transform 0.3s ease;
+}
+
+.jd-accordion-arrow.open {
+  transform: rotate(180deg);
+}
+
+.jd-accordion-body {
+  display: none;
+  padding: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+  color: var(--text-main);
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.jd-accordion-body.open {
+  display: block;
+}
+
+/* Botones CTAs */
+.jd-cta-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.jd-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.jd-cta-btn.btn-add-cart {
+  background: linear-gradient(135deg, #ff003c 0%, #d00030 100%);
+  color: #ffffff;
+  box-shadow: var(--glow-red);
+}
+
+.jd-cta-btn.btn-add-cart:hover {
+  background: linear-gradient(135deg, #ff1a4f 0%, #e00034 100%);
+  box-shadow: 0 0 25px rgba(255, 0, 60, 0.7);
+  transform: translateY(-2px);
+}
+
+.jd-cta-btn.btn-buy-now {
+  background: transparent;
+  color: var(--joycon-cyan);
+  border: 2px solid var(--joycon-cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.jd-cta-btn.btn-buy-now:hover {
+  background: rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+  transform: translateY(-2px);
+}
+
+/* VIP Guarantee Box */
+.jd-vip-guarantee-box {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(255, 0, 60, 0.05) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+}
+
+.vip-box-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.vip-badge-icon {
+  font-size: 1.2rem;
+}
+
+.vip-title {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.vip-benefits-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vip-benefits-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.vip-benefits-list .bullet {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.vip-benefits-list strong {
+  color: var(--joycon-cyan);
+}
+
+/* --- SECCIÓN DE PESTAÑAS INTERACTIVAS (TABS) --- */
+.jd-tabs-section {
+  background: rgba(15, 22, 36, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.jd-tabs-header {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(10, 15, 25, 0.8);
+  overflow-x: auto;
+}
+
+.jd-tab-btn {
+  padding: 1rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+}
+
+.jd-tab-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.jd-tab-btn.active {
+  color: var(--joycon-cyan);
+  border-bottom-color: var(--joycon-cyan);
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.jd-tabs-body {
+  padding: 2rem;
+}
+
+.jd-tab-pane {
+  display: none;
+}
+
+.jd-tab-pane.active {
+  display: block;
+}
+
+.tab-pane-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+.tab-pane-text {
+  font-size: 0.92rem;
+  color: var(--text-main);
+  line-height: 1.7;
+}
+
+.tab-pane-intro {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+/* Pasos de Instalación */
+.install-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.install-step-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
+.install-step-card .step-num {
+  width: 32px;
+  height: 32px;
+  background: var(--switch-red);
+  color: #ffffff;
+  border-radius: 50%;
+  font-family: var(--font-heading);
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--glow-red);
+}
+
+.install-step-card h4 {
+  color: #ffffff;
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+}
+
+.install-step-card p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* Tabla Especificaciones */
+.specs-table-wrapper {
+  overflow-x: auto;
+}
+
+.specs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.specs-table th, .specs-table td {
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.specs-table th {
+  color: var(--joycon-cyan);
+  width: 30%;
+  font-weight: 700;
+}
+
+.specs-table td {
+  color: var(--text-main);
+}
+
+/* --- JUEGOS RELACIONADOS --- */
+.jd-related-section {
+  margin-top: 1rem;
+}
+
+.jd-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Modal Tráiler */
+.trailer-modal-card {
+  position: relative;
+  width: 90%;
+  max-width: 900px;
+  background: #000000;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+}
+
+.trailer-video-wrapper {
+  width: 100%;
+  aspect-ratio: 16/9;
+}
+
+.trailer-video-wrapper iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
+@media (max-width: 992px) {
+  .jd-main-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .juego-detail-wrapper {
+    padding: 1rem 0.85rem 3rem 0.85rem;
+  }
+  .jd-title {
+    font-size: 1.6rem;
+  }
+  .jd-price-current {
+    font-size: 1.8rem;
+  }
+  .jd-license-grid, .jd-cta-actions {
+    grid-template-columns: 1fr;
+  }
+  .jd-tabs-body {
+    padding: 1.25rem 1rem;
+  }
+}

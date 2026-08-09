@@ -125,6 +125,46 @@ const DEFAULT_GAMES_FRONTEND = [
 let catalog = [...DEFAULT_GAMES_FRONTEND];
 let cart = JSON.parse(localStorage.getItem('zonaswitch_cart_v4')) || [];
 let currentUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || null;
+
+// Interceptor global de fetch para inyectar automáticamente el token JWT
+const originalFetch = window.fetch;
+window.fetch = async function (resource, init) {
+  const token = localStorage.getItem('userToken');
+  if (token) {
+    init = init || {};
+    init.headers = init.headers || {};
+    if (init.headers instanceof Headers) {
+      if (!init.headers.has('Authorization')) {
+        init.headers.set('Authorization', `Bearer ${token}`);
+      }
+    } else if (Array.isArray(init.headers)) {
+      const hasAuth = init.headers.some(h => h[0].toLowerCase() === 'authorization');
+      if (!hasAuth) {
+        init.headers.push(['Authorization', `Bearer ${token}`]);
+      }
+    } else {
+      if (!init.headers['Authorization'] && !init.headers['authorization']) {
+        init.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  }
+
+  const response = await originalFetch(resource, init);
+
+  // Si el servidor retorna 401 o 403 (token inválido/expirado), y no es una ruta de auth, cerrar sesión
+  const isAuthRoute = typeof resource === 'string' && (resource.includes('/api/auth/login') || resource.includes('/api/auth/send-register-code') || resource.includes('/api/auth/verify-register-code'));
+  if ((response.status === 401 || response.status === 403) && !isAuthRoute) {
+    console.warn('⚠️ Sesión expirada o token inválido. Cerrando sesión...');
+    handleLogout();
+  }
+
+  return response;
+};
+
+const apiFetch = function (resource, init) {
+  return window.fetch(resource, init);
+};
+
 let activeCategory = 'todos';
 let searchQuery = '';
 let selectedGameForModal = null;
@@ -179,6 +219,12 @@ function formatCLP(num) {
 
 // Inicializar Aplicación al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
+  // Validación activa de sesión y permisos al cargar la página.
+  // Si el token es inválido o expiró, apiFetch() llamará forceLogout() automáticamente.
+  if (localStorage.getItem('userToken')) {
+    apiFetch('/api/auth/me').catch(() => {});
+  }
+
   try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
@@ -529,7 +575,7 @@ async function fetchAndRenderAdminGames() {
   if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando juegos en panel admin...</p>';
 
   try {
-    const res = await fetch(`/api/admin/juegos?user=${encodeURIComponent(currentUser.username)}`);
+    const res = await apiFetch('/api/admin/juegos');
     if (!res.ok) throw new Error('Acceso denegado');
     adminCatalog = await res.json();
     renderAdminGamesList(adminCatalog);
@@ -578,10 +624,10 @@ function renderAdminGamesList(gamesList) {
 async function toggleGameVisibility(gameId, isVisible) {
   if (!currentUser) return;
   try {
-    const res = await fetch('/api/admin/juegos/toggle', {
+    const res = await apiFetch('/api/admin/juegos/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId, visible: isVisible, username: currentUser.username })
+      body: JSON.stringify({ gameId, visible: isVisible })
     });
     const data = await res.json();
     if (data.exito && data.juegos) {
@@ -631,7 +677,6 @@ function closeGameEditModal() {
 
 async function handleGameEditSubmit(e) {
   e.preventDefault();
-  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
 
   const gameId = document.getElementById('edit-game-id').value;
   const titulo = document.getElementById('edit-game-titulo').value.trim();
@@ -678,7 +723,7 @@ async function handleGameEditSubmit(e) {
   saveBtn.textContent = 'Guardando...';
 
   try {
-    const res = await fetch('/api/admin/juegos/update', {
+    const res = await apiFetch('/api/admin/juegos/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -692,8 +737,7 @@ async function handleGameEditSubmit(e) {
         descripcion,
         correoTexto,
         correoImagen,
-        cuentas: cuentasArray,
-        username: adminUsername
+        cuentas: cuentasArray
       })
     });
 
@@ -735,7 +779,7 @@ async function fetchAndRenderUserOrders() {
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Cargando tus órdenes...</p>';
 
   try {
-    const res = await fetch(`/api/user/orders?user=${encodeURIComponent(currentUser.username)}`);
+    const res = await apiFetch('/api/user/orders');
     const orders = await res.json();
 
     if (!Array.isArray(orders) || orders.length === 0) {
@@ -750,7 +794,7 @@ async function fetchAndRenderUserOrders() {
 
     container.innerHTML = orders.map(order => {
       const isPaid = order.estado === 'pagada';
-      const itemsHtml = Array.isArray(order.carrito) 
+      const itemsHtml = Array.isArray(order.carrito)
         ? order.carrito.map(i => `<div class="oh-item"><span>• ${escapeHTML(i.titulo)} (${i.licencia})</span><strong>${formatCLP(i.precio * i.cantidad)}</strong></div>`).join('')
         : '';
 
@@ -788,10 +832,10 @@ async function handleUsernameChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await fetch('/api/user/update-username', {
+    const res = await apiFetch('/api/user/update-username', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id, newUsername, currentPassword })
+      body: JSON.stringify({ newUsername, currentPassword })
     });
 
     const data = await res.json();
@@ -802,6 +846,7 @@ async function handleUsernameChangeSubmit(e) {
 
     currentUser = data.usuario;
     localStorage.setItem('zonaswitch_user', JSON.stringify(currentUser));
+    if (data.token) localStorage.setItem('userToken', data.token);
     initUserSession();
     closeUserSettingsModal();
     showToast(`¡Tu nombre de usuario ahora es ${currentUser.username}!`);
@@ -820,10 +865,10 @@ async function handleEmailChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await fetch('/api/user/send-email-code', {
+    const res = await apiFetch('/api/user/send-email-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id, newEmail, currentPassword })
+      body: JSON.stringify({ newEmail, currentPassword })
     });
 
     const data = await res.json();
@@ -852,10 +897,10 @@ async function handlePasswordChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await fetch('/api/user/send-password-code', {
+    const res = await apiFetch('/api/user/send-password-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id, newPassword })
+      body: JSON.stringify({ newPassword })
     });
 
     const data = await res.json();
@@ -888,16 +933,23 @@ async function handleUpdateOtpSubmit(e) {
 
   try {
     const endpoint = pendingUpdateType === 'email' ? '/api/user/confirm-email-update' : '/api/user/confirm-password-update';
-    const res = await fetch(endpoint, {
+    const res = await apiFetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id, code })
+      body: JSON.stringify({ code })
     });
 
     const data = await res.json();
     if (!res.ok || !data.exito) {
       errorMsg.textContent = data.error || 'Código incorrecto o expirado.';
       btn.disabled = false;
+      return;
+    }
+
+    if (pendingUpdateType === 'password') {
+      handleLogout();
+      closeUpdateOtpModal();
+      pendingUpdateType = null;
       return;
     }
 
@@ -970,6 +1022,7 @@ function initUserSession() {
 function handleLogout() {
   currentUser = null;
   localStorage.removeItem('zonaswitch_user');
+  localStorage.removeItem('userToken');
   initUserSession();
   showToast('Has cerrado sesión correctamente.');
 }
@@ -1073,6 +1126,7 @@ async function handleVerifyOtpSubmit(e) {
 
     currentUser = data.usuario;
     localStorage.setItem('zonaswitch_user', JSON.stringify(currentUser));
+    if (data.token) localStorage.setItem('userToken', data.token);
     initUserSession();
     closeVerifyModal();
     pendingRegisterData = null;
@@ -1135,6 +1189,7 @@ async function handleLoginSubmit(e) {
 
     currentUser = data.usuario;
     localStorage.setItem('zonaswitch_user', JSON.stringify(currentUser));
+    if (data.token) localStorage.setItem('userToken', data.token);
     initUserSession();
     closeLoginModal();
     document.getElementById('login-form').reset();
@@ -1146,30 +1201,51 @@ async function handleLoginSubmit(e) {
 
 function openLoginModal() { document.getElementById('login-modal-backdrop').classList.add('active'); }
 function closeLoginModal() { document.getElementById('login-modal-backdrop').classList.remove('active'); }
-function openRegisterModal() { 
-  document.getElementById('register-modal-backdrop').classList.add('active'); 
+function openRegisterModal() {
+  document.getElementById('register-modal-backdrop').classList.add('active');
   validateRegisterPasswordForm();
 }
 function closeRegisterModal() { document.getElementById('register-modal-backdrop').classList.remove('active'); }
 
-// --- CATÁLOGO DE JUEGOS ---
-async function fetchCatalog() {
+// --- CATÁLOGO DE JUEGOS CON RETROCESO EXPONENCIAL Y LÍMITE DE REINTENTOS (Problema 7) ---
+let isFetchingCatalog = false;
+
+async function fetchCatalog(retries = 3, baseDelay = 1000) {
+  if (isFetchingCatalog) return;
+  isFetchingCatalog = true;
   renderCatalog();
-  try {
-    const res = await fetch('/api/juegos');
-    if (!res.ok) throw new Error('Error al consultar catálogo');
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      catalog = data;
+
+  let attempt = 0;
+  let success = false;
+
+  while (attempt < retries && !success) {
+    try {
+      const res = await apiFetch('/api/juegos');
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        catalog = data;
+        success = true;
+      } else {
+        throw new Error('Respuesta de catálogo vacía');
+      }
+    } catch (err) {
+      attempt++;
+      console.warn(`⚠️ [fetchCatalog] Intento ${attempt}/${retries} falló:`, err.message || err);
+      if (attempt < retries) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
-  } catch (err) {
-    console.warn('Cargando catálogo local por defecto:', err);
-    if (!Array.isArray(catalog) || catalog.length === 0) {
-      catalog = [...DEFAULT_GAMES_FRONTEND];
-    }
-  } finally {
-    renderCatalog();
   }
+
+  if (!success && (!Array.isArray(catalog) || catalog.length === 0)) {
+    console.warn('⚠️ Se agotaron los reintentos de red. Cargando catálogo por defecto.');
+    catalog = [...DEFAULT_GAMES_FRONTEND];
+  }
+
+  isFetchingCatalog = false;
+  renderCatalog();
 }
 
 function renderCatalog() {
@@ -1206,7 +1282,7 @@ function renderCatalog() {
   }
 
   grid.innerHTML = filtered.map((game) => `
-    <article class="game-card in-view" onclick="openGameModal(${game.id})">
+    <article class="game-card in-view" onclick="window.location.href = '/' + slugify('${escapeHTML(game.titulo || '')}')">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -1264,41 +1340,27 @@ function initScrollObserverForCards() {
   }, 300);
 }
 
-// --- MODAL DE DETALLE DEL JUEGO Y SELECCIÓN DE CUENTA ---
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+// --- NAVEGACIÓN A LA VISTA DEDICADA DE DETALLE DEL JUEGO (PRO LEVEL / CLEAN URL SEO) ---
 function openGameModal(gameId) {
-  const game = catalog.find(g => g.id === gameId);
-  if (!game) return;
-
-  selectedGameForModal = game;
-  selectedLicenseType = null;
-
-  // Configurar carrusel de imágenes
-  if (game.imagenesDetalle && Array.isArray(game.imagenesDetalle) && game.imagenesDetalle.length > 0) {
-    currentModalImages = game.imagenesDetalle;
-  } else {
-    currentModalImages = [game.imagenDetalle || game.imagen];
+  const game = Array.isArray(catalog) ? catalog.find(g => Number(g.id) === Number(gameId)) : null;
+  if (game && game.titulo) {
+    const slug = slugify(game.titulo);
+    window.location.href = `/${slug}`;
+  } else if (gameId) {
+    window.location.href = `juego.html?id=${gameId}`;
   }
-  currentModalImageIndex = 0;
-  renderModalSlider();
-
-  document.getElementById('gmodal-title').textContent = game.titulo;
-  document.getElementById('gmodal-category').textContent = game.categoria;
-  document.getElementById('gmodal-size').textContent = `📦 ${game.peso}`;
-  document.getElementById('gmodal-summary').textContent = game.resumenExtenso || game.descripcion;
-
-  document.getElementById('gmodal-price-sec').textContent = formatCLP(game.precioSecundaria);
-  document.getElementById('gmodal-price-prim').textContent = formatCLP(game.precioPrimaria);
-
-  // Reset radios y botones
-  document.querySelectorAll('input[name="license_type"]').forEach(r => r.checked = false);
-  document.getElementById('license-info-box').innerHTML = `
-    <p class="info-placeholder">👇 Por favor selecciona una opción (Cuenta Secundaria o Cuenta Primaria) para ver los detalles.</p>
-  `;
-
-  document.getElementById('gmodal-add-btn').disabled = true;
-  document.getElementById('gmodal-buy-btn').disabled = true;
-
-  document.getElementById('game-modal-backdrop').classList.add('active');
 }
 
 function renderModalSlider() {
@@ -1672,10 +1734,10 @@ async function handlePaymentSubmit(e) {
   btn.innerHTML = `<span>Procesando pedido...</span>`;
 
   try {
-    const res = await fetch('/api/checkout', {
+    const res = await apiFetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: cart, montoTotal })
+      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: cart, couponCode: appliedCoupon ? appliedCoupon.code : null })
     });
 
     const data = await res.json();
@@ -1734,7 +1796,7 @@ async function checkPaymentReturnUrls() {
     window.history.replaceState({}, document.title, window.location.pathname);
 
     try {
-      const res = await fetch(`/api/orders/${orderCode}`);
+      const res = await apiFetch(`/api/orders/${orderCode}`);
       if (res.ok) {
         const order = await res.json();
         if (status === '2' || status === 'approved' || order.estado === 'pagada') {
@@ -1907,14 +1969,14 @@ function initRealtimeCatalogStream() {
               fetchAndRenderAdminGames();
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       };
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
 function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
   );
 }
@@ -1937,7 +1999,7 @@ async function fetchCoupons() {
         });
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 async function fetchAndRenderAdminCoupons() {
@@ -1978,7 +2040,6 @@ function renderAdminCouponsList(coupons) {
 
 async function handleAdminAddCouponSubmit(e) {
   if (e) e.preventDefault();
-  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
 
   const codeInp = document.getElementById('admin-coupon-code');
   const typeInp = document.getElementById('admin-coupon-type');
@@ -2007,10 +2068,10 @@ async function handleAdminAddCouponSubmit(e) {
   }
 
   try {
-    const res = await fetch('/api/admin/coupons/create', {
+    const res = await apiFetch('/api/admin/coupons/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, type, value, desc, username: adminUsername })
+      body: JSON.stringify({ code, type, value, desc })
     });
 
     const data = await res.json();
@@ -2039,14 +2100,13 @@ async function handleAdminAddCouponSubmit(e) {
 }
 
 async function deleteCoupon(code) {
-  const adminUsername = (currentUser && currentUser.username) ? currentUser.username : 'ZxAndere';
   if (!confirm(`¿Estás seguro de borrar permanentemente el cupón ${code}?`)) return;
 
   try {
-    const res = await fetch('/api/admin/coupons/delete', {
+    const res = await apiFetch('/api/admin/coupons/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, username: adminUsername })
+      body: JSON.stringify({ code })
     });
     const data = await res.json();
     if (data.exito && data.cupones) {
@@ -2287,7 +2347,7 @@ async function fetchSettings() {
     const data = await res.json();
     isGalleryEnabled = !!data.galleryEnabled;
     applyGalleryVisibility();
-  } catch (err) {}
+  } catch (err) { }
 }
 
 function applyGalleryVisibility() {
@@ -2318,10 +2378,10 @@ async function handleAdminToggleGallery() {
 
   const newStatus = !isGalleryEnabled;
   try {
-    const res = await fetch('/api/admin/settings/toggle-gallery', {
+    const res = await apiFetch('/api/admin/settings/toggle-gallery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: newStatus, username: currentUser.username })
+      body: JSON.stringify({ enabled: newStatus })
     });
     const data = await res.json();
     if (data.exito) {
@@ -2456,15 +2516,14 @@ async function handleAdminAddGallerySubmit(e) {
   saveBtn.textContent = 'Guardando...';
 
   try {
-    const res = await fetch('/api/admin/gallery/add', {
+    const res = await apiFetch('/api/admin/gallery/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user,
         stars,
         imagen,
-        comment,
-        username: currentUser.username
+        comment
       })
     });
 
@@ -2493,10 +2552,10 @@ async function deleteGalleryItem(id) {
   if (!currentUser || !confirm('¿Estás seguro de eliminar esta reseña de la tienda?')) return;
 
   try {
-    const res = await fetch('/api/admin/gallery/delete', {
+    const res = await apiFetch('/api/admin/gallery/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, username: currentUser.username })
+      body: JSON.stringify({ id })
     });
     const data = await res.json();
     if (data.exito && data.galeria) {

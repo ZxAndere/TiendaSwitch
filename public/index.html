@@ -253,78 +253,7 @@
     </div>
   </section>
 
-  <!-- MODAL DE DETALLE DEL JUEGO (Game Details Modal) -->
-  <div class="modal-backdrop" id="game-modal-backdrop">
-    <div class="game-modal-card">
-      <button class="modal-close-x" id="close-game-modal">&times;</button>
-      
-      <div class="game-modal-grid">
-        <div class="game-modal-media">
-          <img id="gmodal-img" src="" alt="Portada del juego">
-          <button class="slider-arrow prev" id="modal-slider-prev" aria-label="Imagen anterior">❮</button>
-          <button class="slider-arrow next" id="modal-slider-next" aria-label="Siguiente imagen">❯</button>
-          <div class="slider-dots" id="modal-slider-dots"></div>
-          <div class="game-modal-badges">
-            <span class="size-badge" id="gmodal-size">📦 0 GB</span>
-            <span class="console-badge">🎮 Instalación 1 Consola</span>
-          </div>
-        </div>
 
-        <div class="game-modal-info">
-          <div class="gmodal-header">
-            <span class="gmodal-category" id="gmodal-category">Categoría</span>
-          </div>
-          <h2 class="gmodal-title" id="gmodal-title">Título del Juego</h2>
-          <p class="gmodal-summary" id="gmodal-summary">Resumen del juego...</p>
-
-          <!-- SELECCIÓN OBLIGATORIA DE CUENTA -->
-          <div class="license-selector-section">
-            <label class="license-label-title">Selecciona tipo de Cuenta <span class="required-star">*</span></label>
-
-            <div class="license-options-grid">
-              <!-- Opción Cuenta Secundaria -->
-              <label class="license-option-card" for="lic-secundaria">
-                <input type="radio" name="license_type" id="lic-secundaria" value="secundaria">
-                <div class="license-card-content">
-                  <div class="lic-header">
-                    <span class="lic-name">Cuenta Secundaria</span>
-                    <span class="lic-price" id="gmodal-price-sec">$0 CLP</span>
-                  </div>
-                  <span class="lic-badge-tag sec">Económica</span>
-                </div>
-              </label>
-
-              <!-- Opción Cuenta Primaria -->
-              <label class="license-option-card" for="lic-primaria">
-                <input type="radio" name="license_type" id="lic-primaria" value="primaria">
-                <div class="license-card-content">
-                  <div class="lic-header">
-                    <span class="lic-name">Cuenta Primaria</span>
-                    <span class="lic-price" id="gmodal-price-prim">$0 CLP</span>
-                  </div>
-                  <span class="lic-badge-tag prim">Recomendada</span>
-                </div>
-              </label>
-            </div>
-
-            <!-- Caja Informativa de Condiciones de la Cuenta Seleccionada -->
-            <div class="license-info-box" id="license-info-box">
-              <p class="info-placeholder">👇 Por favor selecciona una opción (Cuenta Secundaria o Cuenta Primaria) para ver los detalles.</p>
-            </div>
-          </div>
-
-          <div class="gmodal-actions">
-            <button class="gmodal-btn btn-add-cart" id="gmodal-add-btn" disabled>
-              🛒 Añadir al Carrito
-            </button>
-            <button class="gmodal-btn btn-buy-now" id="gmodal-buy-btn" disabled>
-              ⚡ Comprar Ahora
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- MODAL DE INICIO DE SESIÓN -->
   <div class="modal-backdrop" id="login-modal-backdrop">

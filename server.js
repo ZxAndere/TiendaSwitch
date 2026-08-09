@@ -1,3 +1,4 @@
+process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 require('dotenv').config();
 const dns = require('dns');
 if (dns.setDefaultResultOrder) {
@@ -8,45 +9,126 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-
 const mongoose = require('mongoose');
+
+// Nuevas dependencias de seguridad
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const cors = require('cors');
+const mongoSanitize = require('express-mongo-sanitize');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+let isMongoConnected = false;
+
+// Validar variables de entorno obligatorias
+const REQUIRED_ENV_VARS = ['FLOW_API_KEY', 'FLOW_SECRET_KEY', 'MP_ACCESS_TOKEN', 'MP_PUBLIC_KEY', 'JWT_SECRET'];
+REQUIRED_ENV_VARS.forEach(v => {
+  if (!process.env[v] || process.env[v].trim() === '') {
+    console.error(`❌ ERROR CRÍTICO: La variable de entorno obligatoria '${v}' no está configurada.`);
+    process.exit(1);
+  }
+});
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Configurar cabeceras seguras (Helmet) y Sanitizar MongoDB con replaceWith (Problema 6 y 7)
+app.use(helmet({
+  contentSecurityPolicy: false // Deshabilitado para no romper recursos externos de imágenes/estilos
+}));
+app.use(mongoSanitize({ replaceWith: '_' }));
+
+// Middleware de Protección contra Parameter Pollution (HPP) (Problema 2)
+app.use((req, res, next) => {
+  if (req.query) {
+    for (const k in req.query) {
+      if (Array.isArray(req.query[k])) req.query[k] = req.query[k][0];
+    }
+  }
+  if (req.body && typeof req.body === 'object' && !Array.isArray(req.body)) {
+    for (const k in req.body) {
+      if (Array.isArray(req.body[k])) req.body[k] = req.body[k][0];
+    }
+  }
+  next();
+});
+
+// Configurar CORS seguro restringido al dominio de producción y desarrollo local
+const allowedOrigins = ['https://zonaswitchchile.com', 'https://www.zonaswitchchile.com'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por la política CORS de ZonaSwitchChile'));
+    }
+  },
+  credentials: true
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rechazar peticiones de archivos sensibles estáticos
+app.use((req, res, next) => {
+  const fileExt = path.extname(req.path).toLowerCase();
+  if (['.json', '.env', '.pem', '.backup', '.bak', '.git', '.yml', '.yaml'].includes(fileExt)) {
+    return res.status(403).json({ error: "Acceso denegado a archivos del sistema." });
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Asegurar directorio de datos
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-const GAMES_FILE = path.join(DATA_DIR, 'games.json');
-const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+// Servir juego.html para cualquier ruta limpia SEO de producto (ej: /Mario-Kart-8-Deluxe)
+app.get('/:slug', (req, res, next) => {
+  const slug = req.params.slug;
+  if (!slug || slug.startsWith('api') || slug.includes('.') || ['favicon', 'logo', 'data', 'auth', 'user', 'admin'].some(x => slug.toLowerCase().includes(x))) {
+    return next();
+  }
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(USERS_FILE)) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
-}
-if (!fs.existsSync(ORDERS_FILE)) {
-  fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2));
-}
+  const juegoFile = path.resolve(__dirname, 'public', 'juego.html');
+  res.sendFile(juegoFile, (err) => {
+    if (err) next();
+  });
+});
 
-// --- CONEXIÓN Y MODELOS MONGODB ATLAS (TIEMPO REAL EN LA NUBE) ---
-let isMongoConnected = false;
-let mongoLastError = null;
+// Limitadores de peticiones (Rate Limiters)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { error: "Demasiados intentos desde esta IP. Por favor, intenta en 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
+const userApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Demasiadas solicitudes a tu cuenta. Por favor, espera unos minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Límite de compras excedido. Por favor, espera unos minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const emailOtpLimiter = new Map(); // Mapa en memoria para rate limit por dirección de correo (60s)
+
+// Esquema de Usuario seguro
 const userSchema = new mongoose.Schema({
   id: String,
   username: { type: String, required: true },
   email: { type: String, required: true },
   passwordHash: String,
-  password: String,
   role: { type: String, default: 'user' },
+  tokenVersion: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -93,6 +175,111 @@ const GameModel = mongoose.model('Game', gameSchema);
 const GalleryModel = mongoose.model('Gallery', gallerySchema);
 const OrderModel = mongoose.model('Order', orderSchema);
 
+// Asegurar directorio de datos de forma segura (Directory Traversal Protection)
+const DATA_DIR = path.resolve(__dirname, 'data');
+const USERS_FILE = path.resolve(DATA_DIR, 'users.json');
+const ORDERS_FILE = path.resolve(DATA_DIR, 'orders.json');
+const GAMES_FILE = path.resolve(DATA_DIR, 'games.json');
+const GALLERY_FILE = path.resolve(DATA_DIR, 'gallery.json');
+const SETTINGS_FILE = path.resolve(DATA_DIR, 'settings.json');
+
+// Helpers de validación de tipos y escritura atómica segura de JSON (Problemas 2 y 6)
+function safeString(val) {
+  return typeof val === 'string' ? val : '';
+}
+
+function isString(val) {
+  return typeof val === 'string';
+}
+
+function safeWriteJsonSync(filePath, data) {
+  const tmpPath = `${filePath}.${Date.now()}.${Math.random().toString(36).substring(2, 8)}.tmp`;
+  try {
+    const jsonStr = JSON.stringify(data, null, 2);
+    fs.writeFileSync(tmpPath, jsonStr, 'utf8');
+    fs.renameSync(tmpPath, filePath);
+  } catch (err) {
+    console.error(`❌ Error escribiendo de forma atómica en ${filePath}:`, err.message);
+    if (fs.existsSync(tmpPath)) {
+      try { fs.unlinkSync(tmpPath); } catch (e) {}
+    }
+  }
+}
+
+function safeReadJsonSync(filePath, fallback = []) {
+  if (!fs.existsSync(filePath)) return fallback;
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    if (!content || !content.trim()) return fallback;
+    return JSON.parse(content);
+  } catch (err) {
+    console.error(`❌ Error parseando JSON en ${filePath}:`, err.message);
+    return fallback;
+  }
+}
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!fs.existsSync(USERS_FILE)) {
+  safeWriteJsonSync(USERS_FILE, []);
+}
+if (!fs.existsSync(ORDERS_FILE)) {
+  safeWriteJsonSync(ORDERS_FILE, []);
+}
+
+// Middlewares de Autenticación
+function verifyToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Token de acceso no proporcionado. Debes iniciar sesión." });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: "Token inválido o expirado. Por favor, inicia sesión de nuevo." });
+    }
+    
+    // Verificar tokenVersion para invalidar sesiones al cambiar la contraseña (soporta fallback local si no hay MongoDB)
+    const findUser = async () => {
+      if (isMongoConnected) {
+        try {
+          return await UserModel.findOne({ id: decoded.id });
+        } catch (e) {}
+      }
+      const users = getUsers();
+      return users.find(u => u.id === decoded.id);
+    };
+
+    findUser().then(user => {
+      if (!user || (user.tokenVersion !== undefined && user.tokenVersion !== decoded.tokenVersion)) {
+        return res.status(403).json({ error: "Sesión revocada o expirada. Por favor, inicia sesión nuevamente." });
+      }
+      req.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role || 'user'
+      };
+      next();
+    }).catch(err => {
+      console.error("Error en verifyToken:", err);
+      res.status(500).json({ error: "Error interno en la autenticación." });
+    });
+  });
+}
+
+function verifyAdmin(req, res, next) {
+  verifyToken(req, res, () => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
+    }
+    next();
+  });
+}
+
 if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI.trim())
     .then(async () => {
@@ -109,30 +296,27 @@ if (process.env.MONGODB_URI) {
             username: u.username,
             email: u.email,
             passwordHash: u.passwordHash,
-            password: u.password
+            password: u.password,
+            role: u.role || 'user',
+            tokenVersion: u.tokenVersion || 0
           }));
-          fs.writeFileSync(USERS_FILE, JSON.stringify(formatted, null, 2));
+          safeWriteJsonSync(USERS_FILE, formatted);
           console.log(`📥 Sincronizados ${formatted.length} usuarios desde MongoDB Atlas.`);
         }
       } catch (e) { console.error('Error cargando usuarios MongoDB:', e); }
 
-      // Sincronizar órdenes desde MongoDB Atlas
+      // Verificar órdenes en MongoDB Atlas sin cargar todas en la RAM (Problema 3)
       try {
-        const mongoOrders = await OrderModel.find({});
-        if (mongoOrders.length > 0) {
-          mongoOrders.forEach(o => {
-            if (o.codigoOrden) ORDERS_STORE.set(o.codigoOrden, o.toObject());
-          });
-          console.log(`📥 Sincronizadas ${mongoOrders.length} órdenes desde MongoDB Atlas.`);
-        }
-      } catch (e) { console.error('Error cargando órdenes MongoDB:', e); }
+        const mongoOrdersCount = await OrderModel.countDocuments({});
+        console.log(`📥 Conectado a MongoDB Atlas. ${mongoOrdersCount} órdenes registradas (consultadas bajo demanda).`);
+      } catch (e) { console.error('Error verificando órdenes MongoDB:', e); }
 
       // Sincronizar catálogo de juegos desde MongoDB Atlas
       try {
         const mongoGames = await GameModel.find({});
         if (mongoGames && mongoGames.length > 0) {
           GAMES_STORE = mongoGames.map(g => g.toObject());
-          fs.writeFileSync(GAMES_FILE, JSON.stringify(GAMES_STORE, null, 2));
+          safeWriteJsonSync(GAMES_FILE, GAMES_STORE);
           console.log(`📥 Sincronizados ${GAMES_STORE.length} juegos desde MongoDB Atlas.`);
         } else if (Array.isArray(GAMES_STORE) && GAMES_STORE.length > 0) {
           GAMES_STORE.forEach(async (g) => {
@@ -146,7 +330,7 @@ if (process.env.MONGODB_URI) {
         const mongoGallery = await GalleryModel.find({});
         if (mongoGallery.length > 0) {
           GALLERY_STORE = mongoGallery.map(g => g.toObject());
-          fs.writeFileSync(GALLERY_FILE, JSON.stringify(GALLERY_STORE, null, 2));
+          safeWriteJsonSync(GALLERY_FILE, GALLERY_STORE);
           console.log(`📥 Sincronizadas ${GALLERY_STORE.length} fotos de galería desde MongoDB Atlas.`);
         } else {
           GALLERY_STORE.forEach(async (g) => {
@@ -189,45 +373,147 @@ const FLOW_API_URL = targetFlowUrl;
 const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad').trim().replace(/^["']|["']$/g, '');
 const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626').trim().replace(/^["']|["']$/g, '');
 
-const ORDERS_STORE = new Map();
+// Cache temporal en RAM de tamaño limitado para órdenes recientes (Problema 3)
+const ORDERS_MEM_CACHE = new Map();
 
-function getOrders() {
-  return Array.from(ORDERS_STORE.values());
+function cacheOrderInMemory(order) {
+  if (!order || !order.codigoOrden) return;
+  ORDERS_MEM_CACHE.set(order.codigoOrden, order);
+  if (ORDERS_MEM_CACHE.size > 100) {
+    const oldestKey = ORDERS_MEM_CACHE.keys().next().value;
+    ORDERS_MEM_CACHE.delete(oldestKey);
+  }
 }
 
-function saveOrders(ordersList) {
-  if (Array.isArray(ordersList)) {
-    ordersList.forEach(async (o) => {
-      if (o && o.codigoOrden) {
-        ORDERS_STORE.set(o.codigoOrden, o);
-        if (isMongoConnected) {
-          try {
-            await OrderModel.findOneAndUpdate({ codigoOrden: o.codigoOrden }, o, { upsert: true, returnDocument: 'after' });
-            console.log(`🍃 Orden ${o.codigoOrden} guardada en MongoDB Atlas.`);
-          } catch (err) {
-            console.error('❌ Error guardando orden en Mongo:', err.message);
-          }
-        }
-      }
-    });
+async function getOrdersByUser(username, email) {
+  const cleanUser = isString(username) ? username.toLowerCase().trim() : '';
+  const cleanEmail = isString(email) ? email.toLowerCase().trim() : '';
+
+  if (isMongoConnected) {
+    try {
+      const query = [];
+      if (cleanUser) query.push({ usuario: { $regex: new RegExp(`^${cleanUser}$`, 'i') } });
+      if (cleanEmail) query.push({ email: { $regex: new RegExp(`^${cleanEmail}$`, 'i') } });
+      if (query.length === 0) return [];
+      const mongoOrders = await OrderModel.find({ $or: query }).lean();
+      return mongoOrders;
+    } catch (e) {
+      console.error('Error al consultar órdenes en Mongo:', e);
+    }
   }
+
+  const orders = safeReadJsonSync(ORDERS_FILE, []);
+  return orders.filter(o =>
+    (cleanUser && o.usuario && o.usuario.toLowerCase() === cleanUser) ||
+    (cleanEmail && o.email && o.email.toLowerCase() === cleanEmail)
+  );
+}
+
+async function getOrderByCode(codigoOrden) {
+  if (!codigoOrden || !isString(codigoOrden)) return null;
+  const cleanCode = codigoOrden.trim();
+
+  if (ORDERS_MEM_CACHE.has(cleanCode)) {
+    return ORDERS_MEM_CACHE.get(cleanCode);
+  }
+
+  if (isMongoConnected) {
+    try {
+      const mongoOrder = await OrderModel.findOne({
+        $or: [
+          { codigoOrden: cleanCode },
+          { token: cleanCode },
+          { mpPreferenceId: cleanCode }
+        ]
+      }).lean();
+      if (mongoOrder) {
+        cacheOrderInMemory(mongoOrder);
+        return mongoOrder;
+      }
+    } catch (e) {
+      console.error('Error buscando orden por código en Mongo:', e);
+    }
+  }
+
+  const orders = safeReadJsonSync(ORDERS_FILE, []);
+  const found = orders.find(o => o.codigoOrden === cleanCode || o.token === cleanCode || o.mpPreferenceId === cleanCode);
+  if (found) cacheOrderInMemory(found);
+  return found || null;
+}
+
+async function saveSingleOrder(orderData) {
+  if (!orderData || !orderData.codigoOrden) return;
+  cacheOrderInMemory(orderData);
+
+  if (isMongoConnected) {
+    try {
+      await OrderModel.findOneAndUpdate({ codigoOrden: orderData.codigoOrden }, orderData, { upsert: true, new: true });
+      console.log(`🍃 Orden ${orderData.codigoOrden} guardada/actualizada en MongoDB Atlas.`);
+    } catch (err) {
+      console.error('❌ Error guardando orden en Mongo:', err.message);
+    }
+  }
+
+  try {
+    const orders = safeReadJsonSync(ORDERS_FILE, []);
+    const idx = orders.findIndex(o => o.codigoOrden === orderData.codigoOrden);
+    if (idx !== -1) {
+      orders[idx] = orderData;
+    } else {
+      orders.push(orderData);
+    }
+    safeWriteJsonSync(ORDERS_FILE, orders);
+  } catch (e) {
+    console.error('Error guardando orden localmente:', e);
+  }
+}
+
+let USERS_CACHE = [];
+
+function loadUsersCache() {
+  USERS_CACHE = safeReadJsonSync(USERS_FILE, []);
 }
 
 function saveUsers(users) {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  } catch (e) {}
+  if (!Array.isArray(users)) return;
+  USERS_CACHE = users;
+  safeWriteJsonSync(USERS_FILE, users);
 
-  if (isMongoConnected && Array.isArray(users)) {
+  if (isMongoConnected) {
     users.forEach(async (u) => {
       try {
-        await UserModel.findOneAndUpdate({ email: u.email }, u, { upsert: true, returnDocument: 'after' });
-        console.log(`🍃 Usuario ${u.username} (${u.email}) guardado en MongoDB Atlas.`);
+        const cleanUser = {
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          passwordHash: u.passwordHash,
+          role: u.role || 'user',
+          tokenVersion: u.tokenVersion || 0
+        };
+        await UserModel.findOneAndUpdate({ id: u.id }, cleanUser, { upsert: true, new: true });
+        console.log(`🍃 Usuario ${u.username} sincronizado en MongoDB Atlas.`);
       } catch (err) {
-        console.error('❌ Error guardando usuario en Mongo:', err.message);
+        console.error(`❌ Error guardando usuario ${u.username} en Mongo:`, err.message);
       }
     });
   }
+}
+
+async function verifyPassword(inputPassword, storedUser) {
+  try {
+    if (storedUser.passwordHash && storedUser.passwordHash.startsWith('$2')) {
+      return await bcrypt.compare(inputPassword, storedUser.passwordHash);
+    }
+  } catch (e) {}
+
+  const sha256Hash = crypto.createHash('sha256').update(inputPassword).digest('hex');
+  if (storedUser.passwordHash === sha256Hash || storedUser.password === inputPassword) {
+    storedUser.passwordHash = await bcrypt.hash(inputPassword, 10);
+    if (storedUser.password) delete storedUser.password;
+    saveUsers(getUsers());
+    return true;
+  }
+  return false;
 }
 
 function signFlowParams(params) {
@@ -239,6 +525,19 @@ function signFlowParams(params) {
     toSign += k + params[k];
   });
   return crypto.createHmac('sha256', FLOW_SECRET_KEY).update(toSign).digest('hex');
+}
+
+function getValidatedBaseUrl(req) {
+  const allowedHosts = ['zonaswitchchile.com', 'www.zonaswitchchile.com'];
+  const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase().trim();
+  const hostName = rawHost.split(':')[0];
+  if (hostName === 'localhost' || hostName === '127.0.0.1') {
+    return `http://${rawHost || 'localhost:' + PORT}`;
+  }
+  if (allowedHosts.includes(hostName)) {
+    return `https://${hostName}`;
+  }
+  return process.env.PUBLIC_URL || 'https://zonaswitchchile.com';
 }
 
 function formatFlowErrorMessage(flowData) {
@@ -257,29 +556,11 @@ function hashPassword(pwd) {
   return crypto.createHash('sha256').update(pwd).digest('hex');
 }
 
-// Helpers para usuarios
+// Helpers para usuarios seguros
 function getUsers() {
-  try {
-    const data = fs.readFileSync(USERS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    return [];
-  }
+  return safeReadJsonSync(USERS_FILE, []);
 }
 
-function saveUsers(users) {
-  try {
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  } catch (e) {}
-
-  if (isMongoConnected && Array.isArray(users)) {
-    users.forEach(async (u) => {
-      try {
-        await UserModel.updateOne({ id: u.id }, u, { upsert: true });
-      } catch (e) {}
-    });
-  }
-}
 
 // Catálogo de Juegos ZonaSwitchChile en CLP (Pesos Chilenos)
 const JUEGOS = [
@@ -815,25 +1096,47 @@ async function sendOrderConfirmationEmail(order) {
 
 // --- ENDPOINTS DE AUTENTICACIÓN Y REGISTRO CON VERIFICACIÓN ---
 
+// Validación activa de sesión: retorna los datos del usuario si el token es válido
+app.get('/api/auth/me', verifyToken, (req, res) => {
+  res.json({ exito: true, usuario: req.user });
+});
+
 // Step 1: Solicitar registro y enviar código de 6 dígitos por correo
-app.post('/api/auth/send-register-code', async (req, res) => {
+app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
   const { username, email, password } = req.body;
 
-  if (!username || typeof username !== 'string' || username.trim().length < 3) {
+  if (!isString(username) || !isString(email) || !isString(password)) {
+    return res.status(400).json({ error: "Los datos ingresados deben ser cadenas de texto válidas." });
+  }
+
+  if (username.trim().length < 3) {
     return res.status(400).json({ error: "El usuario debe tener al menos 3 caracteres." });
   }
-  if (!email || !email.includes('@')) {
+
+  // Sanitizar nombre de usuario de caracteres invisibles y validar con regex alfanumérica
+  const cleanUsername = username.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+    return res.status(400).json({ error: "El usuario solo puede contener caracteres alfanuméricos y guiones bajos." });
+  }
+
+  if (!email.includes('@')) {
     return res.status(400).json({ error: "Por favor ingresa un correo electrónico válido." });
   }
-  if (!password || password.length < 6 || !/\d/.test(password)) {
+  if (password.length < 6 || !/\d/.test(password)) {
     return res.status(400).json({ error: "La contraseña debe tener mínimo 6 caracteres y al menos 1 número." });
   }
 
-  const cleanUsername = username.trim();
   const cleanEmail = email.trim().toLowerCase();
-  const users = getUsers();
+  
+  // Rate-Limit de 60 segundos por correo electrónico para evitar abusos
+  const lastRequestTime = emailOtpLimiter.get(cleanEmail);
+  if (lastRequestTime && (Date.now() - lastRequestTime < 60000)) {
+    return res.status(429).json({ error: "Por favor espera 60 segundos antes de solicitar otro código de verificación." });
+  }
+  emailOtpLimiter.set(cleanEmail, Date.now());
 
-  if (users.some(u => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
+  const users = getUsers();
+  if (users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
     return res.status(400).json({ error: "Este nombre de usuario ya está registrado." });
   }
   if (users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
@@ -841,11 +1144,13 @@ app.post('/api/auth/send-register-code', async (req, res) => {
   }
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const passwordHash = await bcrypt.hash(password, 10);
+
   OTP_STORE.set(`reg_${cleanEmail}`, {
     code,
     username: cleanUsername,
     email: cleanEmail,
-    passwordHash: hashPassword(password),
+    passwordHash,
     expiresAt: Date.now() + 600000
   });
 
@@ -858,9 +1163,11 @@ app.post('/api/auth/send-register-code', async (req, res) => {
 });
 
 // Step 2: Confirmar código de 6 dígitos y crear usuario
-app.post('/api/auth/verify-register-code', (req, res) => {
+app.post('/api/auth/verify-register-code', authLimiter, async (req, res) => {
   const { email, code } = req.body;
-  if (!email || !code) return res.status(400).json({ error: "Datos incompletos." });
+  if (!isString(email) || !isString(code)) {
+    return res.status(400).json({ error: "El correo y el código deben ser cadenas de texto válidas." });
+  }
 
   const cleanEmail = email.trim().toLowerCase();
   const otpData = OTP_STORE.get(`reg_${cleanEmail}`);
@@ -877,81 +1184,91 @@ app.post('/api/auth/verify-register-code', (req, res) => {
   }
 
   const users = getUsers();
-  const isZxAndere = otpData.username.toLowerCase() === 'zxandere';
   const newUser = {
     id: `USR-${Date.now()}`,
     username: otpData.username,
     email: otpData.email,
     passwordHash: otpData.passwordHash,
-    role: isZxAndere ? 'admin' : 'user',
+    role: 'user', // Rol strictly user por defecto
+    tokenVersion: 0,
     createdAt: new Date().toISOString()
   };
 
   users.push(newUser);
   saveUsers(users);
+
+  // Invalidación inmediata del código OTP una vez verificado
   OTP_STORE.delete(`reg_${cleanEmail}`);
+
+  // Emitir token JWT firmado para la sesión automática
+  const token = jwt.sign(
+    { id: newUser.id, username: newUser.username, role: newUser.role, tokenVersion: newUser.tokenVersion },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
 
   res.json({
     exito: true,
     mensaje: "¡Registro completado con éxito!",
+    token,
     usuario: { id: newUser.id, username: newUser.username, email: newUser.email, role: newUser.role }
   });
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: "Por favor ingresa tu usuario y contraseña." });
+  if (!isString(username) || !isString(password)) {
+    return res.status(400).json({ error: "Por favor ingresa tu usuario y contraseña en formato de texto." });
   }
 
   const users = getUsers();
-  const inputHash = hashPassword(password);
   const user = users.find(u =>
-    (u.username.toLowerCase() === username.trim().toLowerCase() || (u.email && u.email.toLowerCase() === username.trim().toLowerCase())) &&
-    (u.passwordHash === inputHash || u.password === password)
+    u.username && (u.username.toLowerCase() === username.trim().toLowerCase() || (u.email && u.email.toLowerCase() === username.trim().toLowerCase()))
   );
 
   if (!user) {
     return res.status(401).json({ error: "Usuario/correo o contraseña incorrectos." });
   }
 
-  const isZxAndere = user.username.toLowerCase() === 'zxandere';
-  const role = isZxAndere ? 'admin' : (user.role || 'user');
-  if (isZxAndere && user.role !== 'admin') {
-    user.role = 'admin';
-    saveUsers(users);
+  // Verificar contraseña de forma segura usando bcrypt y auto-migración
+  const isMatch = await verifyPassword(password, user);
+  if (!isMatch) {
+    return res.status(401).json({ error: "Usuario/correo o contraseña incorrectos." });
   }
+
+  const role = user.role || 'user';
+
+  // Emitir token JWT firmado
+  const token = jwt.sign(
+    { id: user.id, username: user.username, role: role, tokenVersion: user.tokenVersion || 0 },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
 
   res.json({
     exito: true,
     mensaje: `¡Bienvenido de nuevo, ${user.username}!`,
+    token,
     usuario: { id: user.id, username: user.username, email: user.email, role }
   });
 });
 
 // --- OPCIONES DE CUENTA Y ÓRDENES DE USUARIOS ---
 
-// Consultar compras del usuario logueado
-app.get('/api/user/orders', (req, res) => {
-  const username = req.query.user;
-  if (!username) return res.status(400).json({ error: "Usuario no especificado." });
-
-  const orders = getOrders();
-  const userOrders = orders.filter(o =>
-    (o.usuario && o.usuario.toLowerCase() === username.toLowerCase()) ||
-    (o.email && o.email.toLowerCase() === username.toLowerCase())
-  );
-
+// Consultar compras del usuario logueado (Protegido por token)
+app.get('/api/user/orders', verifyToken, async (req, res) => {
+  const userOrders = await getOrdersByUser(req.user.username, req.user.email);
   res.json(userOrders);
 });
 
 // Cambiar nombre de usuario (Requiere contraseña actual)
-app.post('/api/user/update-username', (req, res) => {
-  const { userId, newUsername, currentPassword } = req.body;
+app.post('/api/user/update-username', verifyToken, async (req, res) => {
+  const { newUsername, currentPassword } = req.body;
+  const userId = req.user.id;
 
-  if (!userId || !newUsername || !currentPassword) {
-    return res.status(400).json({ error: "Por favor completa todos los campos." });
+  if (!isString(newUsername) || !isString(currentPassword)) {
+    return res.status(400).json({ error: "Por favor completa todos los campos con texto válido." });
   }
 
   const cleanUser = newUsername.trim();
@@ -960,36 +1277,53 @@ app.post('/api/user/update-username', (req, res) => {
   }
 
   const users = getUsers();
-  const userIndex = users.findIndex(u => u.id === userId || u.username === userId);
+  const userIndex = users.findIndex(u => u.id === userId);
   if (userIndex === -1) return res.status(404).json({ error: "Usuario no encontrado." });
 
   const user = users[userIndex];
-  if (user.passwordHash !== hashPassword(currentPassword) && user.password !== currentPassword) {
+  
+  // Validar contraseña
+  const isMatch = await verifyPassword(currentPassword, user);
+  if (!isMatch) {
     return res.status(400).json({ error: "La contraseña actual es incorrecta." });
   }
 
-  const exists = users.some(u => u.id !== user.id && u.username.toLowerCase() === cleanUser.toLowerCase());
+  const exists = users.some(u => u.id !== user.id && u.username && u.username.toLowerCase() === cleanUser.toLowerCase());
   if (exists) return res.status(400).json({ error: "Este nombre de usuario ya está tomado." });
 
   users[userIndex].username = cleanUser;
   saveUsers(users);
 
-  res.json({ exito: true, mensaje: "Nombre de usuario actualizado con éxito.", usuario: { id: user.id, username: cleanUser, email: user.email } });
+  // Emitir un nuevo token JWT actualizado con el nuevo username
+  const token = jwt.sign(
+    { id: user.id, username: cleanUser, role: user.role || 'user', tokenVersion: user.tokenVersion || 0 },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.json({
+    exito: true,
+    mensaje: "Nombre de usuario actualizado con éxito.",
+    token,
+    usuario: { id: user.id, username: cleanUser, email: user.email }
+  });
 });
 
 // Cambiar Correo (Paso 1: Enviar código al nuevo correo)
-app.post('/api/user/send-email-code', async (req, res) => {
-  const { userId, newEmail, currentPassword } = req.body;
+app.post('/api/user/send-email-code', verifyToken, userApiLimiter, async (req, res) => {
+  const { newEmail, currentPassword } = req.body;
+  const userId = req.user.id;
 
-  if (!userId || !newEmail || !currentPassword || !newEmail.includes('@')) {
+  if (!isString(newEmail) || !isString(currentPassword) || !newEmail.includes('@')) {
     return res.status(400).json({ error: "Ingresa el nuevo correo y tu contraseña actual." });
   }
 
   const users = getUsers();
-  const user = users.find(u => u.id === userId || u.username === userId);
+  const user = users.find(u => u.id === userId);
   if (!user) return res.status(404).json({ error: "Usuario no encontrado." });
 
-  if (user.passwordHash !== hashPassword(currentPassword) && user.password !== currentPassword) {
+  const isMatch = await verifyPassword(currentPassword, user);
+  if (!isMatch) {
     return res.status(400).json({ error: "La contraseña actual es incorrecta." });
   }
 
@@ -1010,38 +1344,47 @@ app.post('/api/user/send-email-code', async (req, res) => {
 });
 
 // Cambiar Correo (Paso 2: Verificar código y actualizar)
-app.post('/api/user/confirm-email-update', (req, res) => {
-  const { userId, code } = req.body;
-  const otpData = OTP_STORE.get(`email_${userId}`);
+app.post('/api/user/confirm-email-update', verifyToken, userApiLimiter, (req, res) => {
+  const { code } = req.body;
+  const userId = req.user.id;
 
+  if (!isString(code)) return res.status(400).json({ error: "El código debe ser texto." });
+  
+  const otpData = OTP_STORE.get(`email_${userId}`);
   if (!otpData) return res.status(400).json({ error: "Código no encontrado o expirado." });
   if (otpData.code !== code.trim()) return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
 
   const users = getUsers();
-  const userIndex = users.findIndex(u => u.id === userId || u.username === userId);
+  const userIndex = users.findIndex(u => u.id === userId);
   if (userIndex === -1) return res.status(404).json({ error: "Usuario no encontrado." });
 
   users[userIndex].email = otpData.newEmail;
   saveUsers(users);
+  
+  // Invalidador inmediato del OTP
   OTP_STORE.delete(`email_${userId}`);
 
   res.json({ exito: true, mensaje: "Correo actualizado correctamente.", usuario: { id: users[userIndex].id, username: users[userIndex].username, email: otpData.newEmail } });
 });
 
 // Cambiar Contraseña (Paso 1: Enviar código al correo actual del usuario)
-app.post('/api/user/send-password-code', async (req, res) => {
-  const { userId, newPassword } = req.body;
+app.post('/api/user/send-password-code', verifyToken, userApiLimiter, async (req, res) => {
+  const { newPassword } = req.body;
+  const userId = req.user.id;
 
-  if (!userId || !newPassword || newPassword.length < 6 || !/\d/.test(newPassword)) {
+  if (!isString(newPassword) || newPassword.length < 6 || !/\d/.test(newPassword)) {
     return res.status(400).json({ error: "La nueva contraseña debe tener al menos 6 caracteres y 1 número." });
   }
 
   const users = getUsers();
-  const user = users.find(u => u.id === userId || u.username === userId);
+  const user = users.find(u => u.id === userId);
   if (!user || !user.email) return res.status(400).json({ error: "No se encontró un correo asociado a tu cuenta." });
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  OTP_STORE.set(`pwd_${userId}`, { newPasswordHash: hashPassword(newPassword), code, expiresAt: Date.now() + 600000 });
+  
+  // Hash con bcrypt de la nueva contraseña propuesta
+  const newPasswordHash = await bcrypt.hash(newPassword, 10);
+  OTP_STORE.set(`pwd_${userId}`, { newPasswordHash, code, expiresAt: Date.now() + 600000 });
 
   const sent = await sendVerificationEmail(user.email, code, "Código para Cambiar Contraseña");
   if (sent) {
@@ -1051,23 +1394,32 @@ app.post('/api/user/send-password-code', async (req, res) => {
   }
 });
 
-// Cambiar Contraseña (Paso 2: Verificar código y actualizar)
-app.post('/api/user/confirm-password-update', (req, res) => {
-  const { userId, code } = req.body;
-  const otpData = OTP_STORE.get(`pwd_${userId}`);
+// Cambiar Contraseña (Paso 2: Verificar código y actualizar + rotación de tokenVersion)
+app.post('/api/user/confirm-password-update', verifyToken, userApiLimiter, (req, res) => {
+  const { code } = req.body;
+  const userId = req.user.id;
 
+  if (!isString(code)) return res.status(400).json({ error: "El código debe ser texto." });
+  
+  const otpData = OTP_STORE.get(`pwd_${userId}`);
   if (!otpData) return res.status(400).json({ error: "Código no encontrado o expirado." });
   if (otpData.code !== code.trim()) return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
 
   const users = getUsers();
-  const userIndex = users.findIndex(u => u.id === userId || u.username === userId);
+  const userIndex = users.findIndex(u => u.id === userId);
   if (userIndex === -1) return res.status(404).json({ error: "Usuario no encontrado." });
 
   users[userIndex].passwordHash = otpData.newPasswordHash;
+  
+  // Incrementar tokenVersion para invalidar todas las sesiones JWT activas en circulación
+  users[userIndex].tokenVersion = (users[userIndex].tokenVersion || 0) + 1;
+  
   saveUsers(users);
+  
+  // Invalidador inmediato del OTP
   OTP_STORE.delete(`pwd_${userId}`);
 
-  res.json({ exito: true, mensaje: "Contraseña actualizada correctamente." });
+  res.json({ exito: true, mensaje: "Contraseña actualizada correctamente. Por seguridad, debes iniciar sesión de nuevo." });
 });
 
 // Catálogo de Juegos por Defecto
@@ -1196,31 +1548,19 @@ const DEFAULT_GAMES = [
 
 let GAMES_STORE = [];
 function loadInitialGames() {
-  if (fs.existsSync(GAMES_FILE)) {
-    try {
-      const data = fs.readFileSync(GAMES_FILE, 'utf8');
-      GAMES_STORE = JSON.parse(data);
-      if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-        GAMES_STORE = [...DEFAULT_GAMES];
-        saveGamesLocal(GAMES_STORE);
-      }
-    } catch (e) {
-      GAMES_STORE = [...DEFAULT_GAMES];
-      saveGamesLocal(GAMES_STORE);
-    }
-  } else {
+  GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
+  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
     GAMES_STORE = [...DEFAULT_GAMES];
     saveGamesLocal(GAMES_STORE);
   }
 }
 
 function saveGamesLocal(games) {
+  if (!Array.isArray(games)) return;
   GAMES_STORE = games;
-  try {
-    fs.writeFileSync(GAMES_FILE, JSON.stringify(games, null, 2));
-  } catch (e) {}
+  safeWriteJsonSync(GAMES_FILE, games);
 
-  if (isMongoConnected && Array.isArray(games)) {
+  if (isMongoConnected) {
     games.forEach(async (g) => {
       try {
         await GameModel.findOneAndUpdate({ id: g.id }, g, { upsert: true, returnDocument: 'after' });
@@ -1243,10 +1583,27 @@ app.get('/api/juegos/stream', (req, res) => {
 
   sseClients.add(res);
 
-  req.on('close', () => {
+  const removeClient = () => {
     sseClients.delete(res);
-  });
+  };
+
+  req.on('close', removeClient);
+  req.on('error', removeClient);
+  res.on('error', removeClient);
+  res.on('finish', removeClient);
 });
+
+// Temporizador keep-alive SSE (ping cada 30 segundos) para limpiar clientes desconectados (Problema 4)
+setInterval(() => {
+  sseClients.forEach(client => {
+    try {
+      client.write(': keep-alive ping\n\n');
+    } catch (e) {
+      sseClients.delete(client);
+      try { client.end(); } catch (err) {}
+    }
+  });
+}, 30000);
 
 function broadcastCatalogUpdate() {
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
@@ -1269,7 +1626,19 @@ function broadcastCatalogUpdate() {
 
 loadInitialGames();
 
-// --- ENDPOINTS DE CATÁLOGO Y ADMINISTRACIÓN DE JUEGOS ---
+function slugify(text) {
+  if (!text) return '';
+  return text
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+
 
 // Endpoint Público: Retorna solo juegos visibles para los clientes
 app.get('/api/juegos', (req, res) => {
@@ -1287,20 +1656,13 @@ app.get('/api/juegos', (req, res) => {
 });
 
 // Endpoint Admin: Retorna TODOS los juegos (visibles y ocultos) para el panel de administración
-app.get('/api/admin/juegos', (req, res) => {
-  const username = (req.query.user || '').toLowerCase();
-  if (username !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.get('/api/admin/juegos', verifyAdmin, (req, res) => {
   res.json(GAMES_STORE);
 });
 
 // Endpoint Admin: Cambiar visibilidad (Mostrar / Ocultar) en tiempo real
-app.post('/api/admin/juegos/toggle', (req, res) => {
-  const { gameId, visible, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
+  const { gameId, visible } = req.body;
 
   const game = GAMES_STORE.find(g => g.id === Number(gameId));
   if (!game) return res.status(404).json({ error: "Juego no encontrado." });
@@ -1313,30 +1675,27 @@ app.post('/api/admin/juegos/toggle', (req, res) => {
 });
 
 // Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Foto Normal, Foto Detalle, etc.) en tiempo real
-app.post('/api/admin/juegos/update', (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, correoTexto, correoImagen, cuentas, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, correoTexto, correoImagen, cuentas } = req.body;
 
   const gameIndex = GAMES_STORE.findIndex(g => g.id === Number(gameId));
   if (gameIndex === -1) return res.status(404).json({ error: "Juego no encontrado." });
 
   const game = GAMES_STORE[gameIndex];
-  if (titulo) game.titulo = titulo.trim();
-  if (categoria) game.categoria = categoria.trim();
+  if (isString(titulo) && titulo.trim()) game.titulo = titulo.trim();
+  if (isString(categoria) && categoria.trim()) game.categoria = categoria.trim();
   if (precioSecundaria !== undefined && precioSecundaria !== '') game.precioSecundaria = Number(precioSecundaria);
   if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
-  if (descripcion) game.descripcion = descripcion.trim();
-  if (imagen) game.imagen = imagen.trim();
-  if (imagenDetalle) game.imagenDetalle = imagenDetalle.trim();
-  if (correoTexto !== undefined) game.correoTexto = correoTexto.trim();
-  if (correoImagen !== undefined) game.correoImagen = correoImagen.trim();
+  if (isString(descripcion)) game.descripcion = descripcion.trim();
+  if (isString(imagen)) game.imagen = imagen.trim();
+  if (isString(imagenDetalle)) game.imagenDetalle = imagenDetalle.trim();
+  if (correoTexto !== undefined && isString(correoTexto)) game.correoTexto = correoTexto.trim();
+  if (correoImagen !== undefined && isString(correoImagen)) game.correoImagen = correoImagen.trim();
 
   if (typeof cuentas === 'string') {
     game.cuentas = cuentas.split('\n').map(c => c.trim()).filter(c => c.length > 0);
   } else if (Array.isArray(cuentas)) {
-    game.cuentas = cuentas;
+    game.cuentas = cuentas.filter(c => isString(c) && c.trim().length > 0);
   }
 
   if (typeof game.siguienteVarianteIndex !== 'number') {
@@ -1385,25 +1744,19 @@ const DEFAULT_GALLERY = [
 
 let GALLERY_STORE = [];
 function loadInitialGallery() {
-  if (fs.existsSync(GALLERY_FILE)) {
-    try {
-      GALLERY_STORE = JSON.parse(fs.readFileSync(GALLERY_FILE, 'utf8'));
-    } catch (e) {
-      GALLERY_STORE = [...DEFAULT_GALLERY];
-    }
-  } else {
+  GALLERY_STORE = safeReadJsonSync(GALLERY_FILE, []);
+  if (!Array.isArray(GALLERY_STORE) || GALLERY_STORE.length === 0) {
     GALLERY_STORE = [...DEFAULT_GALLERY];
     saveGalleryLocal(GALLERY_STORE);
   }
 }
 
 function saveGalleryLocal(gallery) {
+  if (!Array.isArray(gallery)) return;
   GALLERY_STORE = gallery;
-  try {
-    fs.writeFileSync(GALLERY_FILE, JSON.stringify(gallery, null, 2));
-  } catch (e) {}
+  safeWriteJsonSync(GALLERY_FILE, gallery);
 
-  if (isMongoConnected && Array.isArray(gallery)) {
+  if (isMongoConnected) {
     gallery.forEach(async (item) => {
       try {
         await GalleryModel.findOneAndUpdate({ id: item.id }, item, { upsert: true, returnDocument: 'after' });
@@ -1425,23 +1778,17 @@ const DEFAULT_COUPONS = [
 ];
 
 function loadCoupons() {
-  if (fs.existsSync(COUPONS_FILE)) {
-    try {
-      COUPONS_STORE = JSON.parse(fs.readFileSync(COUPONS_FILE, 'utf8'));
-    } catch (e) {
-      COUPONS_STORE = [...DEFAULT_COUPONS];
-    }
-  } else {
+  COUPONS_STORE = safeReadJsonSync(COUPONS_FILE, []);
+  if (!Array.isArray(COUPONS_STORE) || COUPONS_STORE.length === 0) {
     COUPONS_STORE = [...DEFAULT_COUPONS];
     saveCouponsLocal(COUPONS_STORE);
   }
 }
 
 function saveCouponsLocal(coupons) {
+  if (!Array.isArray(coupons)) return;
   COUPONS_STORE = coupons;
-  try {
-    fs.writeFileSync(COUPONS_FILE, JSON.stringify(coupons, null, 2));
-  } catch (e) {}
+  safeWriteJsonSync(COUPONS_FILE, coupons);
 }
 
 loadCoupons();
@@ -1452,14 +1799,11 @@ app.get('/api/coupons', (req, res) => {
 });
 
 // Endpoint Admin: Crear / Guardar Cupón Permanente
-app.post('/api/admin/coupons/create', (req, res) => {
-  const { code, type, value, desc, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/coupons/create', verifyAdmin, (req, res) => {
+  const { code, type, value, desc } = req.body;
 
-  if (!code || value === undefined || value === '') {
-    return res.status(400).json({ error: "El código y el valor del descuento son obligatorios." });
+  if (!isString(code) || value === undefined || value === '') {
+    return res.status(400).json({ error: "El código y el valor del descuento son obligatorios y deben ser válidos." });
   }
 
   const cleanCode = code.trim().toUpperCase();
@@ -1471,7 +1815,7 @@ app.post('/api/admin/coupons/create', (req, res) => {
     code: cleanCode,
     type: couponType,
     value: numValue,
-    desc: desc && desc.trim() ? desc.trim() : (couponType === 'percent' ? `${numValue}% de descuento` : `$${numValue.toLocaleString('es-CL')} CLP de descuento`)
+    desc: isString(desc) && desc.trim() ? desc.trim() : (couponType === 'percent' ? `${numValue}% de descuento` : `$${numValue.toLocaleString('es-CL')} CLP de descuento`)
   };
 
   if (existingIdx !== -1) {
@@ -1486,13 +1830,12 @@ app.post('/api/admin/coupons/create', (req, res) => {
 });
 
 // Endpoint Admin: Borrar Cupón Permanente
-app.post('/api/admin/coupons/delete', (req, res) => {
-  const { code, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/coupons/delete', verifyAdmin, (req, res) => {
+  const { code } = req.body;
 
-  const cleanCode = (code || '').trim().toUpperCase();
+  if (!isString(code)) return res.status(400).json({ error: "El código debe ser una cadena de texto." });
+
+  const cleanCode = code.trim().toUpperCase();
   COUPONS_STORE = COUPONS_STORE.filter(c => c.code !== cleanCode);
   saveCouponsLocal(COUPONS_STORE);
 
@@ -1504,22 +1847,12 @@ let STORED_SETTINGS = {
 };
 
 function loadSettings() {
-  if (fs.existsSync(SETTINGS_FILE)) {
-    try {
-      STORED_SETTINGS = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-    } catch (e) {
-      STORED_SETTINGS = { galleryEnabled: false };
-    }
-  } else {
-    saveSettings(STORED_SETTINGS);
-  }
+  STORED_SETTINGS = safeReadJsonSync(SETTINGS_FILE, { galleryEnabled: false });
 }
 
 function saveSettings(settings) {
   STORED_SETTINGS = settings;
-  try {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-  } catch (e) {}
+  safeWriteJsonSync(SETTINGS_FILE, settings);
 }
 
 loadSettings();
@@ -1528,11 +1861,8 @@ app.get('/api/settings', (req, res) => {
   res.json(STORED_SETTINGS);
 });
 
-app.post('/api/admin/settings/toggle-gallery', (req, res) => {
-  const { enabled, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/settings/toggle-gallery', verifyAdmin, (req, res) => {
+  const { enabled } = req.body;
 
   STORED_SETTINGS.galleryEnabled = !!enabled;
   saveSettings(STORED_SETTINGS);
@@ -1546,38 +1876,41 @@ app.get('/api/gallery', (req, res) => {
   res.json(GALLERY_STORE);
 });
 
-// Endpoint Admin: Agregar nueva foto/reseña a la galería
-app.post('/api/admin/gallery/add', (req, res) => {
-  const { user, stars, comment, imagen, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+// Helper de sanitización contra XSS en Galería
+function sanitizeHtml(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+}
+
+// Endpoint Admin: Agregar nueva foto/reseña a la galería (XSS Protected)
+app.post('/api/admin/gallery/add', verifyAdmin, (req, res) => {
+  const { user, stars, comment, imagen } = req.body;
 
   if (!user || !comment || !imagen) {
     return res.status(400).json({ error: "Por favor completa el usuario, comentario y la URL de la foto." });
   }
 
+  const cleanUser = sanitizeHtml(user.trim());
+  const cleanComment = sanitizeHtml(comment.trim());
+
   const newItem = {
     id: Date.now(),
-    user: user.trim(),
+    user: cleanUser,
     stars: stars || "⭐ ⭐ ⭐ ⭐ ⭐",
-    comment: comment.trim(),
+    comment: cleanComment,
     imagen: imagen.trim()
   };
 
   GALLERY_STORE.unshift(newItem);
   saveGalleryLocal(GALLERY_STORE);
 
-  console.log(`🛠️ [ADMIN] Nueva foto agregada a la galería por "${user}"`);
+  console.log(`🛠️ [ADMIN] Nueva foto agregada a la galería por "${cleanUser}"`);
   res.json({ exito: true, mensaje: "Reseña / Foto agregada a la galería exitosamente.", galeria: GALLERY_STORE });
 });
 
 // Endpoint Admin: Eliminar foto/reseña de la galería
-app.post('/api/admin/gallery/delete', (req, res) => {
-  const { id, username } = req.body;
-  if ((username || '').toLowerCase() !== 'zxandere') {
-    return res.status(403).json({ error: "Acceso denegado. Se requieren permisos de administrador." });
-  }
+app.post('/api/admin/gallery/delete', verifyAdmin, (req, res) => {
+  const { id } = req.body;
 
   GALLERY_STORE = GALLERY_STORE.filter(item => item.id !== Number(id));
   saveGalleryLocal(GALLERY_STORE);
@@ -1585,16 +1918,72 @@ app.post('/api/admin/gallery/delete', (req, res) => {
   res.json({ exito: true, mensaje: "Foto removida de la galería.", galeria: GALLERY_STORE });
 });
 
-app.post('/api/checkout', async (req, res) => {
-  const { nombre, apellido, email, carrito, username, metodoPago, montoTotal } = req.body;
+app.post('/api/checkout', checkoutLimiter, async (req, res) => {
+  const { nombre, apellido, email, carrito, username, metodoPago, couponCode } = req.body;
 
-  if (!nombre || !apellido || !email || !carrito || carrito.length === 0) {
-    return res.status(400).json({ error: "Datos incompletos para procesar la orden." });
+  // Validación de tipos de datos en body (Problema 6)
+  if (!isString(nombre) || !isString(apellido) || !isString(email) || !Array.isArray(carrito) || carrito.length === 0) {
+    return res.status(400).json({ error: "Datos incompletos o en formato incorrecto para procesar la orden." });
   }
 
   const cleanEmail = email.trim();
-  const subtotal = carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
-  const total = typeof montoTotal === 'number' ? Math.max(0, montoTotal) : subtotal;
+
+  // 1. Recalcular subtotal y VALIDAR STOCK DE CUENTAS (Problema 5)
+  let calculatedSubtotal = 0;
+  for (const item of carrito) {
+    if (!item || item.id === undefined) {
+      return res.status(400).json({ error: "Artículo inválido en el carrito." });
+    }
+    const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
+    if (!gameInStore) {
+      return res.status(400).json({ error: `El juego con ID ${item.id} no existe en el catálogo.` });
+    }
+
+    // Validación de stock de cuentas disponibles antes de cobrar al cliente (Problema 5)
+    if (!gameInStore.cuentas || !Array.isArray(gameInStore.cuentas) || gameInStore.cuentas.length === 0) {
+      return res.status(400).json({
+        error: `El juego "${gameInStore.titulo}" no cuenta con cuentas de stock disponibles en este momento. Por favor contacta a soporte.`
+      });
+    }
+
+    const availableCuentas = gameInStore.cuentas.filter(c => typeof c === 'string' && c.trim().length > 0);
+    if (availableCuentas.length === 0) {
+      return res.status(400).json({
+        error: `El juego "${gameInStore.titulo}" no cuenta con cuentas de stock disponibles en este momento. Por favor contacta a soporte.`
+      });
+    }
+
+    const basePrice = item.licencia === 'Primaria' ? gameInStore.precioPrimaria : gameInStore.precioSecundaria;
+    calculatedSubtotal += basePrice * Number(item.cantidad || 1);
+  }
+
+  // 2. Validar y aplicar cupones de descuento en el servidor
+  let discountAmount = 0;
+  let appliedCoupon = null;
+  const rawCouponCode = isString(couponCode) ? couponCode.trim().toUpperCase() : '';
+
+  if (rawCouponCode) {
+    if (rawCouponCode === 'PRUEBAXD') {
+      const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase();
+      const isLocal = rawHost.includes('localhost') || rawHost.includes('127.0.0.1');
+      if (process.env.NODE_ENV === 'production' || !isLocal) {
+        return res.status(400).json({ error: "El cupón de pruebas PRUEBAXD está desactivado en producción." });
+      }
+      appliedCoupon = { code: 'PRUEBAXD', type: 'percent', value: 100 };
+    } else {
+      appliedCoupon = COUPONS_STORE.find(c => c.code === rawCouponCode);
+    }
+
+    if (appliedCoupon) {
+      if (appliedCoupon.type === 'percent') {
+        discountAmount = Math.round(calculatedSubtotal * (appliedCoupon.value / 100));
+      } else if (appliedCoupon.type === 'fixed') {
+        discountAmount = appliedCoupon.value;
+      }
+    }
+  }
+
+  const total = Math.max(0, calculatedSubtotal - discountAmount);
   const codigoOrden = `ZSC-${Math.floor(100000 + Math.random() * 900000)}`;
 
   // Asignación de variantes de cuentas en rotación (Round-Robin 🔄) para cada juego comprado
@@ -1653,6 +2042,7 @@ app.post('/api/checkout', async (req, res) => {
 
     return {
       ...item,
+      precio: item.licencia === 'Primaria' ? gameInStore.precioPrimaria : gameInStore.precioSecundaria,
       varianteAsignada: varianteAsignada || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
       correoTexto: correoTextoItem,
       correoImagen: correoImagenItem
@@ -1664,21 +2054,19 @@ app.post('/api/checkout', async (req, res) => {
   const orderData = {
     codigoOrden,
     cliente: `${nombre.trim()} ${apellido.trim()}`,
-    usuario: username || 'Invitado',
+    usuario: isString(username) && username.trim() ? username.trim() : 'Invitado',
     email: cleanEmail,
     carrito: carritoConVariantes,
-    articulos: carritoConVariantes.reduce((acc, item) => acc + item.cantidad, 0),
+    articulos: carritoConVariantes.reduce((acc, item) => acc + (Number(item.cantidad) || 1), 0),
     total,
     totalFormatted: `$${total.toLocaleString('es-CL')} CLP`,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
     estado: total === 0 ? 'pagada' : 'pendiente',
-    metodoPago: metodoPago || 'flow'
+    metodoPago: isString(metodoPago) ? metodoPago : 'flow'
   };
 
-  // Guardar orden localmente
-  const orders = getOrders();
-  orders.push(orderData);
-  saveOrders(orders);
+  // Guardar orden de forma segura en Mongo / Local sin agotar RAM (Problema 3)
+  await saveSingleOrder(orderData);
 
   // Si el total es 0 CLP (Cupón del 100% como PRUEBAXD), finalizar orden inmediatamente sin cobrar
   if (total === 0) {
@@ -1693,12 +2081,8 @@ app.post('/api/checkout', async (req, res) => {
     });
   }
 
-  // Determinar protocolo y host para retorno de pasarelas
-  const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase();
-  const isLocal = rawHost.includes('localhost') || rawHost.includes('127.0.0.1');
-  const baseUrl = isLocal
-    ? `http://${rawHost || 'localhost:' + PORT}`
-    : (process.env.PUBLIC_URL || 'https://zonaswitchchile.com');
+  // Determinar protocolo y host para retorno seguro de pasarelas (Problema 3: Anti Open-Redirect)
+  const baseUrl = getValidatedBaseUrl(req);
 
   // Si el cliente eligió Mercado Pago
   if (metodoPago === 'mercadopago') {
@@ -1738,7 +2122,7 @@ app.post('/api/checkout', async (req, res) => {
       if (mpData && (mpData.init_point || mpData.sandbox_init_point)) {
         const redirectUrl = mpData.init_point || mpData.sandbox_init_point;
         orderData.mpPreferenceId = mpData.id;
-        saveOrders(orders);
+        await saveSingleOrder(orderData);
 
         return res.json({
           exito: true,
@@ -1823,7 +2207,7 @@ app.post('/api/checkout', async (req, res) => {
     if (flowRes.ok && flowData && flowData.url && flowData.token) {
       orderData.flowOrder = flowData.flowOrder;
       orderData.token = flowData.token;
-      saveOrders(orders);
+      await saveSingleOrder(orderData);
 
       return res.json({
         exito: true,
@@ -1849,6 +2233,18 @@ app.all('/api/flow/return', async (req, res) => {
     return res.redirect('/');
   }
 
+  // Validar firma del callback recibida de Flow usando tiempo constante (Problema 1: Anti Timing Attack)
+  const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
+  const incomingSign = incomingParams.s;
+  if (incomingSign) {
+    delete incomingParams.s;
+    const computedSign = signFlowParams(incomingParams);
+    if (!safeCompareSignatures(computedSign, incomingSign)) {
+      console.warn("⚠️ Advertencia: Firma de callback de Flow no válida.");
+      return res.redirect('/');
+    }
+  }
+
   try {
     const params = { apiKey: FLOW_API_KEY, token };
     params.s = signFlowParams(params);
@@ -1865,22 +2261,21 @@ app.all('/api/flow/return', async (req, res) => {
       return res.redirect('/');
     }
 
-    const orders = getOrders();
-    const orderIndex = orders.findIndex(o => o.token === token || o.codigoOrden === statusData.commerceOrder);
+    const order = (await getOrderByCode(token)) || (await getOrderByCode(statusData.commerceOrder));
 
     let orderCode = statusData.commerceOrder || '';
     let status = statusData.status; // 2 = Pagada, 3 = Rechazada, 4 = Anulada, 1 = Pendiente
 
-    if (orderIndex !== -1) {
-      const oldStatus = orders[orderIndex].estado;
-      orders[orderIndex].flowStatus = status;
-      orders[orderIndex].estado = status === 2 ? 'pagada' : (status === 3 ? 'rechazada' : 'cancelada');
-      saveOrders(orders);
-      orderCode = orders[orderIndex].codigoOrden;
+    if (order) {
+      const oldStatus = order.estado;
+      order.flowStatus = status;
+      order.estado = status === 2 ? 'pagada' : (status === 3 ? 'rechazada' : 'cancelada');
+      await saveSingleOrder(order);
+      orderCode = order.codigoOrden;
 
       // Enviar correo de entrega si el pedido acaba de ser pagado 📩
-      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
-        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
 
@@ -1895,6 +2290,18 @@ app.all('/api/flow/return', async (req, res) => {
 app.post('/api/flow/confirm', async (req, res) => {
   const token = req.body?.token || req.query?.token;
   if (!token) return res.status(400).send('Token no proporcionado.');
+
+  // Validar firma del callback recibida de Flow usando tiempo constante (Problema 1: Anti Timing Attack)
+  const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
+  const incomingSign = incomingParams.s;
+  if (incomingSign) {
+    delete incomingParams.s;
+    const computedSign = signFlowParams(incomingParams);
+    if (!safeCompareSignatures(computedSign, incomingSign)) {
+      console.warn("⚠️ Advertencia: Firma de webhook de Flow no válida.");
+      return res.status(403).send("Firma inválida.");
+    }
+  }
 
   try {
     const params = { apiKey: FLOW_API_KEY, token };
@@ -1911,18 +2318,17 @@ app.post('/api/flow/confirm', async (req, res) => {
       return res.status(500).send('Error');
     }
 
-    const orders = getOrders();
-    const orderIndex = orders.findIndex(o => o.token === token || o.codigoOrden === statusData.commerceOrder);
+    const order = (await getOrderByCode(token)) || (await getOrderByCode(statusData.commerceOrder));
 
-    if (orderIndex !== -1) {
-      const oldStatus = orders[orderIndex].estado;
-      orders[orderIndex].flowStatus = statusData.status;
-      orders[orderIndex].estado = statusData.status === 2 ? 'pagada' : 'rechazada';
-      saveOrders(orders);
+    if (order) {
+      const oldStatus = order.estado;
+      order.flowStatus = statusData.status;
+      order.estado = statusData.status === 2 ? 'pagada' : 'rechazada';
+      await saveSingleOrder(order);
 
       // Enviar correo de entrega si el pedido acaba de ser pagado 📩
-      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
-        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
 
@@ -1937,18 +2343,17 @@ app.all('/api/mp/return', async (req, res) => {
   const externalRef = req.query.external_reference || req.query.preference_id;
   const status = req.query.status || req.query.collection_status || 'approved';
 
-  if (externalRef) {
-    const orders = getOrders();
-    const orderIndex = orders.findIndex(o => o.codigoOrden === externalRef || o.mpPreferenceId === externalRef);
-    if (orderIndex !== -1) {
-      const oldStatus = orders[orderIndex].estado;
-      orders[orderIndex].mpStatus = status;
-      orders[orderIndex].estado = (status === 'approved' || status === '2') ? 'pagada' : 'rechazada';
-      saveOrders(orders);
+  if (externalRef && isString(externalRef)) {
+    const order = await getOrderByCode(externalRef);
+    if (order) {
+      const oldStatus = order.estado;
+      order.mpStatus = status;
+      order.estado = (status === 'approved' || status === '2') ? 'pagada' : 'rechazada';
+      await saveSingleOrder(order);
 
       // Enviar correo de entrega si el pedido acaba de ser pagado 📩
-      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
-        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
   }
@@ -1961,13 +2366,37 @@ app.post('/api/mp/confirm', (req, res) => {
 });
 
 // Consultar orden por código
-app.get('/api/orders/:code', (req, res) => {
-  const orders = getOrders();
-  const order = orders.find(o => o.codigoOrden === req.params.code);
+app.get('/api/orders/:code', async (req, res) => {
+  if (!isString(req.params.code)) return res.status(400).json({ error: "Código inválido." });
+  const order = await getOrderByCode(req.params.code);
   if (!order) return res.status(404).json({ error: "Orden no encontrada." });
   res.json(order);
 });
 
+// Captura global de promesas no manejadas y excepciones para evitar caídas del proceso
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Promesa no manejada rechazada en:', promise, 'razón:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Excepción no capturada globalmente:', error);
+});
+
+// Middleware global de manejo de errores de Express
+app.use((err, req, res, next) => {
+  console.error('❌ Error capturado por Express:', err.stack || err.message || err);
+  
+  // Ocultar stack trace y detalles técnicos en producción
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                       (req.get('host') && !req.get('host').includes('localhost') && !req.get('host').includes('127.0.0.1'));
+                       
+  const message = isProduction
+    ? "Ocurrió un error interno en el servidor. Intenta de nuevo más tarde."
+    : err.message || "Error interno del servidor.";
+    
+  res.status(err.status || 500).json({ error: message });
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor ZonaSwitchChile activo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor ZonaSwitchChile activo en https://zonaswitchchile.com (Puerto ${PORT})`);
 });
