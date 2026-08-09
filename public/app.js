@@ -1282,7 +1282,7 @@ function renderCatalog() {
   }
 
   grid.innerHTML = filtered.map((game) => `
-    <article class="game-card in-view" onclick="window.location.href = '/' + slugify('${escapeHTML(game.titulo || '')}')">
+    <article class="game-card in-view" onclick="openGameModal(${game.id})">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -1299,7 +1299,7 @@ function renderCatalog() {
             <span class="original-price">${formatCLP(game.precioOriginal || game.precioSecundaria)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
-          <button class="buy-card-btn">
+          <button class="buy-card-btn" onclick="openGameModal(${game.id}); event.stopPropagation();">
             Comprar
           </button>
         </div>
