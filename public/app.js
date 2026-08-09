@@ -206,9 +206,10 @@ let currentCurrency = localStorage.getItem('zonaswitch_currency') || 'CLP';
 
 // Helper de formato de moneda dinámico y exacto
 function formatCLP(num) {
-  if (typeof num !== 'number') return '$0 CLP';
+  const n = Number(num);
+  if (isNaN(n) || num === null || num === undefined || num === '') return '$0 CLP';
   const conf = CURRENCY_RATES[currentCurrency] || CURRENCY_RATES.CLP;
-  const val = num * conf.rate;
+  const val = n * conf.rate;
 
   const formatted = conf.decimals === 0
     ? Math.round(val).toLocaleString('es-CL')
@@ -217,10 +218,36 @@ function formatCLP(num) {
   return `${conf.symbol}${formatted} ${conf.code}`;
 }
 
+function renderGlobalAdminGear() {
+  const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
+  const isAdmin = savedUser && (
+    savedUser.role === 'admin' ||
+    (savedUser.username && savedUser.username.toLowerCase() === 'zxandere')
+  );
+
+  const gearBtns = document.querySelectorAll('.admin-quick-gear-btn, #admin-game-gear-btn, #global-admin-gear-btn');
+
+  gearBtns.forEach(btn => {
+    if (isAdmin) {
+      btn.style.display = 'flex';
+      btn.style.opacity = '1';
+      btn.style.visibility = 'visible';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+
+  const globalGear = document.getElementById('global-admin-gear-btn');
+  if (globalGear && isAdmin) {
+    globalGear.onclick = () => {
+      openUserSettingsModal();
+      switchAdminSubtab('games');
+    };
+  }
+}
+
 // Inicializar Aplicación al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
-  // Validación activa de sesión y permisos al cargar la página.
-  // Si el token es inválido o expiró, apiFetch() llamará forceLogout() automáticamente.
   if (localStorage.getItem('userToken')) {
     apiFetch('/api/auth/me').catch(() => {});
   }
@@ -228,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
+  try { renderGlobalAdminGear(); } catch (e) { console.error('Error renderGlobalAdminGear:', e); }
   try { fetchSettings(); } catch (e) { console.error('Error fetchSettings:', e); }
   try { fetchCoupons(); } catch (e) { console.error('Error fetchCoupons:', e); }
   try { fetchCatalog(); } catch (e) { console.error('Error fetchCatalog:', e); }
@@ -1069,6 +1097,7 @@ function initUserSession() {
   if (typeof window.initAdminQuickGearButton === 'function') {
     window.initAdminQuickGearButton();
   }
+  renderGlobalAdminGear();
 }
 
 function handleLogout() {
@@ -1333,15 +1362,20 @@ function renderCatalog() {
     return;
   }
 
+  const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
+  const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
+
   grid.innerHTML = filtered.map((game) => {
     const slug = slugify(game.titulo || '');
     const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
+    const origPrice = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
     return `
     <a href="${targetUrl}" class="game-card in-view" onclick="window.location.href='${targetUrl}'; return true;">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
         <span class="card-size-tag">📦 ${escapeHTML(game.peso || 'N/A')}</span>
+        ${isAdmin ? `<button type="button" class="card-admin-gear" onclick="event.preventDefault(); event.stopPropagation(); openGameEditModal(${game.id});" title="Editar juego en tiempo real (Admin ⚙️)">⚙️</button>` : ''}
       </div>
       <div class="card-content">
         <h3 class="card-title">${escapeHTML(game.titulo || '')}</h3>
@@ -1351,7 +1385,7 @@ function renderCatalog() {
         </div>
         <div class="card-footer">
           <div class="price-container">
-            <span class="original-price">${formatCLP(game.precioOriginal || game.precioSecundaria)}</span>
+            <span class="original-price">${formatCLP(origPrice)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
           <span class="buy-card-btn" onclick="window.location.href='${targetUrl}'; event.stopPropagation();">

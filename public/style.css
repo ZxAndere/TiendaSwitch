@@ -3514,6 +3514,32 @@ body {
   background: rgba(0, 240, 255, 0.15);
 }
 
+/* Botón Tuerca Admin en tarjetas del catálogo */
+.card-admin-gear {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(7, 10, 18, 0.88);
+  border: 1.5px solid var(--joycon-cyan);
+  color: var(--joycon-cyan);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.card-admin-gear:hover {
+  transform: scale(1.15) rotate(45deg);
+  background: rgba(0, 240, 255, 0.25);
+}
+
 /* Opciones de Administrador Estiradas Horizontalmente (Wide Admin Layout) */
 .user-modal-card.wide-admin {
   max-width: 1100px !important;
