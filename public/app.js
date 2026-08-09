@@ -1366,11 +1366,9 @@ function renderCatalog() {
   const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
 
   grid.innerHTML = filtered.map((game) => {
-    const slug = slugify(game.titulo || '');
-    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     const origPrice = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
     return `
-    <a href="${targetUrl}" class="game-card in-view" onclick="window.location.href='${targetUrl}'; return true;">
+    <div class="game-card in-view">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -1388,12 +1386,12 @@ function renderCatalog() {
             <span class="original-price">${formatCLP(origPrice)}</span>
             <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
           </div>
-          <span class="buy-card-btn" onclick="window.location.href='${targetUrl}'; event.stopPropagation();">
-            Ver Detalle →
-          </span>
+          <button type="button" class="buy-card-btn" onclick="addGameWithLicenseToCart(catalog.find(g => g.id === ${game.id}), 'secundaria'); openCartDrawer();">
+            🛒 Añadir al Carrito
+          </button>
         </div>
       </div>
-    </a>
+    </div>
   `;
   }).join('');
 
@@ -1445,11 +1443,9 @@ function slugify(text) {
 // --- NAVEGACIÓN A LA VISTA DEDICADA DE DETALLE DEL JUEGO (PRO LEVEL / CLEAN URL SEO) ---
 function openGameModal(gameId) {
   const game = Array.isArray(catalog) ? catalog.find(g => Number(g.id) === Number(gameId)) : null;
-  if (game && game.titulo) {
-    const slug = slugify(game.titulo);
-    window.location.href = `juego.html?id=${gameId}&slug=${encodeURIComponent(slug)}`;
-  } else if (gameId) {
-    window.location.href = `juego.html?id=${gameId}`;
+  if (game) {
+    addGameWithLicenseToCart(game, 'secundaria');
+    openCartDrawer();
   }
 }
 
@@ -2309,16 +2305,14 @@ function handleSearchAutocomplete(inputEl, dropdownId) {
   }
 
   dropdown.innerHTML = matches.map(game => {
-    const slug = slugify(game.titulo || '');
-    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     return `
-    <a href="${targetUrl}" class="autocomplete-item" onclick="window.location.href='${targetUrl}'; return true;" style="text-decoration: none; color: inherit; display: flex;">
+    <div class="autocomplete-item" onclick="addGameWithLicenseToCart(catalog.find(g => g.id === ${game.id}), 'secundaria'); openCartDrawer(); selectAutocompleteResult(${game.id}, '${dropdownId}');" style="cursor: pointer; display: flex;">
       <img class="autocomplete-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
       <div class="autocomplete-info">
         <span class="autocomplete-title">${escapeHTML(game.titulo)}</span>
         <span class="autocomplete-sub">${escapeHTML(game.categoria)} • desde ${formatCLP(game.precioSecundaria)}</span>
       </div>
-    </a>
+    </div>
   `;
   }).join('');
 
