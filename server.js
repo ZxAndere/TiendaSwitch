@@ -515,6 +515,14 @@ async function verifyPassword(inputPassword, storedUser) {
   return false;
 }
 
+function safeCompareSignatures(sigA, sigB) {
+  if (typeof sigA !== 'string' || typeof sigB !== 'string') return false;
+  const bufA = Buffer.from(sigA, 'utf8');
+  const bufB = Buffer.from(sigB, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function signFlowParams(params) {
   const keys = Object.keys(params)
     .filter(k => k !== 's' && params[k] !== undefined && params[k] !== null)
