@@ -651,9 +651,142 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
       console.log(`📩 Correo de verificación enviado con éxito (ID: ${data?.id}) a ${toEmail}`);
     }
     return true;
-  } catch (err) {
+    } catch (err) {
     console.warn('📌 Excepción en envío Resend:', err.message || err);
     console.log(`🔑 [CÓDIGO DE VERIFICACIÓN GENERADO PARA ${toEmail}]: ${code}`);
+    return true;
+  }
+}
+
+async function sendOrderConfirmationEmail(order) {
+  if (!order || !order.email) return;
+
+  const itemsHtml = Array.isArray(order.carrito)
+    ? order.carrito.map(item => {
+        let content = `
+          <div style="background-color: #0f1624; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #f8fafc;">
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">🎮 ${item.titulo} (${item.licencia})</div>
+        `;
+        if (item.correoTexto) {
+          content += `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0 12px 0; line-height: 1.5;">${item.correoTexto}</p>`;
+        }
+        content += `
+            <div style="background-color: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; color: #00f0ff; word-break: break-all; margin-top: 8px;">
+              🔑 ${item.varianteAsignada || 'Asignación de cuenta en proceso'}
+            </div>
+        `;
+        if (item.correoImagen) {
+          content += `<img src="${item.correoImagen}" alt="Banner del juego" style="width: 100%; max-width: 440px; height: auto; border-radius: 6px; margin-top: 12px; display: block;">`;
+        }
+        content += `</div>`;
+        return content;
+      }).join('')
+    : '';
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; background-color: #070a12; color: #cbd5e1; padding: 0; max-width: 600px; margin: 0 auto; border: 1px solid #1e293b; border-radius: 12px; overflow: hidden;">
+      <div style="position: relative; background-color: #ff003c; text-align: center; padding: 24px 16px;">
+        <img src="https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=800&auto=format&fit=crop" alt="Nintendo Switch" style="width: 100%; max-width: 500px; height: auto; border-radius: 8px; display: block; margin: 0 auto 12px auto;">
+        <span style="background-color: #ffffff; color: #ff003c; font-size: 11px; font-weight: 900; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">🎮 Pedido Completado</span>
+        <h2 style="color: #ffffff; margin: 6px 0 0 0; font-size: 22px; font-weight: 900;">ZonaSwitchChile</h2>
+      </div>
+
+      <div style="padding: 24px;">
+        <p style="font-size: 15px; color: #ffffff; margin-top: 0;">¡Hola, <strong>${order.cliente.split(' ')[0]}</strong>!</p>
+        <p style="font-size: 14px; color: #cbd5e1; line-height: 1.5; margin-bottom: 20px;">
+          Tu compra ha sido procesada con éxito. A continuación te entregamos los datos de acceso e instrucciones para que comiences a jugar en tu consola Nintendo Switch:
+        </p>
+
+        <div style="background-color: #0f1624; border-left: 4px solid #ff003c; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
+          <div style="font-size: 13px; color: #94a3b8;">Código de Orden:</div>
+          <div style="font-size: 18px; font-weight: 800; color: #ffffff; font-family: monospace; letter-spacing: 0.5px;">${order.codigoOrden}</div>
+        </div>
+
+        ${itemsHtml}
+
+        <div style="text-align: center; margin: 28px 0 10px 0;">
+          <a href="https://tiendaswitch-production-3bd0.up.railway.app/faq.html#install-guide" style="background: linear-gradient(135deg, #ff003c, #d60033); color: #ffffff; font-weight: 800; text-decoration: none; padding: 12px 24px; border-radius: 24px; display: inline-block; box-shadow: 0 4px 15px rgba(255, 0, 60, 0.4);">
+            ❓ Ver Guía Interactiva Completa
+          </a>
+        </div>
+      </div>
+
+      <div style="background-color: #0c0f17; padding: 16px; text-align: center; border-top: 1px solid #1e293b; font-size: 12px; color: #64748b;">
+        &copy; 2026 ZonaSwitchChile. Entrega digital inmediata.
+      </div>
+    </div>
+  `;
+
+  const subject = `🎮 Pedido Completado (${order.codigoOrden}) - ZonaSwitchChile`;
+
+  // 1. Enviar usando Brevo API REST (si BREVO_API_KEY está presente)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: "ZonaSwitchChile", email: process.env.BREVO_SENDER_EMAIL || "zx.andereacc@gmail.com" },
+          to: [{ email: order.email }],
+          subject: subject,
+          htmlContent: htmlContent
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log(`📩 Correo de entrega enviado con Brevo a ${order.email} (Orden: ${order.codigoOrden})`);
+        return true;
+      }
+    } catch (err) {
+      console.error('Error enviando correo de entrega con Brevo:', err);
+    }
+  }
+
+  // 2. Enviar usando Gmail SMTP (si GMAIL_USER y GMAIL_PASS están presentes)
+  if (process.env.GMAIL_USER && process.env.GMAIL_PASS) {
+    try {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER.trim(),
+          pass: process.env.GMAIL_PASS.trim()
+        }
+      });
+      await transporter.sendMail({
+        from: `"ZonaSwitchChile" <${process.env.GMAIL_USER.trim()}>`,
+        to: order.email,
+        subject: subject,
+        html: htmlContent
+      });
+      console.log(`📩 Correo de entrega enviado con Gmail SMTP a ${order.email} (Orden: ${order.codigoOrden})`);
+      return true;
+    } catch (err) {
+      console.error('Error enviando correo de entrega con Gmail SMTP:', err);
+    }
+  }
+
+  // 3. Intento por Resend (Fallback)
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'ZonaSwitchChile <onboarding@resend.dev>',
+      to: [order.email],
+      subject: subject,
+      html: htmlContent
+    });
+
+    if (error) {
+      console.warn('📌 Resend (Modo Pruebas / Restricción de Dominio):', error.message || error);
+    } else {
+      console.log(`📩 Correo de entrega enviado con Resend a ${order.email} (ID: ${data?.id})`);
+    }
+    return true;
+  } catch (err) {
+    console.warn('📌 Excepción en envío Resend de entrega:', err.message || err);
     return true;
   }
 }
@@ -1527,6 +1660,9 @@ app.post('/api/checkout', async (req, res) => {
 
   // Si el total es 0 CLP (Cupón del 100% como PRUEBAXD), finalizar orden inmediatamente sin cobrar
   if (total === 0) {
+    // Enviar el correo de entrega al instante 📩
+    sendOrderConfirmationEmail(orderData).catch(err => console.error('Error enviando correo:', err));
+
     return res.json({
       exito: true,
       redirectUrl: `/?flow_order=${codigoOrden}&status=2`,
@@ -1714,10 +1850,16 @@ app.all('/api/flow/return', async (req, res) => {
     let status = statusData.status; // 2 = Pagada, 3 = Rechazada, 4 = Anulada, 1 = Pendiente
 
     if (orderIndex !== -1) {
+      const oldStatus = orders[orderIndex].estado;
       orders[orderIndex].flowStatus = status;
       orders[orderIndex].estado = status === 2 ? 'pagada' : (status === 3 ? 'rechazada' : 'cancelada');
       saveOrders(orders);
       orderCode = orders[orderIndex].codigoOrden;
+
+      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      }
     }
 
     res.redirect(`/?flow_order=${orderCode}&status=${status}`);
@@ -1751,9 +1893,15 @@ app.post('/api/flow/confirm', async (req, res) => {
     const orderIndex = orders.findIndex(o => o.token === token || o.codigoOrden === statusData.commerceOrder);
 
     if (orderIndex !== -1) {
+      const oldStatus = orders[orderIndex].estado;
       orders[orderIndex].flowStatus = statusData.status;
       orders[orderIndex].estado = statusData.status === 2 ? 'pagada' : 'rechazada';
       saveOrders(orders);
+
+      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      }
     }
 
     res.send('OK');
@@ -1771,9 +1919,15 @@ app.all('/api/mp/return', async (req, res) => {
     const orders = getOrders();
     const orderIndex = orders.findIndex(o => o.codigoOrden === externalRef || o.mpPreferenceId === externalRef);
     if (orderIndex !== -1) {
+      const oldStatus = orders[orderIndex].estado;
       orders[orderIndex].mpStatus = status;
       orders[orderIndex].estado = (status === 'approved' || status === '2') ? 'pagada' : 'rechazada';
       saveOrders(orders);
+
+      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      if (orders[orderIndex].estado === 'pagada' && oldStatus !== 'pagada') {
+        sendOrderConfirmationEmail(orders[orderIndex]).catch(err => console.error('Error enviando correo:', err));
+      }
     }
   }
 
