@@ -638,7 +638,7 @@ async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de V
   // 2. Intento por Resend (Fallback)
   try {
     const { data, error } = await resend.emails.send({
-      from: 'ZonaSwitchChile <onboarding@resend.dev>',
+      from: process.env.RESEND_SENDER_EMAIL || 'ZonaSwitchChile <no-reply@zonaswitchchile.com>',
       to: [toEmail],
       subject: `🔐 ${subjectTitle}`,
       html: htmlContent
@@ -793,7 +793,7 @@ async function sendOrderConfirmationEmail(order) {
   // 3. Intento por Resend (Fallback)
   try {
     const { data, error } = await resend.emails.send({
-      from: 'ZonaSwitchChile <onboarding@resend.dev>',
+      from: process.env.RESENDER_EMAIL || process.env.RESEND_SENDER_EMAIL || 'ZonaSwitchChile <no-reply@zonaswitchchile.com>',
       to: [order.email],
       subject: subject,
       html: htmlContent
