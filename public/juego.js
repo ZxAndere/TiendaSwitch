@@ -491,6 +491,16 @@ function openAdminQuickGameModal() {
   if (!modal || !currentDetailGame) return;
 
   document.getElementById('admin-quick-game-title').textContent = `Editar Juego: ${currentDetailGame.titulo}`;
+  
+  const secInp = document.getElementById('admin-qg-precio-secundaria');
+  if (secInp) secInp.value = currentDetailGame.precioSecundaria || '';
+
+  const primInp = document.getElementById('admin-qg-precio-primaria');
+  if (primInp) primInp.value = currentDetailGame.precioPrimaria || '';
+
+  const origInp = document.getElementById('admin-qg-precio-original');
+  if (origInp) origInp.value = currentDetailGame.precioOriginal || (Number(currentDetailGame.precioSecundaria) * 1.5) || '';
+
   document.getElementById('admin-qg-imagen').value = currentDetailGame.imagen || '';
   document.getElementById('admin-qg-imagen-detalle').value = currentDetailGame.imagenDetalle || '';
   document.getElementById('admin-qg-youtube').value = currentDetailGame.youtubeUrl || currentDetailGame.videoTrailerUrl || '';
@@ -533,6 +543,14 @@ async function handleAdminQuickGameSubmit(e) {
   if (!verifyAdminSecurity()) return;
   if (!currentDetailGame) return;
 
+  const secInp = document.getElementById('admin-qg-precio-secundaria');
+  const primInp = document.getElementById('admin-qg-precio-primaria');
+  const origInp = document.getElementById('admin-qg-precio-original');
+
+  const precioSecundaria = secInp && secInp.value !== '' ? Number(secInp.value) : currentDetailGame.precioSecundaria;
+  const precioPrimaria = primInp && primInp.value !== '' ? Number(primInp.value) : currentDetailGame.precioPrimaria;
+  const precioOriginal = origInp && origInp.value !== '' ? Number(origInp.value) : currentDetailGame.precioOriginal;
+
   const imagen = document.getElementById('admin-qg-imagen').value.trim();
   const imagenDetalle = document.getElementById('admin-qg-imagen-detalle').value.trim();
   const youtubeUrl = document.getElementById('admin-qg-youtube').value.trim();
@@ -558,6 +576,9 @@ async function handleAdminQuickGameSubmit(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         gameId: currentDetailGame.id,
+        precioSecundaria,
+        precioPrimaria,
+        precioOriginal,
         imagen,
         imagenDetalle,
         imagenesDetalle,
@@ -578,10 +599,20 @@ async function handleAdminQuickGameSubmit(e) {
     if (data.juego) {
       currentDetailGame = data.juego;
     } else {
+      currentDetailGame.precioSecundaria = precioSecundaria;
+      currentDetailGame.precioPrimaria = precioPrimaria;
+      currentDetailGame.precioOriginal = precioOriginal;
       currentDetailGame.imagen = imagen;
       currentDetailGame.imagenDetalle = imagenDetalle;
       currentDetailGame.imagenesDetalle = imagenesDetalle;
       currentDetailGame.youtubeUrl = youtubeUrl;
+    }
+
+    if (Array.isArray(catalog)) {
+      const catGame = catalog.find(g => g.id === currentDetailGame.id);
+      if (catGame) {
+        Object.assign(catGame, currentDetailGame);
+      }
     }
 
     detailImagesList = [];
@@ -597,8 +628,9 @@ async function handleAdminQuickGameSubmit(e) {
 
     detailActiveThumbIndex = 0;
     renderGameDetailView();
+    if (typeof renderCatalog === 'function') renderCatalog();
     closeAdminQuickGameModal();
-    showToast('¡Imágenes y tráiler del juego actualizados con éxito! ⚙️🎉');
+    showToast('¡Precios, imágenes y tráiler actualizados con éxito! ⚙️💰');
   } catch (err) {
     if (errorMsg) errorMsg.textContent = 'Error de conexión con el servidor.';
   } finally {

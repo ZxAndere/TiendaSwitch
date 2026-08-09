@@ -657,6 +657,21 @@
         <p>Cambia la portada, fotos adicionales y link del tráiler de YouTube</p>
       </div>
       <form id="admin-quick-game-form" class="auth-form">
+        <div class="form-group-row" style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>💰 Cta. Secundaria ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-secundaria" placeholder="20000" required min="0">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>👑 Cta. Primaria ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-primaria" placeholder="30000" required min="0">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>🏷️ Precio Oferta ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-original" placeholder="54990" min="0">
+          </div>
+        </div>
+
         <div class="form-group">
           <label>URL Imagen Portada Principal</label>
           <input type="url" id="admin-qg-imagen" placeholder="https://..." required>

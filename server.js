@@ -1716,7 +1716,7 @@ app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
 
 // Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Fotos, YouTube URL, etc.) en tiempo real
 app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, descripcion, imagen, imagenDetalle, imagenesDetalle, youtubeUrl, videoTrailerUrl, correoTexto, correoImagen, cuentas } = req.body;
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, precioOriginal, descripcion, imagen, imagenDetalle, imagenesDetalle, youtubeUrl, videoTrailerUrl, correoTexto, correoImagen, cuentas } = req.body;
 
   const gameIndex = GAMES_STORE.findIndex(g => g.id === Number(gameId));
   if (gameIndex === -1) return res.status(404).json({ error: "Juego no encontrado." });
@@ -1726,6 +1726,7 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   if (isString(categoria) && categoria.trim()) game.categoria = categoria.trim();
   if (precioSecundaria !== undefined && precioSecundaria !== '') game.precioSecundaria = Number(precioSecundaria);
   if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
+  if (precioOriginal !== undefined && precioOriginal !== '') game.precioOriginal = Number(precioOriginal);
   if (isString(descripcion)) game.descripcion = descripcion.trim();
   if (isString(imagen)) game.imagen = imagen.trim();
   if (isString(imagenDetalle)) game.imagenDetalle = imagenDetalle.trim();
