@@ -1,3 +1,9 @@
+var currentDetailGame = null;
+window.currentDetailGame = null;
+let currentSelectedLicense = 'primaria';
+let detailActiveThumbIndex = 0;
+let detailImagesList = [];
+
 function safeEscapeHTML(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>'"]/g,
@@ -470,10 +476,11 @@ function initAdminQuickGearButton() {
   const gearBtn = document.getElementById('admin-game-gear-btn');
   if (!gearBtn) return;
 
-  const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
+  const activeGame = (typeof currentDetailGame !== 'undefined' && currentDetailGame) ? currentDetailGame : (window.currentDetailGame || null);
+  const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || (typeof currentUser !== 'undefined' ? currentUser : null);
   const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
 
-  if (isAdmin && currentDetailGame) {
+  if (isAdmin && activeGame) {
     gearBtn.style.display = 'flex';
     gearBtn.onclick = () => openAdminQuickGameModal();
   } else {
