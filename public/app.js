@@ -208,18 +208,45 @@ const ACCOUNT_CONDITIONS = {
   ]
 };
 
-// --- SISTEMA DE MULTIMONEDA / CONVERSIÓN DE PESOS Y DIVISAS 2026 ---
+// --- SISTEMA DE MULTIMONEDA / CONVERSIÓN DE PESOS Y DIVISAS 2026 (FREECURRENCY API) ---
 const CURRENCY_RATES = {
-  CLP: { symbol: '$', code: 'CLP', rate: 1, decimals: 0 },
-  ARS: { symbol: '$', code: 'ARS', rate: 1.63865, decimals: 0 },
-  BRL: { symbol: 'R$ ', code: 'BRL', rate: 0.005582, decimals: 2 },
-  MXN: { symbol: '$', code: 'MXN', rate: 0.018757, decimals: 2 },
-  COP: { symbol: '$', code: 'COP', rate: 3.47445, decimals: 0 },
-  PEN: { symbol: 'S/. ', code: 'PEN', rate: 0.003697, decimals: 2 },
-  HNL: { symbol: 'L ', code: 'HNL', rate: 0.029421, decimals: 2 }
+  CLP: { symbol: '$', code: 'CLP', rate: 1, decimals: 0, name: 'Chile (CLP)' },
+  USD: { symbol: 'US$', code: 'USD', rate: 0.00106, decimals: 2, name: 'EE.UU. (USD)' },
+  CAD: { symbol: 'CA$', code: 'CAD', rate: 0.00145, decimals: 2, name: 'Canadá (CAD)' },
+  MXN: { symbol: '$', code: 'MXN', rate: 0.0185, decimals: 2, name: 'México (MXN)' },
+  BRL: { symbol: 'R$ ', code: 'BRL', rate: 0.0055, decimals: 2, name: 'Brasil (BRL)' },
+  ARS: { symbol: '$', code: 'ARS', rate: 1.63, decimals: 0, name: 'Argentina (ARS)' },
+  COP: { symbol: '$', code: 'COP', rate: 4.25, decimals: 0, name: 'Colombia (COP)' },
+  PEN: { symbol: 'S/. ', code: 'PEN', rate: 0.0037, decimals: 2, name: 'Perú (PEN)' },
+  UYU: { symbol: '$U ', code: 'UYU', rate: 0.043, decimals: 2, name: 'Uruguay (UYU)' },
+  CRC: { symbol: '₡', code: 'CRC', rate: 0.54, decimals: 2, name: 'Costa Rica (CRC)' },
+  EUR: { symbol: '€', code: 'EUR', rate: 0.00098, decimals: 2, name: 'España (EUR)' },
+  HNL: { symbol: 'L ', code: 'HNL', rate: 0.026, decimals: 2, name: 'Honduras (HNL)' }
 };
 
 let currentCurrency = localStorage.getItem('zonaswitch_currency') || 'CLP';
+
+async function loadLiveExchangeRates() {
+  try {
+    const res = await fetch('/api/exchange-rates');
+    const data = await res.json();
+    if (data && data.success && data.rates) {
+      Object.keys(data.rates).forEach(code => {
+        if (CURRENCY_RATES[code]) {
+          CURRENCY_RATES[code].rate = data.rates[code].rate;
+        } else {
+          CURRENCY_RATES[code] = data.rates[code];
+        }
+      });
+      // Actualizar vista actual tras cargar las tasas reales
+      if (typeof renderCatalog === 'function') renderCatalog();
+      if (typeof renderGameDetailView === 'function') renderGameDetailView();
+      if (typeof renderCartDrawer === 'function') renderCartDrawer();
+    }
+  } catch (err) {
+    console.warn('ℹ️ Usando tasas de cambio predeterminadas locales:', err.message);
+  }
+}
 
 // Helper de formato de moneda dinámico y exacto
 function formatCLP(num) {
@@ -280,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { updateCartBadge(); } catch (e) { console.error('Error updateCartBadge:', e); }
   try { checkPaymentReturnUrls(); } catch (e) { console.error('Error checkPaymentReturnUrls:', e); }
   try { initRealtimeCatalogStream(); } catch (e) { console.error('Error initRealtimeCatalogStream:', e); }
+  try { loadLiveExchangeRates(); } catch (e) { console.error('Error loadLiveExchangeRates:', e); }
 });
 
 // Registrar Listeners principales
@@ -378,15 +406,18 @@ function initEventListeners() {
   const editGameForm = document.getElementById('game-edit-form');
   if (editGameForm) editGameForm.addEventListener('submit', handleGameEditSubmit);
 
-  // Selector de Conversión de Moneda
+  // Selector de Conversión de Moneda (Escritorio)
   const currSelect = document.getElementById('currency-select');
   if (currSelect) {
     currSelect.value = currentCurrency;
     currSelect.addEventListener('change', (e) => {
       currentCurrency = e.target.value;
       localStorage.setItem('zonaswitch_currency', currentCurrency);
+      const mobileCurrencySelect = document.getElementById('mobile-currency-select');
+      if (mobileCurrencySelect) mobileCurrencySelect.value = currentCurrency;
       renderCatalog();
-      renderCartDrawer();
+      if (typeof renderCartDrawer === 'function') renderCartDrawer();
+      if (typeof renderGameDetailView === 'function') renderGameDetailView();
       if (selectedGameForModal) {
         document.getElementById('gmodal-price-sec').textContent = formatCLP(selectedGameForModal.precioSecundaria);
         document.getElementById('gmodal-price-prim').textContent = formatCLP(selectedGameForModal.precioPrimaria);
@@ -488,11 +519,15 @@ function initEventListeners() {
 
   const mobileCurrencySelect = document.getElementById('mobile-currency-select');
   if (mobileCurrencySelect) {
+    mobileCurrencySelect.value = currentCurrency;
     mobileCurrencySelect.addEventListener('change', (e) => {
       currentCurrency = e.target.value;
+      localStorage.setItem('zonaswitch_currency', currentCurrency);
       const desktopCurrency = document.getElementById('currency-select');
       if (desktopCurrency) desktopCurrency.value = currentCurrency;
       renderCatalog();
+      if (typeof renderCartDrawer === 'function') renderCartDrawer();
+      if (typeof renderGameDetailView === 'function') renderGameDetailView();
     });
   }
 

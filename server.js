@@ -34,7 +34,7 @@ const flowHeaders = {
 // Manejo seguro de variables de entorno con fallbacks para evitar caídas del servidor
 const JWT_SECRET = process.env.JWT_SECRET || 'zona_switch_chile_secure_jwt_secret_2026';
 
-const OPTIONAL_ENV_VARS = ['FLOW_API_KEY', 'FLOW_SECRET_KEY', 'MP_ACCESS_TOKEN', 'MP_PUBLIC_KEY', 'JWT_SECRET'];
+const OPTIONAL_ENV_VARS = ['FLOW_API_KEY', 'FLOW_SECRET_KEY', 'MP_ACCESS_TOKEN', 'MP_PUBLIC_KEY', 'JWT_SECRET', 'FREECURRENCY_API_KEY'];
 OPTIONAL_ENV_VARS.forEach(v => {
   if (!process.env[v] || process.env[v].trim() === '') {
     console.warn(`⚠️ ADVERTENCIA DE CONFIGURACIÓN: La variable '${v}' no está configurada en el entorno. Se usará un comportamiento seguro de respaldo.`);
@@ -1963,6 +1963,80 @@ loadSettings();
 
 app.get('/api/settings', (req, res) => {
   res.json(STORED_SETTINGS);
+});
+
+// --- FREECURRENCY API INTEGRATION (12 MONEDAS) ---
+const DEFAULT_CURRENCY_RATES = {
+  CLP: { symbol: '$', code: 'CLP', rate: 1, decimals: 0, name: 'Chile (Peso chileno)' },
+  USD: { symbol: 'US$', code: 'USD', rate: 0.00106, decimals: 2, name: 'Estados Unidos (Dólar estadounidense)' },
+  CAD: { symbol: 'CA$', code: 'CAD', rate: 0.00145, decimals: 2, name: 'Canadá (Dólar canadiense)' },
+  MXN: { symbol: '$', code: 'MXN', rate: 0.0185, decimals: 2, name: 'México (Peso mexicano)' },
+  BRL: { symbol: 'R$ ', code: 'BRL', rate: 0.0055, decimals: 2, name: 'Brasil (Real brasileño)' },
+  ARS: { symbol: '$', code: 'ARS', rate: 1.63, decimals: 0, name: 'Argentina (Peso argentino)' },
+  COP: { symbol: '$', code: 'COP', rate: 4.25, decimals: 0, name: 'Colombia (Peso colombiano)' },
+  PEN: { symbol: 'S/. ', code: 'PEN', rate: 0.0037, decimals: 2, name: 'Perú (Sol peruano)' },
+  UYU: { symbol: '$U ', code: 'UYU', rate: 0.043, decimals: 2, name: 'Uruguay (Peso uruguayo)' },
+  CRC: { symbol: '₡', code: 'CRC', rate: 0.54, decimals: 2, name: 'Costa Rica (Colón costarricense)' },
+  EUR: { symbol: '€', code: 'EUR', rate: 0.00098, decimals: 2, name: 'España (Euro)' },
+  HNL: { symbol: 'L ', code: 'HNL', rate: 0.026, decimals: 2, name: 'Honduras (Lempira hondureño)' }
+};
+
+let cachedCurrencyRates = JSON.parse(JSON.stringify(DEFAULT_CURRENCY_RATES));
+let lastCurrencyFetchTime = 0;
+const CURRENCY_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+
+async function fetchFreeCurrencyRates() {
+  const apiKey = process.env.FREECURRENCY_API_KEY;
+  if (!apiKey || apiKey.trim() === '') {
+    return cachedCurrencyRates;
+  }
+
+  const now = Date.now();
+  if (lastCurrencyFetchTime && (now - lastCurrencyFetchTime < CURRENCY_CACHE_TTL)) {
+    return cachedCurrencyRates;
+  }
+
+  try {
+    const targetCurrencies = ['CLP', 'USD', 'CAD', 'MXN', 'BRL', 'ARS', 'COP', 'PEN', 'UYU', 'CRC', 'EUR', 'HNL'];
+    const url = `https://api.freecurrencyapi.com/v1/latest?apikey=${encodeURIComponent(apiKey.trim())}&currencies=${targetCurrencies.join(',')}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`FreeCurrencyAPI HTTP status ${response.status}`);
+    }
+
+    const json = await response.json();
+    if (json && json.data && json.data.CLP) {
+      const clpRate = json.data.CLP;
+
+      targetCurrencies.forEach(code => {
+        if (cachedCurrencyRates[code] && json.data[code] !== undefined) {
+          cachedCurrencyRates[code].rate = json.data[code] / clpRate;
+        }
+      });
+
+      lastCurrencyFetchTime = now;
+      console.log('✅ [CURRENCY] Tasas de cambio actualizadas con éxito desde FreeCurrencyAPI');
+    }
+  } catch (err) {
+    console.warn('⚠️ Error al consultar FreeCurrencyAPI, utilizando tasas de respaldo:', err.message);
+  }
+
+  return cachedCurrencyRates;
+}
+
+app.get('/api/exchange-rates', async (req, res) => {
+  try {
+    const rates = await fetchFreeCurrencyRates();
+    res.json({ success: true, rates, updatedAt: lastCurrencyFetchTime });
+  } catch (err) {
+    res.json({ success: true, rates: cachedCurrencyRates, updatedAt: lastCurrencyFetchTime });
+  }
 });
 
 app.post('/api/admin/settings/toggle-gallery', verifyAdmin, (req, res) => {
