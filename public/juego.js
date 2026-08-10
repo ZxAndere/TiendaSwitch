@@ -369,7 +369,11 @@ function handleAddDetailToCart() {
 function handleDirectDetailCheckout() {
   if (!currentDetailGame) return;
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
-  openCartDrawer();
+  if (typeof openPaymentModal === 'function') {
+    openPaymentModal();
+  } else {
+    openCartDrawer();
+  }
 }
 
 function switchDetailTab(tabId) {

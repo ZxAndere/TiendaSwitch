@@ -1576,7 +1576,7 @@ function handleBuySelectedLicenseNow() {
   if (!selectedGameForModal || !selectedLicenseType) return;
   addGameWithLicenseToCart(selectedGameForModal, selectedLicenseType);
   closeGameModal();
-  openCartDrawer();
+  openPaymentModal();
 }
 
 function addGameWithLicenseToCart(game, licenseType) {
