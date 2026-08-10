@@ -582,8 +582,8 @@ function formatFlowErrorMessage(flowData) {
   if (flowData.code === 1620) {
     return "El correo electrónico ingresado no es válido o su servidor de correo no fue verificado por Flow. Por favor usa un email válido (ej: tuusuario@gmail.com).";
   }
-  if (flowData.code === 101 || flowData.code === 501) {
-    return "Error de autenticación con la pasarela Flow (las llaves API ingresadas no son válidas).";
+  if (flowData.code === 101 || flowData.code === 501 || flowData.code === 108) {
+    return "Error de autenticación con la pasarela Flow (las llaves API ingresadas no son válidas o no corresponden al entorno Sandbox/Producción configurado).";
   }
   return flowData.message ? `Error Flow: ${flowData.message}` : "No se pudo procesar la transacción con la pasarela Flow.";
 }
