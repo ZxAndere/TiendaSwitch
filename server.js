@@ -21,8 +21,14 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1);
-const PORT = process.env.PORT || 3000;
 let isMongoConnected = false;
+let mongoLastError = null;
+
+const flowHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
+};
 
 // Manejo seguro de variables de entorno con fallbacks para evitar caídas del servidor
 const JWT_SECRET = process.env.JWT_SECRET || 'zona_switch_chile_secure_jwt_secret_2026';
@@ -1558,7 +1564,7 @@ let GAMES_STORE = [];
 function loadInitialGames() {
   GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = [...DEFAULT_GAMES];
+    GAMES_STORE = [...JUEGOS];
     saveGamesLocal(GAMES_STORE);
   }
 }
@@ -1615,11 +1621,11 @@ setInterval(() => {
 
 function broadcastCatalogUpdate() {
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = [...DEFAULT_GAMES];
+    GAMES_STORE = [...JUEGOS];
   }
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
   if (visibleGames.length === 0) {
-    GAMES_STORE = DEFAULT_GAMES.map(g => ({ ...g, visible: true }));
+    GAMES_STORE = JUEGOS.map(g => ({ ...g, visible: true }));
     visibleGames = GAMES_STORE;
   }
   const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames })}\n\n`;
@@ -1657,13 +1663,13 @@ app.get('/api/juegos', (req, res) => {
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
     GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
     if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-      GAMES_STORE = [...DEFAULT_GAMES];
+      GAMES_STORE = [...JUEGOS];
       saveGamesLocal(GAMES_STORE);
     }
   }
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
   if (visibleGames.length === 0) {
-    GAMES_STORE = DEFAULT_GAMES.map(g => ({ ...g, visible: true }));
+    GAMES_STORE = JUEGOS.map(g => ({ ...g, visible: true }));
     saveGamesLocal(GAMES_STORE);
     visibleGames = GAMES_STORE;
   }
@@ -1682,28 +1688,36 @@ app.get('/api/juegos/:identifier', (req, res) => {
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
     GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
     if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-      GAMES_STORE = [...DEFAULT_GAMES];
+      GAMES_STORE = [...JUEGOS];
       saveGamesLocal(GAMES_STORE);
     }
   }
 
-  const cleanParam = param.toLowerCase().trim();
+  const rawClean = param.toLowerCase().trim();
+  const cleanSlug = slugify(param).toLowerCase().trim();
 
-  // 1. Buscar por ID si es número
-  let game = GAMES_STORE.find(g => String(g.id) === cleanParam);
+  // 1. Buscar por ID exacto
+  let game = GAMES_STORE.find(g => String(g.id) === rawClean || String(g.id) === cleanSlug);
 
-  // 2. Si no se encuentra por ID, buscar coincidencias por Slug (título normalizado)
+  // 2. Buscar por coincidencia exacta de Slug o Título
   if (!game) {
-    game = GAMES_STORE.find(g => slugify(g.titulo).toLowerCase() === cleanParam);
+    game = GAMES_STORE.find(g =>
+      slugify(g.titulo).toLowerCase() === cleanSlug ||
+      g.titulo.toLowerCase().trim() === rawClean
+    );
   }
 
-  // 3. Fallback: Búsqueda flexible conteniendo texto del slug
+  // 3. Buscar coincidencia parcial de Slug o Título
   if (!game) {
-    game = GAMES_STORE.find(g => slugify(g.titulo).toLowerCase().includes(cleanParam) || cleanParam.includes(slugify(g.titulo).toLowerCase()));
+    game = GAMES_STORE.find(g => {
+      const gSlug = slugify(g.titulo).toLowerCase();
+      return gSlug.includes(cleanSlug) || cleanSlug.includes(gSlug) || g.titulo.toLowerCase().includes(rawClean);
+    });
   }
 
+  // 4. Fallback al primer juego visible para evitar pantalla bloqueada
   if (!game) {
-    return res.status(404).json({ error: "Juego no encontrado." });
+    game = GAMES_STORE.find(g => g.visible !== false) || GAMES_STORE[0];
   }
 
   res.json(game);
