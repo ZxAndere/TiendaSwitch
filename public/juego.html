@@ -46,18 +46,18 @@
         <!-- Selector de Moneda -->
         <div class="currency-select-wrapper desktop-only">
           <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
-            <option value="CLP">🇨🇱 Chile (CLP)</option>
-            <option value="USD">🇺🇸 EE.UU. (USD)</option>
-            <option value="CAD">🇨🇦 Canadá (CAD)</option>
-            <option value="MXN">🇲🇽 México (MXN)</option>
-            <option value="BRL">🇧🇷 Brasil (BRL)</option>
-            <option value="ARS">🇦🇷 Argentina (ARS)</option>
-            <option value="COP">🇨🇴 Colombia (COP)</option>
-            <option value="PEN">🇵🇪 Perú (PEN)</option>
-            <option value="UYU">🇺🇾 Uruguay (UYU)</option>
-            <option value="CRC">🇨🇷 Costa Rica (CRC)</option>
-            <option value="EUR">🇪🇸 España (EUR)</option>
-            <option value="HNL">🇭🇳 Honduras (HNL)</option>
+            <option value="CLP">Chile (CLP)</option>
+            <option value="USD">Estados Unidos (USD)</option>
+            <option value="CAD">Canadá (CAD)</option>
+            <option value="MXN">México (MXN)</option>
+            <option value="BRL">Brasil (BRL)</option>
+            <option value="ARS">Argentina (ARS)</option>
+            <option value="COP">Colombia (COP)</option>
+            <option value="PEN">Perú (PEN)</option>
+            <option value="UYU">Uruguay (UYU)</option>
+            <option value="CRC">Costa Rica (CRC)</option>
+            <option value="EUR">España (EUR)</option>
+            <option value="HNL">Honduras (HNL)</option>
           </select>
         </div>
 
@@ -112,18 +112,18 @@
       <div class="mobile-drawer-section">
         <label class="mobile-section-label">💱 Moneda</label>
         <select id="mobile-currency-select" class="mobile-currency-select">
-          <option value="CLP">🇨🇱 Chile (CLP)</option>
-          <option value="USD">🇺🇸 EE.UU. (USD)</option>
-          <option value="CAD">🇨🇦 Canadá (CAD)</option>
-          <option value="MXN">🇲🇽 México (MXN)</option>
-          <option value="BRL">🇧🇷 Brasil (BRL)</option>
-          <option value="ARS">🇦🇷 Argentina (ARS)</option>
-          <option value="COP">🇨🇴 Colombia (COP)</option>
-          <option value="PEN">🇵🇪 Perú (PEN)</option>
-          <option value="UYU">🇺🇾 Uruguay (UYU)</option>
-          <option value="CRC">🇨🇷 Costa Rica (CRC)</option>
-          <option value="EUR">🇪🇸 España (EUR)</option>
-          <option value="HNL">🇭🇳 Honduras (HNL)</option>
+          <option value="CLP">Chile (CLP)</option>
+          <option value="USD">Estados Unidos (USD)</option>
+          <option value="CAD">Canadá (CAD)</option>
+          <option value="MXN">México (MXN)</option>
+          <option value="BRL">Brasil (BRL)</option>
+          <option value="ARS">Argentina (ARS)</option>
+          <option value="COP">Colombia (COP)</option>
+          <option value="PEN">Perú (PEN)</option>
+          <option value="UYU">Uruguay (UYU)</option>
+          <option value="CRC">Costa Rica (CRC)</option>
+          <option value="EUR">España (EUR)</option>
+          <option value="HNL">Honduras (HNL)</option>
         </select>
       </div>
       <div class="mobile-drawer-section">
@@ -181,19 +181,34 @@
             </div>
           </div>
 
-          <!-- Tira de Miniaturas (Screenshots / Gameplay Carousel) -->
+          <!-- Tira de Miniaturas (Screenshots / Gameplay Carousel - Max 5 Visibles con Desplazamiento por Flechas) -->
           <div class="jd-gallery-strip-container">
-            <h4 class="jd-gallery-title">📸 Capturas y Galería de Gameplay</h4>
-            <div class="jd-thumbnails-strip" id="jd-thumbnails-strip">
-              <!-- Miniaturas inyectadas dinámicamente por JS -->
+            <div class="jd-gallery-header-row">
+              <h4 class="jd-gallery-title" style="margin-bottom: 0;">📸 Capturas y Galería de Gameplay</h4>
+              <div class="jd-gallery-arrows-box" id="jd-gallery-arrows-box" style="display: none;">
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-gallery-prev-btn" onclick="slideThumbnails(-1)" title="Anterior">‹</button>
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-gallery-next-btn" onclick="slideThumbnails(1)" title="Siguiente">›</button>
+              </div>
+            </div>
+            <div class="jd-thumbnails-viewport">
+              <div class="jd-thumbnails-strip" id="jd-thumbnails-strip">
+                <!-- Miniaturas inyectadas dinámicamente por JS (5 visibles simultáneamente) -->
+              </div>
             </div>
           </div>
 
-          <!-- Video Tráiler Embebido Directamente en la Página -->
+          <!-- Video Tráiler Embebido Directamente en la Página (Múltiples Tráilers con Navegación) -->
           <div class="jd-video-trailer-section" id="jd-video-trailer-section">
-            <h4 class="jd-gallery-title">🎬 Tráiler Oficial de Gameplay</h4>
+            <div class="jd-video-header-row">
+              <h4 class="jd-gallery-title" style="margin-bottom: 0;" id="jd-video-title-label">🎬 Tráiler Oficial de Gameplay</h4>
+              <div class="jd-video-arrows-box" id="jd-video-arrows-box" style="display: none;">
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-video-prev-btn" onclick="switchTrailerVideo(-1)" title="Tráiler Anterior">‹</button>
+                <span id="jd-video-counter-badge" style="font-size: 0.8rem; font-weight: 700; color: var(--joycon-cyan); margin: 0 4px;">1/1</span>
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-video-next-btn" onclick="switchTrailerVideo(1)" title="Tráiler Siguiente">›</button>
+              </div>
+            </div>
             <div class="jd-video-wrapper" id="jd-video-wrapper">
-              <!-- Video embebido cargado dinámicamente por JS -->
+              <iframe id="jd-video-iframe" src="" title="Tráiler de Gameplay" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
             </div>
           </div>
         </div>
@@ -694,9 +709,16 @@
           <input type="url" id="admin-qg-imagen-detalle" placeholder="https://...">
         </div>
         <div class="form-group">
-          <label>▶️ Link del Tráiler de YouTube</label>
-          <input type="url" id="admin-qg-youtube" placeholder="https://www.youtube.com/watch?v=... o https://youtu.be/...">
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Pega el enlace normal de YouTube o YouTube Shorts. Se convertirá automáticamente a formato HD.</span>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+            <label style="margin-bottom: 0;">▶️ Links de Tráilers de YouTube</label>
+            <button type="button" class="btn-add-img-input" onclick="addAdminQuickTrailerInput()" style="background: var(--switch-red); color: #fff; border: none; padding: 0.3rem 0.65rem; border-radius: 4px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
+              ➕ Agregar otro tráiler
+            </button>
+          </div>
+          <div id="admin-qg-trailers-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Inputs dinámicos agregados por JS -->
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">Pega enlaces de YouTube. Puedes agregar múltiples tráilers y el cliente podrá deslizarse entre ellos con las flechas.</span>
         </div>
 
         <div class="form-group">

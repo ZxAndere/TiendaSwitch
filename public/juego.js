@@ -3,6 +3,10 @@ window.currentDetailGame = null;
 let currentSelectedLicense = null;
 let detailActiveThumbIndex = 0;
 let detailImagesList = [];
+let currentThumbOffsetIndex = 0;
+let currentTrailerList = [];
+let currentTrailerIndex = 0;
+let isTrailerInitialized = false;
 
 function safeEscapeHTML(str) {
   if (str === null || str === undefined) return '';
@@ -142,6 +146,7 @@ async function initJuegoPage() {
   }
 
   renderGameDetailView();
+  initDetailTrailers(currentDetailGame);
   renderRelatedGames();
   initAdminQuickGearButton();
 }
@@ -186,14 +191,18 @@ function renderGameDetailView() {
   } catch (e) {}
 
   try {
-    // Tira de miniaturas
+    // Tira de miniaturas (Galería de 5 visibles + Flechas)
     const strip = document.getElementById('jd-thumbnails-strip');
+    const arrowsBox = document.getElementById('jd-gallery-arrows-box');
     if (strip) {
       strip.innerHTML = (detailImagesList || []).map((imgUrl, idx) => `
         <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
           <img src="${safeEscapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
         </div>
       `).join('');
+    }
+    if (arrowsBox) {
+      arrowsBox.style.display = (detailImagesList && detailImagesList.length > 5) ? 'flex' : 'none';
     }
   } catch (e) {}
 
@@ -541,6 +550,86 @@ function getYouTubeEmbedUrl(game) {
   return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`;
 }
 
+function slideThumbnails(direction) {
+  const total = detailImagesList ? detailImagesList.length : 0;
+  if (total <= 5) return;
+  const maxOffset = total - 5;
+  currentThumbOffsetIndex += direction;
+  if (currentThumbOffsetIndex < 0) currentThumbOffsetIndex = 0;
+  if (currentThumbOffsetIndex > maxOffset) currentThumbOffsetIndex = maxOffset;
+
+  const strip = document.getElementById('jd-thumbnails-strip');
+  if (strip) {
+    const offsetPercent = currentThumbOffsetIndex * (100 / 5 + 0.65);
+    strip.style.transform = `translateX(-${offsetPercent}%)`;
+  }
+}
+
+function initDetailTrailers(game) {
+  if (!game) return;
+  currentTrailerList = [];
+
+  if (Array.isArray(game.youtubeTrailers) && game.youtubeTrailers.length > 0) {
+    game.youtubeTrailers.forEach(t => {
+      const id = parseYouTubeVideoId(t);
+      if (id && !currentTrailerList.includes(id)) currentTrailerList.push(id);
+    });
+  }
+
+  if (currentTrailerList.length === 0) {
+    const customYt = game.youtubeUrl || game.videoTrailerUrl;
+    const customId = parseYouTubeVideoId(customYt);
+    if (customId) {
+      currentTrailerList.push(customId);
+    } else {
+      const trailerMap = {
+        1: 'uHGShqcAHlQ',
+        2: 'JStAYvbe_3s',
+        3: 'tKlRN2YpxRE',
+        4: 'WShCN-AYHqA',
+        5: '7V20G0S_Y4w',
+        6: '8wjY0q01uOk'
+      };
+      currentTrailerList.push(trailerMap[game.id] || 'uHGShqcAHlQ');
+    }
+  }
+
+  currentTrailerIndex = 0;
+  isTrailerInitialized = false;
+  updateTrailerIframe();
+}
+
+function switchTrailerVideo(direction) {
+  if (!currentTrailerList || currentTrailerList.length <= 1) return;
+  currentTrailerIndex = (currentTrailerIndex + direction + currentTrailerList.length) % currentTrailerList.length;
+  updateTrailerIframe(true);
+}
+
+function updateTrailerIframe(forceReload = false) {
+  const iframe = document.getElementById('jd-video-iframe');
+  const arrowsBox = document.getElementById('jd-video-arrows-box');
+  const counterBadge = document.getElementById('jd-video-counter-badge');
+
+  if (arrowsBox) {
+    if (currentTrailerList.length > 1) {
+      arrowsBox.style.display = 'flex';
+      if (counterBadge) counterBadge.textContent = `${currentTrailerIndex + 1}/${currentTrailerList.length}`;
+    } else {
+      arrowsBox.style.display = 'none';
+    }
+  }
+
+  if (iframe) {
+    const videoId = currentTrailerList[currentTrailerIndex] || 'uHGShqcAHlQ';
+    const targetSrc = `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`;
+    if (!isTrailerInitialized || forceReload || iframe.getAttribute('data-video-id') !== videoId) {
+      iframe.src = targetSrc;
+      iframe.setAttribute('data-video-id', videoId);
+      isTrailerInitialized = true;
+    }
+  }
+}
+
 // --- MODO ADMINISTRADOR: BOTÓN CON TUERCA ABAJO A LA IZQUIERDA Y MODAL QUICK-EDIT ---
 function initAdminQuickGearButton() {
   const gearBtn = document.getElementById('admin-game-gear-btn');
@@ -588,7 +677,22 @@ function openAdminQuickGameModal() {
 
   document.getElementById('admin-qg-imagen').value = currentDetailGame.imagen || '';
   document.getElementById('admin-qg-imagen-detalle').value = currentDetailGame.imagenDetalle || '';
-  document.getElementById('admin-qg-youtube').value = currentDetailGame.youtubeUrl || currentDetailGame.videoTrailerUrl || '';
+
+  const trailersContainer = document.getElementById('admin-qg-trailers-container');
+  if (trailersContainer) {
+    trailersContainer.innerHTML = '';
+    let trailers = [];
+    if (Array.isArray(currentDetailGame.youtubeTrailers) && currentDetailGame.youtubeTrailers.length > 0) {
+      trailers = currentDetailGame.youtubeTrailers;
+    } else if (currentDetailGame.youtubeUrl || currentDetailGame.videoTrailerUrl) {
+      trailers = [currentDetailGame.youtubeUrl || currentDetailGame.videoTrailerUrl];
+    }
+    if (trailers.length > 0) {
+      trailers.forEach(t => addAdminQuickTrailerInput(t));
+    } else {
+      addAdminQuickTrailerInput();
+    }
+  }
 
   const extraContainer = document.getElementById('admin-qg-extra-images-container');
   extraContainer.innerHTML = '';
@@ -606,6 +710,20 @@ function openAdminQuickGameModal() {
 function closeAdminQuickGameModal() {
   const modal = document.getElementById('admin-game-modal-backdrop');
   if (modal) modal.classList.remove('active');
+}
+
+function addAdminQuickTrailerInput(val = '') {
+  const container = document.getElementById('admin-qg-trailers-container');
+  if (!container) return;
+
+  const div = document.createElement('div');
+  div.className = 'extra-trailer-row';
+  div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
+  div.innerHTML = `
+    <input type="url" class="admin-extra-trailer-input" placeholder="https://www.youtube.com/watch?v=..." value="${escapeHTML(val)}" style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #fff; padding: 0.55rem; border-radius: 4px;">
+    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️</button>
+  `;
+  container.appendChild(div);
 }
 
 function addAdminQuickImageInput(val = '') {
@@ -638,7 +756,14 @@ async function handleAdminQuickGameSubmit(e) {
 
   const imagen = document.getElementById('admin-qg-imagen').value.trim();
   const imagenDetalle = document.getElementById('admin-qg-imagen-detalle').value.trim();
-  const youtubeUrl = document.getElementById('admin-qg-youtube').value.trim();
+  
+  const trailerInputs = document.querySelectorAll('.admin-extra-trailer-input');
+  const youtubeTrailers = [];
+  trailerInputs.forEach(inp => {
+    const val = inp.value.trim();
+    if (val) youtubeTrailers.push(val);
+  });
+  const youtubeUrl = youtubeTrailers.length > 0 ? youtubeTrailers[0] : '';
   const errorMsg = document.getElementById('admin-quick-game-error');
   if (errorMsg) errorMsg.textContent = '';
 
@@ -667,7 +792,8 @@ async function handleAdminQuickGameSubmit(e) {
         imagen,
         imagenDetalle,
         imagenesDetalle,
-        youtubeUrl
+        youtubeUrl,
+        youtubeTrailers
       })
     });
 
@@ -678,12 +804,13 @@ async function handleAdminQuickGameSubmit(e) {
         return;
       }
       if (errorMsg) errorMsg.textContent = data.error || 'Error al actualizar juego.';
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Guardar Cambios en Juego';
+      }
       return;
     }
 
-    if (data.juego) {
-      currentDetailGame = data.juego;
-    } else {
       currentDetailGame.precioSecundaria = precioSecundaria;
       currentDetailGame.precioPrimaria = precioPrimaria;
       currentDetailGame.precioOriginal = precioOriginal;
@@ -691,7 +818,7 @@ async function handleAdminQuickGameSubmit(e) {
       currentDetailGame.imagenDetalle = imagenDetalle;
       currentDetailGame.imagenesDetalle = imagenesDetalle;
       currentDetailGame.youtubeUrl = youtubeUrl;
-    }
+      currentDetailGame.youtubeTrailers = youtubeTrailers;
 
     if (Array.isArray(catalog)) {
       const catGame = catalog.find(g => g.id === currentDetailGame.id);
