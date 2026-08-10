@@ -77,6 +77,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Manejar felizmente cualquier SyntaxError en JSON malformado (de pasarelas o bots) sin ensuciar logs
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: "Formato JSON no válido en la petición." });
+  }
+  next(err);
+});
+
 // Rechazar peticiones de archivos sensibles estáticos
 app.use((req, res, next) => {
   const fileExt = path.extname(req.path).toLowerCase();
@@ -2465,6 +2473,10 @@ process.on('uncaughtException', (error) => {
 
 // Middleware global de manejo de errores de Express
 app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: "Formato JSON no válido en la petición." });
+  }
+
   console.error('❌ Error capturado por Express:', err.stack || err.message || err);
   
   // Ocultar stack trace y detalles técnicos en producción
