@@ -3606,3 +3606,150 @@ body {
   border: 0;
 }
 
+/* ==========================================================================
+   ESTILOS PRO Y ARMONIOSOS PARA CENTRO DE AYUDA / FAQ & FOOTER
+   ========================================================================== */
+
+/* Layout flexible para mantener el footer en la parte inferior con espaciado */
+html, body {
+  min-height: 100vh;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.faq-hero {
+  text-align: center;
+  padding: 4rem 1.5rem 2.5rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.faq-hero h1 {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 0.8rem;
+  line-height: 1.25;
+}
+
+.faq-hero p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.faq-container {
+  max-width: 850px;
+  width: 92%;
+  margin: 0 auto 5rem auto;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.faq-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.faq-item:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.12);
+}
+
+.faq-item.active {
+  border-color: var(--joycon-cyan);
+  box-shadow: 0 4px 25px rgba(0, 240, 255, 0.2);
+}
+
+.faq-question {
+  width: 100%;
+  padding: 1.35rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.faq-question span:first-child {
+  flex: 1;
+}
+
+.faq-icon {
+  font-size: 1.2rem;
+  color: var(--joycon-cyan);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease;
+  padding: 0 1.5rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  font-size: 1rem;
+}
+
+.faq-item.active .faq-answer {
+  padding: 0 1.5rem 1.35rem 1.5rem;
+}
+
+.back-home-banner {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.back-home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(230, 0, 18, 0.15));
+  border: 1px solid var(--joycon-cyan);
+  color: #ffffff;
+  padding: 0.9rem 2rem;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
+}
+
+.back-home-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, var(--joycon-cyan), var(--switch-red));
+  color: #000000;
+  box-shadow: 0 6px 25px rgba(0, 240, 255, 0.4);
+}
+
+/* Footer Armonioso */
+footer.footer {
+  margin-top: auto !important;
+  background: #080a0f;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3.5rem 1.5rem 2rem 1.5rem;
+}
+
