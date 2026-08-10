@@ -86,14 +86,6 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-// Desactivar caché del navegador para peticiones estáticas e HTML (Problema Anti-Caché)
-app.use((req, res, next) => {
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  next();
-});
-
 // Rechazar peticiones de archivos sensibles estáticos
 app.use((req, res, next) => {
   const fileExt = path.extname(req.path).toLowerCase();
@@ -102,13 +94,15 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Servir archivos estáticos con cabeceras anti-caché seguras
 app.use(express.static(path.join(__dirname, 'public'), {
-  etag: false,
-  lastModified: false,
   setHeaders: (res, filePath) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
   }
 }));
 
