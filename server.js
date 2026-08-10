@@ -86,6 +86,14 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
+// Desactivar caché del navegador para peticiones estáticas e HTML (Problema Anti-Caché)
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Rechazar peticiones de archivos sensibles estáticos
 app.use((req, res, next) => {
   const fileExt = path.extname(req.path).toLowerCase();
@@ -94,7 +102,15 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res, filePath) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+}));
 
 // Servir juego.html para cualquier ruta limpia SEO de producto (ej: /Mario-Kart-8-Deluxe)
 app.get('/:slug', (req, res, next) => {
@@ -102,6 +118,10 @@ app.get('/:slug', (req, res, next) => {
   if (!slug || slug.startsWith('api') || slug.includes('.') || ['favicon', 'logo', 'data', 'auth', 'user', 'admin'].some(x => slug.toLowerCase().includes(x))) {
     return next();
   }
+
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
 
   const juegoFile = path.resolve(__dirname, 'public', 'juego.html');
   res.sendFile(juegoFile, (err) => {

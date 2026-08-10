@@ -656,3 +656,13 @@ async function handleAdminQuickGameSubmit(e) {
   }
 }
 
+// Auto-refrescar datos del juego al volver a la pestaña sin necesidad de Control + F5
+window.addEventListener('focus', () => {
+  if (typeof initJuegoPage === 'function') initJuegoPage();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && typeof initJuegoPage === 'function') {
+    initJuegoPage();
+  }
+});
+

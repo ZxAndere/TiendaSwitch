@@ -126,12 +126,29 @@ let catalog = [...DEFAULT_GAMES_FRONTEND];
 let cart = JSON.parse(localStorage.getItem('zonaswitch_cart_v4')) || [];
 let currentUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || null;
 
-// Interceptor global de fetch para inyectar automáticamente el token JWT
+// Interceptor global de fetch para inyectar automáticamente el token JWT y cabeceras Anti-Caché
 const originalFetch = window.fetch;
 window.fetch = async function (resource, init) {
+  init = init || {};
+  init.cache = 'no-store';
+
+  // Inyectar cabeceras anti-caché para rutas de la API interna
+  if (typeof resource === 'string' && resource.startsWith('/api/')) {
+    init.headers = init.headers || {};
+    if (init.headers instanceof Headers) {
+      init.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      init.headers.set('Pragma', 'no-cache');
+    } else if (Array.isArray(init.headers)) {
+      init.headers.push(['Cache-Control', 'no-cache, no-store, must-revalidate']);
+      init.headers.push(['Pragma', 'no-cache']);
+    } else {
+      init.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      init.headers['Pragma'] = 'no-cache';
+    }
+  }
+
   const token = localStorage.getItem('userToken');
   if (token) {
-    init = init || {};
     init.headers = init.headers || {};
     if (init.headers instanceof Headers) {
       if (!init.headers.has('Authorization')) {
@@ -2851,3 +2868,13 @@ function updateVariantBadges() {
     }
   });
 }
+
+// Auto-refrescar datos del catálogo sin necesidad de Control + F5
+window.addEventListener('focus', () => {
+  if (typeof fetchCatalog === 'function') fetchCatalog();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && typeof fetchCatalog === 'function') {
+    fetchCatalog();
+  }
+});
