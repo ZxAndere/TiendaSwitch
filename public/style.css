@@ -379,11 +379,12 @@ body {
 }
 
 /* ==========================================================================
-   Banner de Ancho Completo
+   Banner de Ancho Completo Ultra Estirado
    ========================================================================== */
 .full-width-banner-section {
-  max-width: 1560px;
-  margin: 1.75rem auto 1rem;
+  max-width: 1720px;
+  width: 100%;
+  margin: 1.5rem auto 1rem;
   padding: 0 1.5rem;
 }
 
@@ -391,25 +392,31 @@ body {
   position: relative;
   display: block;
   width: 100%;
-  height: 240px;
+  height: 260px;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   text-decoration: none;
-  box-shadow: var(--shadow-lg), 0 0 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg), 0 0 35px rgba(0, 0, 0, 0.6);
   transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 @media (min-width: 768px) {
   .full-width-banner-card {
-    height: 330px;
+    height: 380px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .full-width-banner-card {
+    height: 420px;
   }
 }
 
 .full-width-banner-card:hover {
   transform: translateY(-4px);
   border-color: var(--switch-red);
-  box-shadow: var(--shadow-lg), 0 0 35px rgba(255, 0, 60, 0.3);
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 0, 60, 0.35);
 }
 
 .hero-banner-img {
@@ -427,45 +434,45 @@ body {
 .banner-overlay-content {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(7, 10, 18, 0.92) 0%, rgba(7, 10, 18, 0.6) 55%, rgba(7, 10, 18, 0.15) 100%);
+  background: linear-gradient(90deg, rgba(7, 10, 18, 0.94) 0%, rgba(7, 10, 18, 0.65) 55%, rgba(7, 10, 18, 0.15) 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 2.5rem 3.5rem;
+  padding: 3rem 4.5rem;
   color: white;
 }
 
 .banner-tag {
   color: var(--joycon-cyan);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 1.5px;
-  margin-bottom: 0.6rem;
+  letter-spacing: 2px;
+  margin-bottom: 0.75rem;
 }
 
 .banner-title {
   font-family: var(--font-heading);
-  font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+  font-size: clamp(1.8rem, 4vw, 2.85rem);
   font-weight: 900;
-  max-width: 750px;
-  line-height: 1.2;
-  margin-bottom: 1.5rem;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  max-width: 900px;
+  line-height: 1.18;
+  margin-bottom: 1.75rem;
+  text-shadow: 0 3px 12px rgba(0, 0, 0, 0.9);
 }
 
 .banner-cta-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   background: linear-gradient(135deg, var(--switch-red), #d60033);
   color: white;
-  padding: 0.65rem 1.4rem;
+  padding: 0.85rem 1.8rem;
   border-radius: var(--radius-full);
   font-weight: 800;
-  font-size: 0.875rem;
+  font-size: 1rem;
   width: fit-content;
-  box-shadow: 0 4px 14px rgba(255, 0, 60, 0.4);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 18px rgba(255, 0, 60, 0.45);
+  transition: all 0.25s ease;
 }
 
 .full-width-banner-card:hover .banner-cta-btn {
