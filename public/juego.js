@@ -465,17 +465,6 @@ function getYouTubeEmbedUrl(game) {
   return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`;
 }
 
-  modal.classList.add('active');
-
-  const closeBtn = document.getElementById('close-trailer-modal');
-  if (closeBtn) {
-    closeBtn.onclick = () => {
-      modal.classList.remove('active');
-      wrapper.innerHTML = '';
-    };
-  }
-}
-
 // --- MODO ADMINISTRADOR: BOTÓN CON TUERCA ABAJO A LA IZQUIERDA Y MODAL QUICK-EDIT ---
 function initAdminQuickGearButton() {
   const gearBtn = document.getElementById('admin-game-gear-btn');
