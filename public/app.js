@@ -1453,6 +1453,12 @@ function renderCatalog() {
     card.style.opacity = '1';
     card.style.transform = 'none';
   });
+
+  document.querySelectorAll('.game-card .current-price').forEach(el => {
+    el.classList.remove('price-anim-pop');
+    void el.offsetWidth;
+    el.classList.add('price-anim-pop');
+  });
 }
 
 // Observador para animar tarjetas al scroll (Aparecer gradualmente al estar en vista)
