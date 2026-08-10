@@ -1933,36 +1933,80 @@ async function checkPaymentReturnUrls() {
 
   const orderCode = flowOrderCode || mpOrderCode;
 
-  if (orderCode) {
-    // Limpiar query string de la URL
+  if (orderCode || status) {
+    // Limpiar query string de la URL sin recargar la página
     window.history.replaceState({}, document.title, window.location.pathname);
 
-    try {
-      const res = await apiFetch(`/api/orders/${orderCode}`);
-      if (res.ok) {
-        const order = await res.json();
-        if (status === '2' || status === 'approved' || order.estado === 'pagada') {
-          cart = [];
-          saveCart();
-          updateCartBadge();
-          openReceiptModal({
-            codigoOrden: order.codigoOrden,
-            cliente: order.cliente,
-            usuario: order.usuario,
-            total: order.totalFormatted || formatCLP(order.total),
-            fecha: order.fecha
-          });
-          const pasarela = order.metodoPago === 'mercadopago' ? 'Mercado Pago 💙' : 'Flow 💳';
-          showToast(`¡Pago en ${pasarela} completado con éxito! 🎉`);
-        } else if (status === '3' || status === 'failure') {
-          showToast('El pago fue rechazado o no se completó.');
-        } else if (status === '4' || status === 'cancelled') {
-          showToast('El pago fue cancelado.');
+    if (status === '2' || status === 'approved') {
+      if (orderCode) {
+        try {
+          const res = await apiFetch(`/api/orders/${orderCode}`);
+          if (res.ok) {
+            const order = await res.json();
+            cart = [];
+            saveCart();
+            updateCartBadge();
+            openReceiptModal({
+              codigoOrden: order.codigoOrden,
+              cliente: order.cliente,
+              usuario: order.usuario,
+              total: order.totalFormatted || formatCLP(order.total),
+              fecha: order.fecha
+            });
+            const pasarela = order.metodoPago === 'mercadopago' ? 'Mercado Pago 💙' : 'Flow 💳';
+            showToast(`¡Pago en ${pasarela} completado con éxito! 🎉`);
+            return;
+          }
+        } catch (err) {
+          console.error('Error al consultar orden de retorno:', err);
         }
       }
-    } catch (err) {
-      console.error('Error al consultar orden de retorno:', err);
+      showToast('¡Pago completado con éxito! 🎉');
+    } else if (status === '3' || status === '4' || status === 'cancelled' || status === 'failure' || status === 'rejected') {
+      showPaymentCancelledModal();
     }
+  }
+}
+
+function showPaymentCancelledModal() {
+  let modal = document.getElementById('payment-cancelled-modal-backdrop');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'payment-cancelled-modal-backdrop';
+    modal.className = 'modal-backdrop';
+    modal.style.display = 'flex';
+    modal.style.zIndex = '100000';
+    modal.innerHTML = `
+      <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2.2rem 1.8rem; background: var(--bg-card, #111827); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); animation: modalFadeIn 0.25s ease;">
+        <div style="font-size: 3.5rem; margin-bottom: 0.6rem; line-height: 1;">❌</div>
+        <h3 style="color: #f87171; font-size: 1.45rem; font-weight: 800; margin-bottom: 0.6rem;">Pago Cancelado</h3>
+        <p style="color: var(--text-muted, #94a3b8); font-size: 0.95rem; line-height: 1.55; margin-bottom: 1.8rem;">
+          La transacción en la pasarela de pago fue cancelada o no se pudo procesar. Tu carrito sigue guardado y no se ha realizado ningún cargo.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <button id="btn-cancel-retry-pay" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 0.9rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);">
+            🔄 Reintentar Pago
+          </button>
+          <button id="btn-cancel-go-home" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease;">
+            🏠 Volver al Inicio
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById('btn-cancel-go-home').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    document.getElementById('btn-cancel-retry-pay').addEventListener('click', () => {
+      modal.style.display = 'none';
+      if (typeof openCartDrawer === 'function') {
+        openCartDrawer();
+      }
+    });
+  } else {
+    modal.style.display = 'flex';
   }
 }
 

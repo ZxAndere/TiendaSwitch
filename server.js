@@ -62,14 +62,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configurar CORS seguro restringido al dominio de producción y desarrollo local
-const allowedOrigins = ['https://zonaswitchchile.com', 'https://www.zonaswitchchile.com'];
+// Configurar CORS seguro restringido al dominio de producción, desarrollo local y pasarelas de pago
+const allowedOrigins = [
+  'https://zonaswitchchile.com',
+  'https://www.zonaswitchchile.com',
+  'https://flow.cl',
+  'https://www.flow.cl',
+  'https://sandbox.flow.cl',
+  'https://mercadopago.cl',
+  'https://www.mercadopago.cl',
+  'https://www.mercadopago.com'
+];
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por la política CORS de ZonaSwitchChile'));
+      callback(null, false);
     }
   },
   credentials: true
@@ -2406,12 +2415,12 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
 
 // Retorno del usuario desde la pasarela Flow (Webpay, etc.)
 app.all('/api/flow/return', async (req, res) => {
-  const token = req.query.token || req.body?.token;
+  const token = req.query?.token || req.body?.token;
   if (!token) {
-    return res.redirect('/');
+    return res.redirect('/?status=cancelled');
   }
 
-  // Validar firma del callback recibida de Flow usando tiempo constante (Problema 1: Anti Timing Attack)
+  // Validar firma del callback recibida de Flow usando tiempo constante (Anti Timing Attack)
   const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
   const incomingSign = incomingParams.s;
   if (incomingSign) {
@@ -2419,7 +2428,7 @@ app.all('/api/flow/return', async (req, res) => {
     const computedSign = signFlowParams(incomingParams);
     if (!safeCompareSignatures(computedSign, incomingSign)) {
       console.warn("⚠️ Advertencia: Firma de callback de Flow no válida.");
-      return res.redirect('/');
+      return res.redirect('/?status=cancelled');
     }
   }
 
@@ -2436,13 +2445,13 @@ app.all('/api/flow/return', async (req, res) => {
       statusData = JSON.parse(responseText);
     } catch (e) {
       console.error('❌ Error parseando estado de Flow:', responseText);
-      return res.redirect('/');
+      return res.redirect('/?status=cancelled');
     }
 
-    const order = (await getOrderByCode(token)) || (await getOrderByCode(statusData.commerceOrder));
+    const order = (await getOrderByCode(token)) || (statusData.commerceOrder ? await getOrderByCode(statusData.commerceOrder) : null);
 
-    let orderCode = statusData.commerceOrder || '';
-    let status = statusData.status; // 2 = Pagada, 3 = Rechazada, 4 = Anulada, 1 = Pendiente
+    let orderCode = statusData.commerceOrder || (order ? order.codigoOrden : '');
+    let status = statusData.status !== undefined ? statusData.status : 4; // 2 = Pagada, 3 = Rechazada, 4 = Anulada, 1 = Pendiente
 
     if (order) {
       const oldStatus = order.estado;
@@ -2457,10 +2466,10 @@ app.all('/api/flow/return', async (req, res) => {
       }
     }
 
-    res.redirect(`/?flow_order=${orderCode}&status=${status}`);
+    res.redirect(`/?flow_order=${encodeURIComponent(orderCode)}&status=${encodeURIComponent(status)}`);
   } catch (err) {
     console.error('❌ Error en callback de retorno Flow:', err);
-    res.redirect('/');
+    res.redirect('/?status=cancelled');
   }
 });
 
