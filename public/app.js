@@ -1438,7 +1438,7 @@ function renderCatalog() {
         <div class="card-footer">
           <div class="price-container">
             <span class="original-price">${formatCLP(origPrice)}</span>
-            <span class="current-price">${formatCLP(game.precioSecundaria)}</span>
+            <span class="current-price"><small style="font-size: 0.75em; font-weight: 600; opacity: 0.85; margin-right: 3px;">Desde</small> ${formatCLP(game.precioSecundaria)}</span>
           </div>
           <span class="buy-card-btn" onclick="openGameModal(${game.id}); event.stopPropagation();">
             Ver Detalle →

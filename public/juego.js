@@ -1,6 +1,6 @@
 var currentDetailGame = null;
 window.currentDetailGame = null;
-let currentSelectedLicense = 'primaria';
+let currentSelectedLicense = null;
 let detailActiveThumbIndex = 0;
 let detailImagesList = [];
 
@@ -215,28 +215,59 @@ function renderGameDetailView() {
   try {
     // Precios y Ahorro
     const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5) || 15000;
-    const selectedPrice = currentSelectedLicense === 'primaria' ? (Number(game.precioPrimaria) || 30000) : (Number(game.precioSecundaria) || 20000);
-    const convertedCurrent = formatCLP(selectedPrice);
-    const convertedOld = formatCLP(orig);
-    const savingsAmount = Math.max(0, orig - selectedPrice);
     const curSec = Number(game.precioSecundaria) || 20000;
-    const pct = Math.max(10, Math.round(((orig - curSec) / orig) * 100));
+    const curPrim = Number(game.precioPrimaria) || 30000;
 
     const priceCur = document.getElementById('jd-price-current');
-    if (priceCur) priceCur.textContent = convertedCurrent;
-
     const priceOld = document.getElementById('jd-price-old');
-    if (priceOld) priceOld.textContent = convertedOld;
-
     const savingsTag = document.getElementById('jd-savings-tag');
-    if (savingsTag) savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
+
+    if (!currentSelectedLicense) {
+      if (priceCur) priceCur.innerHTML = `<small style="font-size: 0.7em; font-weight: 600; opacity: 0.85; margin-right: 4px;">Desde</small> ${formatCLP(curSec)}`;
+      if (priceOld) priceOld.textContent = formatCLP(orig);
+      const pct = Math.max(10, Math.round(((orig - curSec) / orig) * 100));
+      if (savingsTag) savingsTag.textContent = `¡Hasta ${pct}% OFF! (Selecciona tu cuenta)`;
+    } else {
+      const selectedPrice = currentSelectedLicense === 'primaria' ? curPrim : curSec;
+      const convertedCurrent = formatCLP(selectedPrice);
+      const convertedOld = formatCLP(orig);
+      const savingsAmount = Math.max(0, orig - selectedPrice);
+      const pct = Math.max(10, Math.round(((orig - selectedPrice) / orig) * 100));
+
+      if (priceCur) priceCur.textContent = convertedCurrent;
+      if (priceOld) priceOld.textContent = convertedOld;
+      if (savingsTag) savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
+    }
 
     // Precios en las tarjetas de licencias
     const licPriceSec = document.getElementById('jd-lic-price-sec');
-    if (licPriceSec) licPriceSec.textContent = formatCLP(game.precioSecundaria || 20000);
+    if (licPriceSec) licPriceSec.textContent = formatCLP(curSec);
 
     const licPricePrim = document.getElementById('jd-lic-price-prim');
-    if (licPricePrim) licPricePrim.textContent = formatCLP(game.precioPrimaria || 30000);
+    if (licPricePrim) licPricePrim.textContent = formatCLP(curPrim);
+
+    // Estado visual de las tarjetas y radios
+    const cardSec = document.getElementById('jd-card-secundaria');
+    const cardPrim = document.getElementById('jd-card-primaria');
+    const radioSec = document.getElementById('jd-radio-secundaria');
+    const radioPrim = document.getElementById('jd-radio-primaria');
+
+    if (currentSelectedLicense === 'secundaria') {
+      if (cardSec) cardSec.classList.add('active');
+      if (cardPrim) cardPrim.classList.remove('active');
+      if (radioSec) radioSec.checked = true;
+      if (radioPrim) radioPrim.checked = false;
+    } else if (currentSelectedLicense === 'primaria') {
+      if (cardPrim) cardPrim.classList.add('active');
+      if (cardSec) cardSec.classList.remove('active');
+      if (radioPrim) radioPrim.checked = true;
+      if (radioSec) radioSec.checked = false;
+    } else {
+      if (cardSec) cardSec.classList.remove('active');
+      if (cardPrim) cardPrim.classList.remove('active');
+      if (radioSec) radioSec.checked = false;
+      if (radioPrim) radioPrim.checked = false;
+    }
   } catch (e) {}
 
   try {
@@ -360,14 +391,39 @@ function updateLicenseAccordionContent() {
   }
 }
 
+function promptSelectLicense() {
+  if (typeof showToast === 'function') {
+    showToast('⚠️ Por favor selecciona una cuenta (Secundaria o Primaria) para continuar.');
+  }
+  const secCard = document.getElementById('jd-card-secundaria');
+  const primCard = document.getElementById('jd-card-primaria');
+  if (secCard && primCard) {
+    secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    secCard.style.animation = 'jdLicensePop 0.4s ease 2';
+    primCard.style.animation = 'jdLicensePop 0.4s ease 2';
+    setTimeout(() => {
+      secCard.style.animation = '';
+      primCard.style.animation = '';
+    }, 900);
+  }
+}
+
 function handleAddDetailToCart() {
   if (!currentDetailGame) return;
+  if (!currentSelectedLicense) {
+    promptSelectLicense();
+    return;
+  }
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
   openCartDrawer();
 }
 
 function handleDirectDetailCheckout() {
   if (!currentDetailGame) return;
+  if (!currentSelectedLicense) {
+    promptSelectLicense();
+    return;
+  }
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
   if (typeof openPaymentModal === 'function') {
     openPaymentModal();
@@ -418,7 +474,7 @@ function renderRelatedGames() {
           <div class="card-footer">
             <div class="price-container">
               <span class="original-price">${formatCLP(orig)}</span>
-              <span class="current-price">${formatCLP(cur)}</span>
+              <span class="current-price"><small style="font-size: 0.75em; font-weight: 600; opacity: 0.85; margin-right: 3px;">Desde</small> ${formatCLP(cur)}</span>
             </div>
             <button class="btn-card-buy" type="button">Ver Detalle →</button>
           </div>
