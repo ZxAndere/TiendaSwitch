@@ -1,11 +1,9 @@
-/* ==========================================================================
-   ZonaSwitchChile - Juego Detail Pro Level Controller JS
-   ========================================================================== */
-
-let currentDetailGame = null;
-let currentSelectedLicense = 'primaria';
-let detailActiveThumbIndex = 0;
-let detailImagesList = [];
+function safeEscapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>'"]/g,
+    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+  );
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Escuchar cambio de moneda para actualizar precios en tiempo real
@@ -49,7 +47,7 @@ async function initJuegoPage() {
     const pathSegments = window.location.pathname.split('/').filter(Boolean);
     if (pathSegments.length > 0) {
       const lastSegment = pathSegments[pathSegments.length - 1];
-      if (lastSegment && !lastSegment.includes('.')) {
+      if (lastSegment && !lastSegment.includes('.html') && !lastSegment.includes('.')) {
         rawParam = decodeURIComponent(lastSegment);
       }
     }
@@ -72,7 +70,7 @@ async function initJuegoPage() {
   if (!currentDetailGame) {
     if (!Array.isArray(catalog) || catalog.length === 0) {
       try {
-        const res = await apiFetch('/api/juegos');
+        const res = await fetch('/api/juegos');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) catalog = data;
@@ -81,7 +79,7 @@ async function initJuegoPage() {
     }
 
     if (!Array.isArray(catalog) || catalog.length === 0) {
-      catalog = [...DEFAULT_GAMES_FRONTEND];
+      catalog = Array.isArray(window.DEFAULT_GAMES_FRONTEND) ? window.DEFAULT_GAMES_FRONTEND : [];
     }
 
     if (rawParam) {
@@ -147,108 +145,129 @@ function renderGameDetailView() {
 
   const game = currentDetailGame;
 
-  // Breadcrumbs
-  const crumbCat = document.getElementById('jd-crumb-category');
-  if (crumbCat) crumbCat.textContent = game.categoria || 'Nintendo';
+  try {
+    // Breadcrumbs
+    const crumbCat = document.getElementById('jd-crumb-category');
+    if (crumbCat) crumbCat.textContent = game.categoria || 'Nintendo';
 
-  const crumbTitle = document.getElementById('jd-crumb-title');
-  if (crumbTitle) crumbTitle.textContent = game.titulo;
+    const crumbTitle = document.getElementById('jd-crumb-title');
+    if (crumbTitle) crumbTitle.textContent = game.titulo || '';
+  } catch (e) {}
 
-  // Hero Media
-  const heroImg = document.getElementById('jd-hero-img');
-  if (heroImg) {
-    heroImg.src = detailImagesList[detailActiveThumbIndex] || game.imagen;
-    heroImg.alt = game.titulo;
-  }
+  try {
+    // Hero Media
+    const heroImg = document.getElementById('jd-hero-img');
+    if (heroImg) {
+      heroImg.src = (detailImagesList && detailImagesList[detailActiveThumbIndex]) || game.imagen || '';
+      heroImg.alt = game.titulo || '';
+    }
+  } catch (e) {}
 
-  // Badge de descuento animado
-  const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
-  const cur = Number(game.precioSecundaria) || 10000;
-  const pct = Math.max(10, Math.round(((orig - cur) / orig) * 100));
+  try {
+    // Badge de descuento animado
+    const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5) || 15000;
+    const cur = Number(game.precioSecundaria) || 10000;
+    const pct = Math.max(10, Math.round(((orig - cur) / orig) * 100));
 
-  const discBadge = document.getElementById('jd-discount-badge');
-  if (discBadge) discBadge.textContent = `-${pct}% OFF`;
+    const discBadge = document.getElementById('jd-discount-badge');
+    if (discBadge) discBadge.textContent = `-${pct}% OFF`;
 
-  const sizeBadge = document.getElementById('jd-hero-size-badge');
-  if (sizeBadge) sizeBadge.textContent = `📦 ${game.peso || '15 GB'}`;
+    const sizeBadge = document.getElementById('jd-hero-size-badge');
+    if (sizeBadge) sizeBadge.textContent = `📦 ${game.peso || '15 GB'}`;
 
-  const ratingElem = document.getElementById('jd-hero-rating-badge');
-  if (ratingElem) ratingElem.style.display = 'none';
+    const ratingElem = document.getElementById('jd-hero-rating-badge');
+    if (ratingElem) ratingElem.style.display = 'none';
+  } catch (e) {}
 
-  // Tira de miniaturas
-  const strip = document.getElementById('jd-thumbnails-strip');
-  if (strip) {
-    strip.innerHTML = detailImagesList.map((imgUrl, idx) => `
-      <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
-        <img src="${escapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
-      </div>
-    `).join('');
-  }
+  try {
+    // Tira de miniaturas
+    const strip = document.getElementById('jd-thumbnails-strip');
+    if (strip) {
+      strip.innerHTML = (detailImagesList || []).map((imgUrl, idx) => `
+        <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
+          <img src="${safeEscapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
+        </div>
+      `).join('');
+    }
+  } catch (e) {}
 
-  // Encabezado
-  const catTag = document.getElementById('jd-category-tag');
-  if (catTag) catTag.textContent = game.categoria || 'Nintendo Switch';
+  try {
+    // Encabezado
+    const catTag = document.getElementById('jd-category-tag');
+    if (catTag) catTag.textContent = game.categoria || 'Nintendo Switch';
 
-  const titleEl = document.getElementById('jd-title');
-  if (titleEl) titleEl.textContent = game.titulo;
+    const titleEl = document.getElementById('jd-title');
+    if (titleEl) titleEl.textContent = game.titulo || '';
 
-  const pesoVal = document.getElementById('jd-peso-val');
-  if (pesoVal) pesoVal.textContent = game.peso || '15 GB';
+    const pesoVal = document.getElementById('jd-peso-val');
+    if (pesoVal) pesoVal.textContent = game.peso || '15 GB';
 
-  const ratingVal = document.getElementById('jd-rating-val');
-  if (ratingVal && ratingVal.parentElement) ratingVal.parentElement.style.display = 'none';
+    const ratingVal = document.getElementById('jd-rating-val');
+    if (ratingVal && ratingVal.parentElement) ratingVal.parentElement.style.display = 'none';
+  } catch (e) {}
 
-  // Precios y Ahorro
-  const selectedPrice = currentSelectedLicense === 'primaria' ? game.precioPrimaria : game.precioSecundaria;
-  const convertedCurrent = formatCLP(selectedPrice);
-  const convertedOld = formatCLP(orig);
-  const savingsAmount = Math.max(0, orig - selectedPrice);
+  try {
+    // Precios y Ahorro
+    const orig = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5) || 15000;
+    const selectedPrice = currentSelectedLicense === 'primaria' ? (Number(game.precioPrimaria) || 30000) : (Number(game.precioSecundaria) || 20000);
+    const convertedCurrent = formatCLP(selectedPrice);
+    const convertedOld = formatCLP(orig);
+    const savingsAmount = Math.max(0, orig - selectedPrice);
+    const curSec = Number(game.precioSecundaria) || 20000;
+    const pct = Math.max(10, Math.round(((orig - curSec) / orig) * 100));
 
-  const priceCur = document.getElementById('jd-price-current');
-  if (priceCur) priceCur.textContent = convertedCurrent;
+    const priceCur = document.getElementById('jd-price-current');
+    if (priceCur) priceCur.textContent = convertedCurrent;
 
-  const priceOld = document.getElementById('jd-price-old');
-  if (priceOld) priceOld.textContent = convertedOld;
+    const priceOld = document.getElementById('jd-price-old');
+    if (priceOld) priceOld.textContent = convertedOld;
 
-  const savingsTag = document.getElementById('jd-savings-tag');
-  if (savingsTag) savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
+    const savingsTag = document.getElementById('jd-savings-tag');
+    if (savingsTag) savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
 
-  // Precios en las tarjetas de licencias
-  const licPriceSec = document.getElementById('jd-lic-price-sec');
-  if (licPriceSec) licPriceSec.textContent = formatCLP(game.precioSecundaria);
+    // Precios en las tarjetas de licencias
+    const licPriceSec = document.getElementById('jd-lic-price-sec');
+    if (licPriceSec) licPriceSec.textContent = formatCLP(game.precioSecundaria || 20000);
 
-  const licPricePrim = document.getElementById('jd-lic-price-prim');
-  if (licPricePrim) licPricePrim.textContent = formatCLP(game.precioPrimaria);
+    const licPricePrim = document.getElementById('jd-lic-price-prim');
+    if (licPricePrim) licPricePrim.textContent = formatCLP(game.precioPrimaria || 30000);
+  } catch (e) {}
 
-  // Acordeón texto
-  updateLicenseAccordionContent();
+  try {
+    // Acordeón texto
+    updateLicenseAccordionContent();
+  } catch (e) {}
 
-  // Tabs contenido
-  const descContent = document.getElementById('jd-desc-content');
-  if (descContent) {
-    descContent.innerHTML = `
-      <p style="margin-bottom: 1rem;">${escapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
-      <p>Disfruta de la máxima calidad de Nintendo Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de Nintendo eShop con garantía de uso permanente ZonaSwitchChile.</p>
-    `;
-  }
+  try {
+    // Tabs contenido / Descripción
+    const descContent = document.getElementById('jd-desc-content');
+    if (descContent) {
+      descContent.innerHTML = `
+        <p style="margin-bottom: 1rem;">${safeEscapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
+        <p>Disfruta de la máxima calidad de Nintendo Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de Nintendo eShop con garantía de uso permanente ZonaSwitchChile.</p>
+      `;
+    }
 
-  const specCat = document.getElementById('jd-spec-category');
-  if (specCat) specCat.textContent = game.categoria || 'Acción / Aventura';
+    const specCat = document.getElementById('jd-spec-category');
+    if (specCat) specCat.textContent = game.categoria || 'Acción / Aventura';
+  } catch (e) {}
 
-  // Video Tráiler Embebido Directamente en la Página
-  const videoWrapper = document.getElementById('jd-video-wrapper');
-  if (videoWrapper) {
-    const videoUrl = getYouTubeEmbedUrl(game);
-    videoWrapper.innerHTML = `
-      <iframe
-        src="${videoUrl}"
-        title="Tráiler Oficial de ${escapeHTML(game.titulo)}"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen>
-      </iframe>
-    `;
-  }
+  try {
+    // Video Tráiler Embebido Directamente en la Página
+    const videoWrapper = document.getElementById('jd-video-wrapper');
+    if (videoWrapper) {
+      const videoUrl = getYouTubeEmbedUrl(game);
+      videoWrapper.innerHTML = `
+        <iframe
+          src="${videoUrl}"
+          title="Tráiler Oficial de ${safeEscapeHTML(game.titulo)}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+      `;
+    }
+  } catch (e) {}
 }
 
 function selectDetailThumbnail(index) {
