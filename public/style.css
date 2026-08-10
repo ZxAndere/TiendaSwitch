@@ -563,8 +563,15 @@ body {
 
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 1100px) {
+  .games-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.1rem;
+  }
 }
 
 .game-card {
