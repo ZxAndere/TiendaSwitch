@@ -151,7 +151,7 @@ async function initJuegoPage() {
   initAdminQuickGearButton();
 }
 
-function renderGameDetailView() {
+function renderGameDetailView(animatePrice = false) {
   if (!currentDetailGame) return;
 
   const game = currentDetailGame;
@@ -245,16 +245,20 @@ function renderGameDetailView() {
 
       if (priceCur) {
         priceCur.textContent = convertedCurrent;
-        priceCur.classList.remove('price-anim-pop');
-        void priceCur.offsetWidth;
-        priceCur.classList.add('price-anim-pop');
+        if (animatePrice) {
+          priceCur.classList.remove('price-anim-pop');
+          void priceCur.offsetWidth;
+          priceCur.classList.add('price-anim-pop');
+        }
       }
       if (priceOld) priceOld.textContent = convertedOld;
       if (savingsTag) {
         savingsTag.textContent = `¡Ahorras ${formatCLP(savingsAmount)} (${pct}% OFF)!`;
-        savingsTag.classList.remove('price-anim-pop');
-        void savingsTag.offsetWidth;
-        savingsTag.classList.add('price-anim-pop');
+        if (animatePrice) {
+          savingsTag.classList.remove('price-anim-pop');
+          void savingsTag.offsetWidth;
+          savingsTag.classList.add('price-anim-pop');
+        }
       }
     }
 
@@ -369,7 +373,7 @@ function selectDetailLicense(type) {
     if (radioSec) radioSec.checked = false;
   }
 
-  renderGameDetailView();
+  renderGameDetailView(true);
 }
 
 function toggleLicenseAccordion() {

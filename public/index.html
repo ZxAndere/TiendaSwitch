@@ -894,26 +894,21 @@
     <span class="whatsapp-tooltip">💬 ¿Dudas? Escríbenos por WhatsApp</span>
   </a>
 
-  <!-- Pie de página con enlace a Instagram -->
+  <!-- Pie de página unificado ZonaSwitchChile -->
   <footer class="footer">
     <div class="footer-container">
-      <div class="footer-brand">
-        <img src="logo.jpg" alt="Logo" class="footer-logo">
-        <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+      <div class="footer-bottom-left">
+        <p>&copy; 2026 ZonaSwitchChile. Todos los derechos reservados. Marca independiente no afiliada a Nintendo Co., Ltd.</p>
       </div>
-
-      <!-- Enlace a Instagram -->
-      <a href="https://www.instagram.com/zonaswitchchile/" target="_blank" rel="noopener noreferrer" class="footer-instagram-link" title="Síguenos en Instagram">
-        <svg class="instagram-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-        </svg>
-        <span>@zonaswitchchile</span>
-      </a>
-
-      <div class="footer-copyright">
-        &copy; 2026 ZonaSwitchChile.
+      <div class="footer-bottom-right">
+        <button type="button" class="footer-btn" onclick="openAboutUsModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Sobre nosotros</span>
+        </button>
+        <button type="button" class="footer-btn" onclick="openTermsModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>Términos y condiciones</span>
+        </button>
       </div>
     </div>
   </footer>

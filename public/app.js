@@ -415,9 +415,9 @@ function initEventListeners() {
       localStorage.setItem('zonaswitch_currency', currentCurrency);
       const mobileCurrencySelect = document.getElementById('mobile-currency-select');
       if (mobileCurrencySelect) mobileCurrencySelect.value = currentCurrency;
-      renderCatalog();
+      renderCatalog(true);
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
-      if (typeof renderGameDetailView === 'function') renderGameDetailView();
+      if (typeof renderGameDetailView === 'function') renderGameDetailView(true);
       if (selectedGameForModal) {
         document.getElementById('gmodal-price-sec').textContent = formatCLP(selectedGameForModal.precioSecundaria);
         document.getElementById('gmodal-price-prim').textContent = formatCLP(selectedGameForModal.precioPrimaria);
@@ -1381,7 +1381,7 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   renderCatalog();
 }
 
-function renderCatalog() {
+function renderCatalog(animatePrices = false) {
   const grid = document.getElementById('games-grid');
   const countLabel = document.getElementById('games-count');
   if (!grid) return;
@@ -1454,11 +1454,13 @@ function renderCatalog() {
     card.style.transform = 'none';
   });
 
-  document.querySelectorAll('.game-card .current-price').forEach(el => {
-    el.classList.remove('price-anim-pop');
-    void el.offsetWidth;
-    el.classList.add('price-anim-pop');
-  });
+  if (animatePrices) {
+    document.querySelectorAll('.game-card .current-price').forEach(el => {
+      el.classList.remove('price-anim-pop');
+      void el.offsetWidth;
+      el.classList.add('price-anim-pop');
+    });
+  }
 }
 
 // Observador para animar tarjetas al scroll (Aparecer gradualmente al estar en vista)
@@ -1562,14 +1564,26 @@ function handleLicenseSelection(e) {
   const bullets = ACCOUNT_CONDITIONS[selectedLicenseType];
 
   const infoBox = document.getElementById('license-info-box');
-  infoBox.innerHTML = `
-    <ul class="license-bullets">
-      ${bullets.map(b => `<li>${b}</li>`).join('')}
-    </ul>
-  `;
+  if (infoBox) {
+    infoBox.innerHTML = `
+      <ul class="license-bullets">
+        ${bullets.map(b => `<li>${b}</li>`).join('')}
+      </ul>
+    `;
+  }
 
-  document.getElementById('gmodal-add-btn').disabled = false;
-  document.getElementById('gmodal-buy-btn').disabled = false;
+  const addBtn = document.getElementById('gmodal-add-btn');
+  const buyBtn = document.getElementById('gmodal-buy-btn');
+  if (addBtn) addBtn.disabled = false;
+  if (buyBtn) buyBtn.disabled = false;
+
+  const targetPriceId = selectedLicenseType === 'secundaria' ? 'gmodal-price-sec' : 'gmodal-price-prim';
+  const priceElem = document.getElementById(targetPriceId);
+  if (priceElem) {
+    priceElem.classList.remove('price-anim-pop');
+    void priceElem.offsetWidth;
+    priceElem.classList.add('price-anim-pop');
+  }
 }
 
 function handleAddSelectedLicenseToCart() {
@@ -2553,22 +2567,30 @@ function animateButtonSuccess(btn, successText = '✓ ¡Listo!') {
 }
 
 // --- SMART STICKY NAVBAR SCROLL HANDLER ---
-let lastScrollY = window.scrollY;
+let lastScrollY = Math.max(0, window.scrollY);
+let isNavHidden = false;
+
 window.addEventListener('scroll', () => {
   const navbar = document.querySelector('.navbar');
   if (!navbar) return;
-  const currentScrollY = window.scrollY;
+  const currentScrollY = Math.max(0, window.scrollY);
+  const delta = currentScrollY - lastScrollY;
 
-  if (currentScrollY > 150) {
-    if (currentScrollY > lastScrollY + 5) {
-      navbar.classList.add('nav-hidden');
-    } else if (currentScrollY < lastScrollY - 5) {
-      navbar.classList.remove('nav-hidden');
-      navbar.classList.add('nav-scrolled');
-    }
-  } else {
+  if (currentScrollY <= 15) {
     navbar.classList.remove('nav-hidden');
     navbar.classList.remove('nav-scrolled');
+    isNavHidden = false;
+  } else if (delta > 4 && currentScrollY > 60) {
+    if (!isNavHidden) {
+      navbar.classList.add('nav-hidden');
+      isNavHidden = true;
+    }
+  } else if (delta < -2) {
+    if (isNavHidden) {
+      navbar.classList.remove('nav-hidden');
+      navbar.classList.add('nav-scrolled');
+      isNavHidden = false;
+    }
   }
 
   lastScrollY = currentScrollY;
@@ -2963,3 +2985,91 @@ document.addEventListener('visibilitychange', () => {
     fetchCatalog();
   }
 });
+
+// --- MODALES ESTÉTICOS DE FOOTER (Sobre Nosotros y Términos y Condiciones) ---
+function openAboutUsModal() {
+  let backdrop = document.getElementById('about-us-modal-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'about-us-modal-backdrop';
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal-card" style="max-width: 580px; padding: 2.2rem; background: var(--bg-card, #111827); border: 1px solid rgba(230, 0, 18, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: modalFadeIn 0.25s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">
+          <h3 style="margin: 0; color: #fff; font-size: 1.4rem; display: flex; align-items: center; gap: 0.6rem;">
+            <span>🎮</span> Sobre ZonaSwitchChile
+          </h3>
+          <button type="button" onclick="closeAboutUsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        <div style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 0.9rem;">
+          <p><strong>ZonaSwitchChile</strong> es tu tienda de confianza en Chile para la adquisición de juegos digitales de Nintendo Switch al mejor precio del mercado.</p>
+          <p>Nos especializamos en brindar licencias <strong>100% digitales y originales</strong> (Cuentas Primarias y Secundarias), directamente descargables desde Nintendo eShop con máximo ahorro y soporte permanente.</p>
+          <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; color: #e2e8f0;">
+            <li>⚡ <strong>Entrega Digital 24/7:</strong> Recibe tu juego de forma inmediata tras completar la compra.</li>
+            <li>🛡️ <strong>Garantía VIP Permanente:</strong> Atención personalizada y garantía total de uso.</li>
+            <li>💳 <strong>Múltiples Medios de Pago:</strong> Transferencias y pago online seguro en pesos chilenos (CLP).</li>
+          </ul>
+        </div>
+        <div style="margin-top: 1.6rem; text-align: right;">
+          <button type="button" onclick="closeAboutUsModal()" class="btn-primary" style="padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">Entendido</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeAboutUsModal();
+    });
+  }
+  backdrop.classList.add('active');
+}
+
+function closeAboutUsModal() {
+  const backdrop = document.getElementById('about-us-modal-backdrop');
+  if (backdrop) backdrop.classList.remove('active');
+}
+
+function openTermsModal() {
+  let backdrop = document.getElementById('terms-modal-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'terms-modal-backdrop';
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal-card" style="max-width: 640px; padding: 2.2rem; background: var(--bg-card, #111827); border: 1px solid rgba(230, 0, 18, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 85vh; overflow-y: auto; animation: modalFadeIn 0.25s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">
+          <h3 style="margin: 0; color: #fff; font-size: 1.4rem; display: flex; align-items: center; gap: 0.6rem;">
+            <span>📜</span> Términos y Condiciones
+          </h3>
+          <button type="button" onclick="closeTermsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+        <div style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">1. Licencias Digitales</h4>
+            <p style="margin: 0;">ZonaSwitchChile entrega cuentas digitales originales de Nintendo eShop en dos modalidades: Cuenta Primaria (juegas desde tu usuario personal) y Cuenta Secundaria (juegas desde el perfil entregado con conexión a internet).</p>
+          </div>
+          <div>
+            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">2. Garantía y Uso Correcto</h4>
+            <p style="margin: 0;">Todas nuestras ventas incluyen garantía total. Está estrictamente prohibido modificar las credenciales de acceso de las cuentas suministradas o compartirlas fuera de las instrucciones entregadas.</p>
+          </div>
+          <div>
+            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">3. Deslinde de Afiliación</h4>
+            <p style="margin: 0;">ZonaSwitchChile es un comercio digital independiente y NO se encuentra afiliado, patrocinado ni asociado oficialmente a Nintendo Co., Ltd.</p>
+          </div>
+        </div>
+        <div style="margin-top: 1.6rem; text-align: right;">
+          <button type="button" onclick="closeTermsModal()" class="btn-primary" style="padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">Aceptar y Cerrar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeTermsModal();
+    });
+  }
+  backdrop.classList.add('active');
+}
+
+function closeTermsModal() {
+  const backdrop = document.getElementById('terms-modal-backdrop');
+  if (backdrop) backdrop.classList.remove('active');
+}
