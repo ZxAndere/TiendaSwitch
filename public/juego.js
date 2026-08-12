@@ -485,7 +485,7 @@ function renderRelatedGames() {
     const orig = Number(g.precioOriginal) || (Number(g.precioSecundaria) * 1.5);
     const cur = Number(g.precioSecundaria);
     return `
-      <article class="game-card in-view" onclick="window.location.href='juego.html?id=${g.id}'">
+      <article class="game-card in-view" onclick="window.location.href='/juego?id=${g.id}'">
         <div class="card-media">
           <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy">
           <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>

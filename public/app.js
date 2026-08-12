@@ -1419,7 +1419,7 @@ function renderCatalog(animatePrices = false) {
 
   grid.innerHTML = filtered.map((game) => {
     const slug = slugify(game.titulo || '');
-    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
+    const targetUrl = `/juego?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     const origPrice = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
     return `
     <a href="${targetUrl}" class="game-card in-view" onclick="openGameModal(${game.id}); return false;">
@@ -1507,9 +1507,9 @@ function openGameModal(gameId) {
   const game = Array.isArray(catalog) ? catalog.find(g => Number(g.id) === Number(gameId)) : null;
   if (game && game.titulo) {
     const slug = slugify(game.titulo);
-    window.location.href = `juego.html?id=${gameId}&slug=${encodeURIComponent(slug)}`;
-  } else if (gameId) {
-    window.location.href = `juego.html?id=${gameId}`;
+    window.location.href = `/juego?id=${gameId}&slug=${encodeURIComponent(slug)}`;
+  } else {
+    window.location.href = `/juego?id=${gameId}`;
   }
 }
 
@@ -2456,7 +2456,7 @@ function handleSearchAutocomplete(inputEl, dropdownId) {
 
   dropdown.innerHTML = matches.map(game => {
     const slug = slugify(game.titulo || '');
-    const targetUrl = `juego.html?id=${game.id}&slug=${encodeURIComponent(slug)}`;
+    const targetUrl = `/juego?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     return `
     <a href="${targetUrl}" class="autocomplete-item" onclick="openGameModal(${game.id}); return false;" style="text-decoration: none; color: inherit; display: flex;">
       <img class="autocomplete-thumb" src="${escapeHTML(game.imagen)}" alt="${escapeHTML(game.titulo)}">
@@ -3031,7 +3031,7 @@ function closeAboutUsModal() {
 }
 
 function openTermsModal() {
-  window.location.href = 'terminos.html';
+  window.location.href = '/terminos';
 }
 
 function closeTermsModal() {

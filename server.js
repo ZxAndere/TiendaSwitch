@@ -104,8 +104,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Servir archivos estáticos con cabeceras anti-caché seguras
+// Middleware para redirigir URLs con .html a URLs limpias (SEO & Clean URLs)
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html')) {
+    const cleanPath = req.path.slice(0, -5);
+    const queryString = req.url.includes('?') ? req.url.slice(req.path.length) : '';
+    if (cleanPath === '/index') {
+      return res.redirect(301, '/' + queryString);
+    }
+    return res.redirect(301, cleanPath + queryString);
+  }
+  next();
+});
+
+// Servir archivos estáticos con cabeceras anti-caché seguras y extensión html transparente
 app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html'],
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -115,10 +129,15 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+// Rutas explícitas de URLs limpias
+app.get('/faq', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'faq.html')));
+app.get('/terminos', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'terminos.html')));
+app.get('/juego', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'juego.html')));
+
 // Servir juego.html para cualquier ruta limpia SEO de producto (ej: /Mario-Kart-8-Deluxe)
 app.get('/:slug', (req, res, next) => {
   const slug = req.params.slug;
-  if (!slug || slug.startsWith('api') || slug.includes('.') || ['favicon', 'logo', 'data', 'auth', 'user', 'admin'].some(x => slug.toLowerCase().includes(x))) {
+  if (!slug || slug.startsWith('api') || slug.includes('.') || ['faq', 'terminos', 'juego', 'favicon', 'logo', 'data', 'auth', 'user', 'admin'].some(x => slug.toLowerCase() === x.toLowerCase())) {
     return next();
   }
 
