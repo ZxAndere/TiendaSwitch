@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Detalle del Juego | ZonaSwitchChile</title>
+  <meta name="description" content="Detalle del juego en formato digital para Nintendo Switch en ZonaSwitchChile. Cuentas Primarias y Secundarias 100% garantizadas.">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS Principal y Estilos de Detalle Pro -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="juego.css">
+</head>
+<body>
+  <!-- Notificaciones Toast -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Barra de Navegación Sticky -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="/" class="logo">
+        <img src="favicon.png" alt="ZonaSwitchChile Logo" class="brand-logo-img">
+        <div class="logo-text desktop-only">
+          <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <!-- Buscador integrado -->
+        <div class="header-search-box desktop-only">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Buscar otro juego..." aria-label="Buscar juegos" autocomplete="off">
+          <div class="search-autocomplete-dropdown" id="search-autocomplete-dropdown"></div>
+        </div>
+
+        <!-- Selector de Moneda -->
+        <div class="currency-select-wrapper desktop-only">
+          <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
+            <option value="CLP">Chile (CLP)</option>
+            <option value="USD">Estados Unidos (USD)</option>
+            <option value="CAD">Canadá (CAD)</option>
+            <option value="MXN">México (MXN)</option>
+            <option value="BRL">Brasil (BRL)</option>
+            <option value="ARS">Argentina (ARS)</option>
+            <option value="COP">Colombia (COP)</option>
+            <option value="PEN">Perú (PEN)</option>
+            <option value="UYU">Uruguay (UYU)</option>
+            <option value="CRC">Costa Rica (CRC)</option>
+            <option value="EUR">España (EUR)</option>
+            <option value="HNL">Honduras (HNL)</option>
+          </select>
+        </div>
+
+        <a href="/faq" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
+          <span>❓ FAQ</span>
+        </a>
+
+        <div id="user-nav-area" class="user-nav-area desktop-only">
+          <button class="nav-auth-btn login-btn" id="open-login-btn">Iniciar Sesión</button>
+          <button class="nav-auth-btn register-btn" id="open-register-btn">Registrarse</button>
+        </div>
+
+        <button class="cart-trigger-btn" id="cart-btn" aria-label="Ver Carrito de Compras">
+          <svg class="cart-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="21" r="1"></circle>
+            <circle cx="19" cy="21" r="1"></circle>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+          </svg>
+          <span class="cart-btn-text">Carrito</span>
+          <span class="cart-badge" id="cart-count">0</span>
+        </button>
+
+        <button class="mobile-menu-trigger-btn mobile-only" id="mobile-menu-btn" aria-label="Abrir Menú">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MENÚ LATERAL MÓVIL -->
+  <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+  <aside class="mobile-nav-drawer" id="mobile-nav-drawer" aria-hidden="true">
+    <div class="mobile-drawer-header">
+      <div class="mobile-drawer-brand">
+        <img src="logo.jpg" alt="Logo" class="mobile-brand-logo">
+        <h3>ZonaSwitchChile</h3>
+      </div>
+      <button class="drawer-close-btn" id="close-mobile-drawer" aria-label="Cerrar Menú">&times;</button>
+    </div>
+    <div class="mobile-drawer-body">
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">🔍 Buscar en el Catálogo</label>
+        <div class="mobile-search-box">
+          <input type="text" id="mobile-search-input" placeholder="Buscar juego..." autocomplete="off">
+          <div class="search-autocomplete-dropdown" id="mobile-search-autocomplete-dropdown"></div>
+        </div>
+      </div>
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">💱 Moneda</label>
+        <select id="mobile-currency-select" class="mobile-currency-select">
+          <option value="CLP">Chile (CLP)</option>
+          <option value="USD">Estados Unidos (USD)</option>
+          <option value="CAD">Canadá (CAD)</option>
+          <option value="MXN">México (MXN)</option>
+          <option value="BRL">Brasil (BRL)</option>
+          <option value="ARS">Argentina (ARS)</option>
+          <option value="COP">Colombia (COP)</option>
+          <option value="PEN">Perú (PEN)</option>
+          <option value="UYU">Uruguay (UYU)</option>
+          <option value="CRC">Costa Rica (CRC)</option>
+          <option value="EUR">España (EUR)</option>
+          <option value="HNL">Honduras (HNL)</option>
+        </select>
+      </div>
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">ℹ️ Información</label>
+        <a href="/faq" class="mobile-drawer-link">❓ Preguntas Frecuentes (FAQ)</a>
+      </div>
+      <div class="mobile-drawer-section">
+        <label class="mobile-section-label">👤 Mi Cuenta</label>
+        <div id="mobile-user-nav-container" class="mobile-user-container"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL VISTA DEDICADA DETALLE PRO LEVEL -->
+  <main class="juego-detail-wrapper">
+    <div class="juego-detail-container">
+      
+      <!-- Breadcrumbs de Navegación & Botón Volver -->
+      <div class="jd-breadcrumbs-bar">
+        <a href="/" class="jd-back-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Volver al Catálogo</span>
+        </a>
+
+        <nav class="jd-breadcrumbs" aria-label="Navegación secundaria">
+          <a href="/">Inicio</a>
+          <span class="sep">›</span>
+          <span>Nintendo Switch</span>
+          <span class="sep">›</span>
+          <span id="jd-crumb-category">Categoría</span>
+          <span class="sep">›</span>
+          <strong id="jd-crumb-title" class="active">Cargando juego...</strong>
+        </nav>
+      </div>
+
+      <!-- GRID PRINCIPAL DE 2 COLUMNAS RESPONSIVE (55% / 45%) -->
+      <div class="jd-main-grid">
+        
+        <!-- COLUMNA IZQUIERDA: GALERÍA GLASSMORPHISM, CARROUSEL Y TRÁILER (55%) -->
+        <div class="jd-media-col">
+          <!-- Hero Poster Principal con Glassmorphism y Badge de Descuento Animado -->
+          <div class="jd-hero-card">
+            <div id="jd-discount-badge" class="jd-discount-badge">-0% OFF</div>
+            <div class="jd-hero-img-container">
+              <img id="jd-hero-img" src="" alt="Portada del Juego" class="jd-hero-img">
+            </div>
+            
+            <div class="jd-hero-footer-bar">
+              <span class="jd-hero-meta-item">🎮 Nintendo Switch</span>
+              <span class="jd-hero-meta-item" id="jd-hero-size-badge">📦 0 GB</span>
+              <span class="jd-hero-meta-item highlight-cyan">⚡ 100% Garantizado</span>
+            </div>
+          </div>
+
+          <!-- Tira de Miniaturas (Screenshots / Gameplay Carousel - Max 5 Visibles con Desplazamiento por Flechas) -->
+          <div class="jd-gallery-strip-container">
+            <div class="jd-gallery-header-row">
+              <h4 class="jd-gallery-title" style="margin-bottom: 0;">📸 Capturas y Galería de Gameplay</h4>
+              <div class="jd-gallery-arrows-box" id="jd-gallery-arrows-box" style="display: none;">
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-gallery-prev-btn" onclick="slideThumbnails(-1)" title="Anterior">‹</button>
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-gallery-next-btn" onclick="slideThumbnails(1)" title="Siguiente">›</button>
+              </div>
+            </div>
+            <div class="jd-thumbnails-viewport">
+              <div class="jd-thumbnails-strip" id="jd-thumbnails-strip">
+                <!-- Miniaturas inyectadas dinámicamente por JS (5 visibles simultáneamente) -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Tráiler Embebido Directamente en la Página (Múltiples Tráilers con Navegación) -->
+          <div class="jd-video-trailer-section" id="jd-video-trailer-section">
+            <div class="jd-video-header-row">
+              <h4 class="jd-gallery-title" style="margin-bottom: 0;" id="jd-video-title-label">🎬 Tráiler Oficial de Gameplay</h4>
+              <div class="jd-video-arrows-box" id="jd-video-arrows-box" style="display: none;">
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-video-prev-btn" onclick="switchTrailerVideo(-1)" title="Tráiler Anterior">‹</button>
+                <span id="jd-video-counter-badge" style="font-size: 0.8rem; font-weight: 700; color: var(--joycon-cyan); margin: 0 4px;">1/1</span>
+                <button type="button" class="jd-gallery-arrow-btn" id="jd-video-next-btn" onclick="switchTrailerVideo(1)" title="Tráiler Siguiente">›</button>
+              </div>
+            </div>
+            <div class="jd-video-wrapper" id="jd-video-wrapper">
+              <iframe id="jd-video-iframe" src="" title="Tráiler de Gameplay" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: PANEL DE COMPRA Y SELECCIÓN DE LICENCIA (45%) -->
+        <div class="jd-info-col">
+          <!-- Encabezado del Juego -->
+          <div class="jd-header-block">
+            <span class="jd-category-pill" id="jd-category-tag">Categoría</span>
+            <h1 class="jd-title" id="jd-title">Cargando título...</h1>
+            
+            <div class="jd-meta-pills-row">
+              <span class="jd-pill"><span class="pill-icon">📦</span> <span id="jd-peso-val">0 GB</span></span>
+              <span class="jd-pill"><span class="pill-icon">🎮</span> Digital Switch</span>
+              <span class="jd-pill green"><span class="pill-icon">⚡</span> Entrega Inmediata</span>
+            </div>
+          </div>
+
+          <!-- Visualizador de Moneda y Precios -->
+          <div class="jd-price-box">
+            <div class="jd-price-header">
+              <span class="jd-price-label">Precio Oferta ZonaSwitch:</span>
+              <span class="jd-savings-tag" id="jd-savings-tag">¡Ahorras $0 CLP!</span>
+            </div>
+            
+            <div class="jd-price-row">
+              <span class="jd-price-current" id="jd-price-current">$0 CLP</span>
+              <span class="jd-price-old" id="jd-price-old">$0 CLP</span>
+            </div>
+            <p class="jd-price-subtext">Impuestos incluidos. Pago seguro mediante Webpay, Mercado Pago o CuentaRUT.</p>
+          </div>
+
+          <!-- Selector Interactivo de Licencias (Cards) -->
+          <div class="jd-license-section">
+            <label class="jd-section-label">
+              <span>Selecciona Tipo de Cuenta</span>
+              <span class="req-star">* Obligatorio</span>
+            </label>
+
+            <div class="jd-license-grid">
+              <!-- Tarjeta 1: Cuenta Secundaria -->
+              <div class="jd-lic-card" id="jd-card-secundaria" onclick="selectDetailLicense('secundaria')">
+                <div class="jd-lic-header">
+                  <div class="jd-lic-radio-group">
+                    <input type="radio" name="jd_license_type" id="jd-radio-secundaria" value="secundaria">
+                    <span class="jd-lic-title">Cuenta Secundaria</span>
+                  </div>
+                  <span class="jd-lic-price" id="jd-lic-price-sec">$0 CLP</span>
+                </div>
+                <div class="jd-lic-badge sec">Económica</div>
+                <p class="jd-lic-desc">Juegas directamente desde el usuario entregado por la tienda. Requiere conexión permanente a internet.</p>
+              </div>
+
+              <!-- Tarjeta 2: Cuenta Primaria (Recomendada) -->
+              <div class="jd-lic-card" id="jd-card-primaria" onclick="selectDetailLicense('primaria')">
+                <div class="jd-lic-header">
+                  <div class="jd-lic-radio-group">
+                    <input type="radio" name="jd_license_type" id="jd-radio-primaria" value="primaria">
+                    <span class="jd-lic-title">Cuenta Primaria</span>
+                  </div>
+                  <span class="jd-lic-price" id="jd-lic-price-prim">$0 CLP</span>
+                </div>
+                <div class="jd-lic-badge prim">🔥 MÁS POPULAR</div>
+                <p class="jd-lic-desc">Juegas con tu perfil personal de siempre. Compatible con modo online y offline sin restricciones.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desplegable / Acordeón Informativo de Licencia -->
+          <div class="jd-accordion-box">
+            <button type="button" class="jd-accordion-header" id="jd-accordion-btn" onclick="toggleLicenseAccordion()">
+              <span>ℹ️ ¿Qué incluye la opción elegida (<strong id="jd-accordion-selected-label">Cuenta Primaria</strong>)?</span>
+              <span class="jd-accordion-arrow" id="jd-accordion-arrow">▼</span>
+            </button>
+            <div class="jd-accordion-body" id="jd-accordion-body">
+              <div id="jd-accordion-content-text">
+                <!-- Se llena dinámicamente según la cuenta activa -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de Acción Inmediata (CTAs) -->
+          <div class="jd-cta-actions">
+            <button type="button" class="jd-cta-btn btn-add-cart" id="jd-btn-add-cart" onclick="handleAddDetailToCart()">
+              <span class="btn-icon">🛒</span>
+              <span class="btn-text">AÑADIR AL CARRITO</span>
+            </button>
+            <button type="button" class="jd-cta-btn btn-buy-now" id="jd-btn-buy-now" onclick="handleDirectDetailCheckout()">
+              <span class="btn-icon">⚡</span>
+              <span class="btn-text">COMPRAR AHORA</span>
+            </button>
+          </div>
+
+          <!-- Caja de Garantías VIP (Borde Neón de Seguridad) -->
+          <div class="jd-vip-guarantee-box">
+            <div class="vip-box-header">
+              <span class="vip-badge-icon">🛡️</span>
+              <h4 class="vip-title">Garantía VIP ZonaSwitchChile</h4>
+            </div>
+            <ul class="vip-benefits-list">
+              <li>
+                <span class="bullet">⚡</span>
+                <div>
+                  <strong>Entrega Digital Inmediata:</strong> Credenciales y guía paso a paso enviadas a tu correo en menos de 5 minutos.
+                </div>
+              </li>
+              <li>
+                <span class="bullet">🛡️</span>
+                <div>
+                  <strong>Licencia 100% Original:</strong> Juegos oficiales descargados directo de Nintendo eShop con garantía anti-bloqueos.
+                </div>
+              </li>
+              <li>
+                <span class="bullet">💬</span>
+                <div>
+                  <strong>Soporte Personalizado 24/7:</strong> Asistencia prioritaria por WhatsApp para resolver dudas durante la instalación.
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- SECCIÓN DE PESTAÑAS INTERACTIVAS (TABS) -->
+      <section class="jd-tabs-section">
+        <div class="jd-tabs-header">
+          <button type="button" class="jd-tab-btn active" data-tab="jd-tab-desc" onclick="switchDetailTab('jd-tab-desc')">
+            📜 Descripción del Juego
+          </button>
+          <button type="button" class="jd-tab-btn" data-tab="jd-tab-install" onclick="switchDetailTab('jd-tab-install')">
+            🎮 Paso a Paso de Instalación
+          </button>
+          <button type="button" class="jd-tab-btn" data-tab="jd-tab-reqs" onclick="switchDetailTab('jd-tab-reqs')">
+            📋 Requisitos e Idiomas
+          </button>
+        </div>
+
+        <div class="jd-tabs-body">
+          <!-- Tab 1: Descripción -->
+          <div class="jd-tab-pane active" id="jd-tab-desc">
+            <h3 class="tab-pane-title">Acerca de este Juego</h3>
+            <div class="tab-pane-text" id="jd-desc-content">
+              Cargando descripción...
+            </div>
+          </div>
+
+          <!-- Tab 2: Paso a Paso de Instalación -->
+          <div class="jd-tab-pane" id="jd-tab-install">
+            <h3 class="tab-pane-title">Guía Fácil de Instalación en Nintendo Switch</h3>
+            <p class="tab-pane-intro">Al completar tu compra, recibirás un correo automático con los datos de acceso y estas sencillas instrucciones:</p>
+            
+            <div class="install-steps-grid">
+              <div class="install-step-card">
+                <div class="step-num">1</div>
+                <h4>Crear Nuevo Usuario</h4>
+                <p>En el menú de tu Nintendo Switch, ve a <em>Configuración de la Consola ➔ Usuarios ➔ Añadir Usuario</em>.</p>
+              </div>
+
+              <div class="install-step-card">
+                <div class="step-num">2</div>
+                <h4>Vincular Cuenta</h4>
+                <p>Ingresa la cuenta de Nintendo y contraseña proporcionadas por ZonaSwitchChile en tu correo de entrega.</p>
+              </div>
+
+              <div class="install-step-card">
+                <div class="step-num">3</div>
+                <h4>Entrar a Nintendo eShop</h4>
+                <p>Abre la eShop con la nueva cuenta creada, dirígete a tu Perfil (esquina superior derecha) ➔ <em>Volver a Descargar</em>.</p>
+              </div>
+
+              <div class="install-step-card">
+                <div class="step-num">4</div>
+                <h4>¡A Jugar!</h4>
+                <p>Presiona descargar. En <strong>Cuenta Primaria</strong> juegas desde tu usuario de siempre. En <strong>Cuenta Secundaria</strong> juegas desde el usuario creado.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 3: Requisitos e Idiomas -->
+          <div class="jd-tab-pane" id="jd-tab-reqs">
+            <h3 class="tab-pane-title">Ficha Técnica y Especificaciones</h3>
+            <div class="specs-table-wrapper">
+              <table class="specs-table">
+                <tbody>
+                  <tr>
+                    <th>Plataforma</th>
+                    <td>Nintendo Switch (Modelos V1, V2, OLED y Lite)</td>
+                  </tr>
+                  <tr>
+                    <th>Espacio Necesario</th>
+                    <td id="jd-spec-size">0 GB</td>
+                  </tr>
+                  <tr>
+                    <th>Categoría / Género</th>
+                    <td id="jd-spec-category">Acción / Aventura</td>
+                  </tr>
+                  <tr>
+                    <th>Modos de Juego</th>
+                    <td>Modo TV, Modo Semiportátil, Modo Portátil</td>
+                  </tr>
+                  <tr>
+                    <th>Idiomas Disponibles</th>
+                    <td>Español, Inglés, Francés, Alemán, Italiano, Japonés</td>
+                  </tr>
+                  <tr>
+                    <th>Garantía de Tienda</th>
+                    <td>Permanente y Soporte Postventa 100% Garantizado</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN DE JUEGOS RELACIONADOS / RECOMENDADOS -->
+      <section class="jd-related-section">
+        <div class="section-header">
+          <h2 class="section-title">🎮 Juegos Relacionados que te Pueden Gustar</h2>
+          <p class="section-subtitle">Explora más títulos populares de Nintendo Switch en oferta</p>
+        </div>
+
+        <div class="jd-related-grid" id="jd-related-grid">
+          <!-- Juegos sugeridos por JS -->
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- MODAL DE TRÁILER EN VÍDEO -->
+  <div class="modal-backdrop" id="trailer-modal-backdrop">
+    <div class="trailer-modal-card">
+      <button class="modal-close-x" id="close-trailer-modal">&times;</button>
+      <div class="trailer-video-wrapper" id="trailer-video-wrapper">
+        <!-- Embed de video iframe -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALES DE AUTENTICACIÓN Y MI CUENTA -->
+  <!-- MODAL INICIO SESIÓN -->
+  <div class="modal-backdrop" id="login-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-login-modal">&times;</button>
+      <div class="auth-modal-header">
+        <img src="logo.jpg" alt="Logo" class="auth-logo">
+        <h3>Iniciar Sesión en ZonaSwitchChile</h3>
+        <p>Accede con tu cuenta registrada</p>
+      </div>
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="login-username">Usuario</label>
+          <input type="text" id="login-username" placeholder="Ingresa tu usuario" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="auth-error-msg" id="login-error-msg"></div>
+        <button type="submit" class="auth-submit-btn">Ingresar a Mi Cuenta</button>
+      </form>
+      <div class="auth-switch-text">
+        ¿Aún no tienes cuenta? <a href="#" id="switch-to-register">Regístrate gratis aquí</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL REGISTRO -->
+  <div class="modal-backdrop" id="register-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-register-modal">&times;</button>
+      <div class="auth-modal-header">
+        <img src="logo.jpg" alt="Logo" class="auth-logo">
+        <h3>Crear Cuenta en ZonaSwitchChile</h3>
+        <p>Enviaremos un código de verificación a tu correo</p>
+      </div>
+      <form id="register-form" class="auth-form">
+        <div class="form-group">
+          <label for="register-username">Nombre de Usuario</label>
+          <input type="text" id="register-username" placeholder="Tu usuario único" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="register-email">Correo Electrónico</label>
+          <input type="email" id="register-email" placeholder="ejemplo@correo.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="register-password">Contraseña</label>
+          <input type="password" id="register-password" placeholder="Mínimo 6 caracteres y 1 número" required autocomplete="new-password">
+        </div>
+        <div class="pwd-rules-box">
+          <div class="rule-item" id="rule-length">❌ Mínimo 6 letras / caracteres</div>
+          <div class="rule-item" id="rule-number">❌ Al menos 1 número</div>
+        </div>
+        <div class="auth-error-msg" id="register-error-msg"></div>
+        <button type="submit" class="auth-submit-btn" id="register-submit-btn" disabled>Continuar y Enviar Código</button>
+      </form>
+      <div class="auth-switch-text">
+        ¿Ya estás registrado? <a href="#" id="switch-to-login">Inicia sesión aquí</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL OTP VERIFY -->
+  <div class="modal-backdrop" id="verify-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-verify-modal">&times;</button>
+      <div class="auth-modal-header">
+        <div class="otp-badge-icon">📩</div>
+        <h3>Código de Verificación</h3>
+        <p>Ingresa el código enviado a <strong id="verify-email-target" class="highlight-cyan">-</strong></p>
+      </div>
+      <form id="verify-otp-form" class="auth-form">
+        <div class="form-group">
+          <input type="text" id="verify-code-input" maxlength="6" placeholder="0 0 0 0 0 0" required autocomplete="one-time-code" class="otp-input-large">
+        </div>
+        <div class="auth-error-msg" id="verify-error-msg"></div>
+        <button type="submit" class="auth-submit-btn" id="verify-submit-btn">Verificar y Crear Cuenta</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE MIS ÓRDENES -->
+  <div class="modal-backdrop" id="user-orders-modal-backdrop">
+    <div class="user-modal-card wide">
+      <button class="modal-close-x" id="close-user-orders-modal">&times;</button>
+      <div class="user-modal-header">
+        <h3>📦 Mis Órdenes de Compra</h3>
+        <p>Historial de tus juegos adquiridos</p>
+      </div>
+      <div class="user-orders-body" id="user-orders-container"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DE OPCIONES DE CUENTA -->
+  <div class="modal-backdrop" id="user-settings-modal-backdrop">
+    <div class="user-modal-card">
+      <button class="modal-close-x" id="close-user-settings-modal">&times;</button>
+      <div class="user-modal-header">
+        <h3>⚙️ Opciones de Cuenta</h3>
+        <p>Administra tu usuario, correo electrónico y contraseña</p>
+      </div>
+      
+      <div class="settings-tabs">
+        <button type="button" class="tab-btn active" data-tab="tab-username">Usuario</button>
+        <button type="button" class="tab-btn" data-tab="tab-email">Correo</button>
+        <button type="button" class="tab-btn" data-tab="tab-password">Contraseña</button>
+        <button type="button" class="tab-btn admin-only-tab" id="admin-tab-btn" data-tab="tab-admin" style="display: none;">🛠️ Opciones de Administrador</button>
+      </div>
+
+      <div class="settings-tab-content">
+        <form id="tab-username" class="settings-form tab-pane active">
+          <div class="form-group">
+            <label>Nuevo Nombre de Usuario</label>
+            <input type="text" id="new-username-input" placeholder="Ingresa tu nuevo usuario" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label>Contraseña Actual (para confirmar)</label>
+            <input type="password" id="username-current-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <div class="auth-error-msg" id="change-username-error"></div>
+          <button type="submit" class="auth-submit-btn">Guardar Nuevo Usuario</button>
+        </form>
+
+        <form id="tab-email" class="settings-form tab-pane">
+          <div class="form-group">
+            <label>Nuevo Correo Electrónico</label>
+            <input type="email" id="new-email-input" placeholder="nuevo@correo.com" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label>Contraseña Actual (para confirmar)</label>
+            <input type="password" id="email-current-password" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+          <div class="auth-error-msg" id="change-email-error"></div>
+          <button type="submit" class="auth-submit-btn">Enviar Código de Verificación</button>
+        </form>
+
+        <form id="tab-password" class="settings-form tab-pane">
+          <div class="form-group">
+            <label>Nueva Contraseña (mínimo 6 caracteres y 1 número)</label>
+            <input type="password" id="new-password-input" placeholder="••••••••" required autocomplete="new-password">
+          </div>
+          <div class="auth-error-msg" id="change-password-error"></div>
+          <button type="submit" class="auth-submit-btn">Enviar Código de Verificación</button>
+        </form>
+
+        <div id="tab-admin" class="settings-form tab-pane">
+          <div class="admin-tab-header">
+            <h4>🛠️ Opciones de Administrador</h4>
+            <p>Gestiona los juegos del catálogo, cupones y fotos.</p>
+          </div>
+          <div class="admin-subtabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button type="button" class="tab-btn active" id="btn-subtab-games" onclick="switchAdminSubtab('games')">🎮 Juegos</button>
+            <button type="button" class="tab-btn" id="btn-subtab-coupons" onclick="switchAdminSubtab('coupons')">🎟️ Cupones</button>
+            <button type="button" class="tab-btn" id="btn-subtab-gallery" onclick="switchAdminSubtab('gallery')">📸 Galería de Clientes</button>
+          </div>
+          <div id="admin-view-games">
+            <div class="admin-create-game-bar" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+              <div>
+                <strong style="color:#fff; font-size:0.95rem;">Catálogo de Juegos</strong>
+                <p style="margin:0.2rem 0 0; color:var(--text-muted); font-size:0.78rem;">Los nuevos juegos quedan guardados en MongoDB cuando está conectado.</p>
+              </div>
+              <button type="button" id="open-create-game-modal" class="auth-submit-btn" style="width:auto; margin:0; padding:0.65rem 1rem;">➕ Crear Juego</button>
+            </div>
+            <div class="admin-search-box-wrapper">
+              <input type="text" id="admin-game-search" placeholder="🔍 Filtrar juegos..." class="admin-search-input">
+            </div>
+            <div class="admin-games-container" id="admin-games-container"></div>
+          </div>
+          <div id="admin-view-coupons" style="display: none;">
+            <form id="admin-add-coupon-form" class="settings-form" style="margin-bottom: 1.25rem;">
+              <h5 style="color: var(--joycon-cyan); font-size: 0.95rem; font-weight: 800;">➕ Crear Nuevo Código de Descuento</h5>
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label>Nombre del Código</label>
+                  <input type="text" id="admin-coupon-code" placeholder="Ej: SWITCH50" style="text-transform: uppercase;" required>
+                </div>
+                <div class="form-group">
+                  <label>Tipo de Descuento</label>
+                  <select id="admin-coupon-type" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #ffffff; padding: 0.65rem; border-radius: var(--radius-sm);">
+                    <option value="percent">Porcentaje (%)</option>
+                    <option value="fixed">Monto Fijo ($ CLP)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Valor / Cantidad</label>
+                  <input type="number" id="admin-coupon-value" min="1" placeholder="50" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Descripción del Cupón</label>
+                <input type="text" id="admin-coupon-desc" placeholder="Ej: 50% de descuento">
+              </div>
+              <div class="auth-error-msg" id="admin-coupon-error"></div>
+              <button type="submit" class="auth-submit-btn" id="save-coupon-btn">🎟️ Guardar Cupón Permanente</button>
+            </form>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+              <h5 style="color: #ffffff; font-size: 0.9rem; font-weight: 800; margin: 0;">Cupones Activos en la Tienda</h5>
+              <button type="button" class="coupon-toggle-btn" id="toggle-coupons-btn" onclick="toggleAdminCouponsVisibility()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-subtle); color: #ffffff; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer;">
+                👁️ Ver Cupones
+              </button>
+            </div>
+            <div class="admin-games-container" id="admin-coupons-items-container" style="display: none;"></div>
+          </div>
+          <div id="admin-view-gallery" style="display: none;">
+            <div class="admin-games-container" id="admin-gallery-items-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL OTP ACTUALIZACIÓN DATOS -->
+  <div class="modal-backdrop" id="update-otp-modal-backdrop">
+    <div class="auth-modal-card">
+      <button class="modal-close-x" id="close-update-otp-modal">&times;</button>
+      <div class="auth-modal-header">
+        <div class="otp-badge-icon">📩</div>
+        <h3>Confirmar Cambio de Datos</h3>
+        <p>Ingresa el código enviado a tu correo</p>
+      </div>
+      <form id="update-otp-form" class="auth-form">
+        <div class="form-group">
+          <input type="text" id="update-code-input" maxlength="6" placeholder="0 0 0 0 0 0" required autocomplete="one-time-code" class="otp-input-large">
+        </div>
+        <div class="auth-error-msg" id="update-otp-error-msg"></div>
+        <button type="submit" class="auth-submit-btn" id="update-otp-submit-btn">Verificar y Guardar Cambios</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CREACIÓN DE JUEGO (ADMIN) -->
+  <div class="modal-backdrop" id="game-create-modal-backdrop">
+    <div class="user-modal-card">
+      <button class="modal-close-x" type="button" id="close-game-create-modal">&times;</button>
+      <div class="user-modal-header"><h3>➕ Crear Nuevo Juego</h3><p>El juego se guardará en MongoDB y en el respaldo local.</p></div>
+      <form id="game-create-form" class="settings-form">
+        <div class="form-group-row"><div class="form-group"><label>Nombre / Título</label><input type="text" id="create-game-titulo" required maxlength="120"></div><div class="form-group"><label>Categoría</label><input type="text" id="create-game-categoria" required maxlength="80"></div></div>
+        <div class="form-group-row"><div class="form-group"><label>Precio Secundaria (CLP)</label><input type="number" id="create-game-secundaria" required min="0" step="1"></div><div class="form-group"><label>Precio Primaria (CLP)</label><input type="number" id="create-game-primaria" required min="0" step="1"></div><div class="form-group"><label>Precio Original (CLP)</label><input type="number" id="create-game-original" min="0" step="1"></div></div>
+        <div class="form-group-row"><div class="form-group"><label>Valoración</label><input type="number" id="create-game-rating" min="0" max="5" step="0.1" value="5"></div><div class="form-group"><label>Tamaño</label><input type="text" id="create-game-peso" maxlength="30"></div></div>
+        <div class="form-group-row"><div class="form-group"><label>Imagen principal</label><input type="url" id="create-game-imagen" required></div><div class="form-group"><label>Imagen de detalle</label><input type="url" id="create-game-imagen-detalle" required></div></div>
+        <div class="form-group"><label>Descripción corta</label><textarea id="create-game-descripcion" rows="2" required maxlength="500"></textarea></div>
+        <div class="form-group"><label>Descripción extensa</label><textarea id="create-game-resumen" rows="4" maxlength="2000"></textarea></div>
+        <div class="form-group-row"><div class="form-group"><label>URL de YouTube (opcional)</label><input type="url" id="create-game-youtube"></div><div class="form-group"><label>Imagen para correo (opcional)</label><input type="url" id="create-game-correo-imagen"></div></div>
+        <div class="form-group"><label>Texto del correo (opcional)</label><textarea id="create-game-correo-texto" rows="2" maxlength="1000"></textarea></div>
+        <div class="form-group"><label>Variantes de cuentas (opcional)</label><textarea id="create-game-cuentas" rows="4" placeholder="Una por línea: Cuenta / Contraseña / Código"></textarea></div>
+        <label style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0 1rem;color:#fff;font-weight:700;"><input type="checkbox" id="create-game-visible" checked> Mostrar en la tienda inmediatamente</label>
+        <div class="auth-error-msg" id="game-create-error"></div><button type="submit" class="auth-submit-btn" id="save-game-create-btn">💾 Crear y Guardar Juego</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL QUICK EDIT ADMIN (BOTÓN CON TUERCA PARA EDICIÓN DE FOTOS Y VÍDEO YOUTUBE) -->
+  <div class="modal-backdrop" id="admin-game-modal-backdrop">
+    <div class="auth-modal-card wide-admin-game">
+      <button class="modal-close-x" id="close-admin-game-modal">&times;</button>
+      <div class="auth-modal-header">
+        <div class="otp-badge-icon">⚙️</div>
+        <h3 id="admin-quick-game-title">Editar Juego (Modo Administrador)</h3>
+        <p>Cambia la portada, fotos adicionales y link del tráiler de YouTube</p>
+      </div>
+      <form id="admin-quick-game-form" class="auth-form">
+        <div class="form-group-row" style="display: flex; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>💰 Cta. Secundaria ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-secundaria" placeholder="20000" required min="0">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>👑 Cta. Primaria ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-primaria" placeholder="30000" required min="0">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>🏷️ Precio Oferta ($ CLP)</label>
+            <input type="number" id="admin-qg-precio-original" placeholder="54990" min="0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>URL Imagen Portada Principal</label>
+          <input type="url" id="admin-qg-imagen" placeholder="https://..." required>
+        </div>
+        <div class="form-group">
+          <label>URL Imagen Detalle Secundaria</label>
+          <input type="url" id="admin-qg-imagen-detalle" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+            <label style="margin-bottom: 0;">▶️ Links de Tráilers de YouTube</label>
+            <button type="button" class="btn-add-img-input" onclick="addAdminQuickTrailerInput()" style="background: var(--switch-red); color: #fff; border: none; padding: 0.3rem 0.65rem; border-radius: 4px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
+              ➕ Agregar otro tráiler
+            </button>
+          </div>
+          <div id="admin-qg-trailers-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Inputs dinámicos agregados por JS -->
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; display: block;">Pega enlaces de YouTube. Puedes agregar múltiples tráilers y el cliente podrá deslizarse entre ellos con las flechas.</span>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem;">
+            <label style="margin-bottom: 0;">🖼️ Fotos Adicionales de Gameplay / Capturas</label>
+            <button type="button" class="btn-add-img-input" onclick="addAdminQuickImageInput()" style="background: var(--joycon-cyan); color: #000; border: none; padding: 0.3rem 0.65rem; border-radius: 4px; font-weight: 800; font-size: 0.8rem; cursor: pointer;">
+              ➕ Agregar otra foto
+            </button>
+          </div>
+          <div id="admin-qg-extra-images-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Inputs dinámicos agregados por JS -->
+          </div>
+        </div>
+
+        <div class="auth-error-msg" id="admin-quick-game-error"></div>
+        <button type="submit" class="auth-submit-btn" id="save-admin-quick-game-btn">💾 Guardar Cambios en Juego</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOTÓN FLOTANTE TUERCA DE ADMIN (Abajo a la izquierda en vista de juego) -->
+  <button type="button" id="admin-game-gear-btn" class="admin-quick-gear-btn" title="Editar Imágenes y Tráiler de YouTube (Admin)" style="display: none;">
+    ⚙️
+  </button>
+
+  <!-- BOTÓN FLOTANTE WHATSAPP -->
+  <a href="https://wa.me/message/4GNZ5RBRR3GNE1" target="_blank" rel="noopener noreferrer" class="whatsapp-float-btn" title="Atención directa por WhatsApp">
+    <svg class="whatsapp-icon" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#ffffff" stroke="none">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.105 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+    </svg>
+    <span class="whatsapp-tooltip">💬 ¿Dudas? Escríbenos por WhatsApp</span>
+  </a>
+
+  <!-- Carrito Lateral Deslizable (Side Drawer) -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="cart-drawer" id="cart-drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="drawer-title-group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="21" r="1"></circle>
+          <circle cx="19" cy="21" r="1"></circle>
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+        </svg>
+        <h3>Tu Carrito (<span id="drawer-count">0</span>)</h3>
+      </div>
+      <button class="drawer-close-btn" id="close-drawer" aria-label="Cerrar Carrito">&times;</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="cart-items-container" id="cart-items-container">
+        <!-- Ítems renderizados por JS -->
+      </div>
+
+      <div class="cart-checkout-wrapper" id="checkout-wrapper">
+        <!-- Código de Descuento en Carrito -->
+        <div class="cart-coupon-box">
+          <label class="coupon-label">🎟️ Código de Descuento</label>
+          <div class="coupon-input-group">
+            <input type="text" id="coupon-code-input" placeholder="Ej: ZONA10" style="text-transform: uppercase;">
+            <button type="button" id="apply-coupon-btn" class="apply-coupon-btn">Aplicar</button>
+          </div>
+          <div id="coupon-message" class="coupon-msg"></div>
+        </div>
+
+        <div class="cart-summary">
+          <div class="summary-row discount-row" id="cart-discount-row" style="display: none;">
+            <span>Descuento Aplicado</span>
+            <strong id="summary-discount" style="color: var(--accent-green);">$0 CLP</strong>
+          </div>
+          <div class="summary-row total">
+            <span>Total a Pagar</span>
+            <span id="summary-total">$0 CLP</span>
+          </div>
+        </div>
+
+        <button type="button" class="submit-order-btn" id="open-payment-modal-btn">
+          <span>Seleccionar Método de Pago</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MODAL DE SELECCIÓN DE MÉTODO DE PAGO Y DATOS DEL CLIENTE -->
+  <div class="modal-backdrop" id="payment-modal-backdrop">
+    <div class="payment-modal-card">
+      <button class="modal-close-x" id="close-payment-modal">&times;</button>
+      
+      <div class="payment-modal-grid">
+        <!-- Columna Izquierda: Datos del Cliente + Pasarelas -->
+        <div class="payment-left-col">
+          <h3 class="payment-modal-title">Finalizar Pedido</h3>
+          <p class="payment-modal-subtitle">Ingresa tus datos para la entrega digital y elige tu pasarela.</p>
+
+          <form id="payment-checkout-form" class="payment-form">
+            <div class="form-section-title">👤 Datos del Cliente</div>
+            <div class="form-group-row">
+              <div class="form-group">
+                <input type="text" id="checkout-name" placeholder="Nombre" required autocomplete="given-name">
+              </div>
+              <div class="form-group">
+                <input type="text" id="checkout-surname" placeholder="Apellido" required autocomplete="family-name">
+              </div>
+            </div>
+            <div class="form-group">
+              <input type="email" id="checkout-email" placeholder="Correo Electrónico (para recibir tu juego)" required autocomplete="email">
+            </div>
+
+            <div class="form-section-title">💳 Selecciona Pasarela de Pago</div>
+            <div class="gateway-options-grid">
+              <!-- Opción Flow -->
+              <label class="gateway-option-card active" for="gateway-flow">
+                <input type="radio" name="payment_gateway" id="gateway-flow" value="flow" checked>
+                <div class="gateway-card-content">
+                  <div class="gateway-header">
+                    <span class="gateway-name">Flow Chile</span>
+                    <span class="gateway-badge flow">🇨🇱 Webpay / Servipag</span>
+                  </div>
+                  <p class="gateway-desc">Paga con Débito, Crédito, Mach, Chek, Klap o Servipag.</p>
+                </div>
+              </label>
+
+              <!-- Opción Mercado Pago -->
+              <label class="gateway-option-card" for="gateway-mp">
+                <input type="radio" name="payment_gateway" id="gateway-mp" value="mercadopago">
+                <div class="gateway-card-content">
+                  <div class="gateway-header">
+                    <span class="gateway-name">Mercado Pago</span>
+                    <span class="gateway-badge mp">💙 Mercado Pago</span>
+                  </div>
+                  <p class="gateway-desc">Tarjetas de crédito/débito, Mercado Crédito o saldo MP.</p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Logotipos de Medios de Pago Locales en Chile (Abajo del Todo) -->
+            <div class="checkout-local-payments-box">
+              <span class="local-payments-label">🇨🇱 Medios de pago respaldados y aceptados en Chile:</span>
+              <div class="local-payment-badges">
+                <span class="pay-badge webpay">💳 Webpay Plus</span>
+                <span class="pay-badge mp">💙 Mercado Pago</span>
+                <span class="pay-badge mach">⚡ MACH</span>
+                <span class="pay-badge rut">🏦 CuentaRUT / BancoEstado</span>
+                <span class="pay-badge chek">🟢 Chek</span>
+                <span class="pay-badge servipag">🟡 Servipag / Klap / Khipu</span>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Columna Derecha: Carrusel de juegos en carrito + Resumen + Botón Continuar -->
+        <div class="payment-right-col">
+          <div class="cart-games-preview-box">
+            <div class="preview-media-container">
+              <img id="pay-carousel-img" src="" alt="Juego en el carrito">
+              <button class="slider-arrow prev" id="pay-slider-prev" aria-label="Juego anterior">❮</button>
+              <button class="slider-arrow next" id="pay-slider-next" aria-label="Siguiente juego">❯</button>
+            </div>
+            <div class="pay-carousel-info">
+              <span class="pay-game-title" id="pay-carousel-title">-</span>
+              <span class="pay-game-lic" id="pay-carousel-lic">-</span>
+            </div>
+            <div class="pay-slider-dots" id="pay-slider-dots"></div>
+
+            <!-- Aviso de Código de Descuento debajo de la foto del juego -->
+            <div id="checkout-coupon-notice" class="checkout-coupon-notice" style="display: none;">
+              <span class="coupon-notice-title">🎟️ ¿Ocupar el código de descuento?</span>
+              <strong id="checkout-coupon-detail" class="coupon-notice-detail">¡Sí! Cupón Aplicado en el Carrito</strong>
+            </div>
+          </div>
+
+          <div class="payment-summary-box">
+            <div class="pay-summary-row">
+              <span>Juegos en orden:</span>
+              <strong id="pay-total-items">0</strong>
+            </div>
+            <div class="pay-summary-row total">
+              <span>Total Final:</span>
+              <strong id="pay-total-price" class="highlight-green">$0 CLP</strong>
+            </div>
+
+            <button type="button" class="submit-payment-btn" id="submit-payment-btn">
+              <span>Continuar al Pago</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Recibo de Confirmación de Compra -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="receipt-modal">
+      <!-- Banner Hero Nintendo Switch Siempre Visible -->
+      <div class="receipt-top-banner">
+        <img src="https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=800&auto=format&fit=crop" alt="Nintendo Switch Banner" class="receipt-banner-img">
+        <div class="receipt-banner-overlay">
+          <span class="receipt-banner-badge">🎮 Pedido Completado</span>
+          <h4 class="receipt-banner-title">ZonaSwitchChile</h4>
+        </div>
+      </div>
+
+      <div class="receipt-header">
+        <div class="success-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h3 id="receipt-title">¡Compra Completada en ZonaSwitchChile!</h3>
+        <p id="receipt-message">Recibirás los datos de acceso e instrucciones de tu Nintendo Switch en tu correo.</p>
+      </div>
+
+      <div class="receipt-body">
+        <div class="order-code-box">
+          <span class="code-label">Código de Orden:</span>
+          <div class="code-value-wrapper">
+            <strong id="receipt-code" class="code-value">ZSC-000000</strong>
+            <button class="copy-btn" id="copy-code-btn" title="Copiar código">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="receipt-details">
+          <div class="detail-row">
+            <span>Cliente:</span>
+            <strong id="receipt-client">-</strong>
+          </div>
+          <div class="detail-row">
+            <span>Cuenta / Usuario:</span>
+            <strong id="receipt-user">-</strong>
+          </div>
+          <div class="detail-row">
+            <span>Total Pagado:</span>
+            <strong id="receipt-total" class="highlight-green">$0 CLP</strong>
+          </div>
+          <div class="detail-row">
+            <span>Fecha:</span>
+            <span id="receipt-date">-</span>
+          </div>
+        </div>
+
+        <!-- Cuentas asignadas y detalles de entrega -->
+        <div id="receipt-items-assigned-container" class="receipt-items-assigned-box" style="margin-top: 1rem;">
+          <!-- Asignaciones renderizadas por JS -->
+        </div>
+      </div>
+
+      <div class="receipt-footer">
+        <button class="btn-close-modal" id="close-modal-btn">Volver al Catálogo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER PRINCIPAL -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-bottom-left">
+        <p>&copy; 2026 ZonaSwitchChile. Todos los derechos reservados. Marca independiente no afiliada a Nintendo Co., Ltd.</p>
+      </div>
+      <div class="footer-bottom-right">
+        <button type="button" class="footer-btn" onclick="openAboutUsModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Sobre nosotros</span>
+        </button>
+        <a href="/terminos" class="footer-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>Términos y condiciones</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+  <script src="juego.js"></script>
+</body>
+</html>
