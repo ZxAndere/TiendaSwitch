@@ -2986,7 +2986,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// --- MODALES ESTÉTICOS DE FOOTER (Sobre Nosotros y Términos y Condiciones) ---
+// --- MODALES ESTÉTICOS DE FOOTER (Sobre Nosotros) Y REDIRECCIÓN A TÉRMINOS ---
 function openAboutUsModal() {
   let backdrop = document.getElementById('about-us-modal-backdrop');
   if (!backdrop) {
@@ -2994,24 +2994,26 @@ function openAboutUsModal() {
     backdrop.id = 'about-us-modal-backdrop';
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
-      <div class="modal-card" style="max-width: 580px; padding: 2.2rem; background: var(--bg-card, #111827); border: 1px solid rgba(230, 0, 18, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: modalFadeIn 0.25s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">
-          <h3 style="margin: 0; color: #fff; font-size: 1.4rem; display: flex; align-items: center; gap: 0.6rem;">
+      <div class="modal-card about-modal-content">
+        <div class="about-modal-header">
+          <h3>
             <span>🎮</span> Sobre ZonaSwitchChile
           </h3>
-          <button type="button" onclick="closeAboutUsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer; line-height: 1;">&times;</button>
+          <button type="button" onclick="closeAboutUsModal()" class="about-modal-close-btn">&times;</button>
         </div>
-        <div style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 0.9rem;">
+        <div class="about-modal-body">
           <p><strong>ZonaSwitchChile</strong> es tu tienda de confianza en Chile para la adquisición de juegos digitales de Nintendo Switch al mejor precio del mercado.</p>
-          <p>Nos especializamos en brindar licencias <strong>100% digitales y originales</strong> (Cuentas Primarias y Secundarias), directamente descargables desde Nintendo eShop con máximo ahorro y soporte permanente.</p>
-          <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; color: #e2e8f0;">
+          <p>Nos especializamos en brindar licencias <strong>100% digitales y originales</strong> (Cuentas Primarias y Secundarias), Directamente descargables desde nintendo eshop con máximo ahorro y soporte permanente.</p>
+          <ul>
             <li>⚡ <strong>Entrega Digital 24/7:</strong> Recibe tu juego de forma inmediata tras completar la compra.</li>
             <li>🛡️ <strong>Garantía VIP Permanente:</strong> Atención personalizada y garantía total de uso.</li>
             <li>💳 <strong>Múltiples Medios de Pago:</strong> Transferencias y pago online seguro en pesos chilenos (CLP).</li>
           </ul>
         </div>
-        <div style="margin-top: 1.6rem; text-align: right;">
-          <button type="button" onclick="closeAboutUsModal()" class="btn-primary" style="padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">Entendido</button>
+        <div class="about-modal-footer">
+          <button type="button" onclick="closeAboutUsModal()" class="modal-pretty-btn">
+            <span>✓ Entendido</span>
+          </button>
         </div>
       </div>
     `;
@@ -3029,44 +3031,7 @@ function closeAboutUsModal() {
 }
 
 function openTermsModal() {
-  let backdrop = document.getElementById('terms-modal-backdrop');
-  if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.id = 'terms-modal-backdrop';
-    backdrop.className = 'modal-backdrop';
-    backdrop.innerHTML = `
-      <div class="modal-card" style="max-width: 640px; padding: 2.2rem; background: var(--bg-card, #111827); border: 1px solid rgba(230, 0, 18, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); max-height: 85vh; overflow-y: auto; animation: modalFadeIn 0.25s ease;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.8rem;">
-          <h3 style="margin: 0; color: #fff; font-size: 1.4rem; display: flex; align-items: center; gap: 0.6rem;">
-            <span>📜</span> Términos y Condiciones
-          </h3>
-          <button type="button" onclick="closeTermsModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.6rem; cursor: pointer; line-height: 1;">&times;</button>
-        </div>
-        <div style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; text-align: left; display: flex; flex-direction: column; gap: 1rem;">
-          <div>
-            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">1. Licencias Digitales</h4>
-            <p style="margin: 0;">ZonaSwitchChile entrega cuentas digitales originales de Nintendo eShop en dos modalidades: Cuenta Primaria (juegas desde tu usuario personal) y Cuenta Secundaria (juegas desde el perfil entregado con conexión a internet).</p>
-          </div>
-          <div>
-            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">2. Garantía y Uso Correcto</h4>
-            <p style="margin: 0;">Todas nuestras ventas incluyen garantía total. Está estrictamente prohibido modificar las credenciales de acceso de las cuentas suministradas o compartirlas fuera de las instrucciones entregadas.</p>
-          </div>
-          <div>
-            <h4 style="color: var(--switch-red, #e60012); margin: 0 0 0.3rem 0; font-size: 1.05rem;">3. Deslinde de Afiliación</h4>
-            <p style="margin: 0;">ZonaSwitchChile es un comercio digital independiente y NO se encuentra afiliado, patrocinado ni asociado oficialmente a Nintendo Co., Ltd.</p>
-          </div>
-        </div>
-        <div style="margin-top: 1.6rem; text-align: right;">
-          <button type="button" onclick="closeTermsModal()" class="btn-primary" style="padding: 0.6rem 1.4rem; border-radius: 10px; cursor: pointer;">Aceptar y Cerrar</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(backdrop);
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeTermsModal();
-    });
-  }
-  backdrop.classList.add('active');
+  window.location.href = 'terminos.html';
 }
 
 function closeTermsModal() {

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Términos y Condiciones | ZonaSwitchChile</title>
+  <meta name="description" content="Términos y condiciones de uso, políticas de garantía, entrega digital automatizada y propiedad de licencias en ZonaSwitchChile.">
+  <link rel="icon" type="image/x-icon" href="logo.jpg">
+  
+  <!-- CSS Principal -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+
+  <!-- Barra de Navegación Sticky -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">
+        <img src="logo.jpg" alt="ZonaSwitchChile Logo" class="brand-logo-img">
+        <div class="logo-text desktop-only">
+          <span class="logo-title">ZONA<span class="highlight">SWITCH</span>CHILE</span>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <div class="header-search-box desktop-only">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Buscar juego..." aria-label="Buscar juegos" autocomplete="off">
+          <div class="search-autocomplete-dropdown" id="search-autocomplete-dropdown"></div>
+        </div>
+
+        <div class="currency-select-wrapper desktop-only">
+          <select id="currency-select" class="currency-select" aria-label="Seleccionar moneda">
+            <option value="CLP">Chile (CLP)</option>
+            <option value="USD">Estados Unidos (USD)</option>
+            <option value="CAD">Canadá (CAD)</option>
+            <option value="MXN">México (MXN)</option>
+            <option value="BRL">Brasil (BRL)</option>
+            <option value="ARS">Argentina (ARS)</option>
+            <option value="COP">Colombia (COP)</option>
+            <option value="PEN">Perú (PEN)</option>
+            <option value="UYU">Uruguay (UYU)</option>
+            <option value="CRC">Costa Rica (CRC)</option>
+            <option value="EUR">España (EUR)</option>
+            <option value="HNL">Honduras (HNL)</option>
+          </select>
+        </div>
+
+        <a href="faq.html" class="nav-faq-btn desktop-only" title="Preguntas Frecuentes">
+          <span>❓ FAQ</span>
+        </a>
+
+        <div id="user-nav-area" class="user-nav-area desktop-only">
+          <button class="nav-auth-btn login-btn" id="open-login-btn">Iniciar Sesión</button>
+          <button class="nav-auth-btn register-btn" id="open-register-btn">Registrarse</button>
+        </div>
+
+        <button class="cart-trigger-btn" id="cart-btn" aria-label="Ver Carrito de Compras">
+          <svg class="cart-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="21" r="1"></circle>
+            <circle cx="19" cy="21" r="1"></circle>
+            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+          </svg>
+          <span class="cart-btn-text">Carrito</span>
+          <span class="cart-badge" id="cart-count">0</span>
+        </button>
+
+        <button class="mobile-menu-trigger-btn mobile-only" id="mobile-menu-btn" aria-label="Abrir Menú de Navegación">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Enlace de regreso al catálogo -->
+  <div class="terms-breadcrumbs-bar">
+    <div class="terms-breadcrumbs-container">
+      <a href="index.html" class="terms-back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        <span>Volver al Catálogo Principal</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="terms-hero">
+    <div class="terms-hero-content">
+      <div class="terms-hero-badge">📜 MARCO LEGAL Y CONDICIONES</div>
+      <h1 class="terms-hero-title">Términos y Condiciones de Servicio</h1>
+      <p class="terms-hero-subtitle">Conoce detalladamente las políticas de uso, garantías, proceso automatizado de despacho digital y derechos del consumidor en ZonaSwitchChile.</p>
+    </div>
+  </section>
+
+  <!-- Contenido de Términos -->
+  <main class="terms-main-container">
+    
+    <!-- 1. GENERALIDADES -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">1</div>
+        <h2>GENERALIDADES Y NATURALEZA DEL SERVICIO</h2>
+      </div>
+      <div class="legal-card-body">
+        <p><strong>Zona Switch Chile</strong> es un comercio electrónico especializado en la comercialización de licencias de acceso, videojuegos digitales, cuentas y productos vinculados a plataformas de entretenimiento. Salvo indicación expresa en contrario, todos los productos ofrecidos son de carácter estrictamente digital y no requieren despacho ni entrega física.</p>
+      </div>
+    </article>
+
+    <!-- 2. PROPIEDAD DE LAS CUENTAS -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">2</div>
+        <h2>PROPIEDAD DE LAS CUENTAS Y LICENCIA DE USO</h2>
+      </div>
+      <div class="legal-card-body">
+        <div class="legal-alert warning-alert">
+          <div class="legal-alert-icon">⚠️</div>
+          <div>
+            <strong>Aviso Importante sobre la Titularidad:</strong>
+          </div>
+        </div>
+        <ul class="legal-list">
+          <li><strong>Titularidad:</strong> Las cuentas proporcionadas son y seguirán siendo propiedad exclusiva de Zona Switch Chile.</li>
+          <li><strong>Licencia de uso:</strong> El pago realizado por el usuario le otorga única y exclusivamente el derecho o licencia de acceso para la descarga y uso del contenido en su consola, bajo las condiciones e instrucciones provistas al momento de la compra.</li>
+          <li><strong>Prohibición de modificación:</strong> Queda estrictamente prohibido al comprador modificar los datos de seguridad de la cuenta (tales como correo electrónico, contraseña, verificación en dos pasos o nombres de usuario). La alteración de estos datos se considerará una infracción grave y derivará en la revocación inmediata del acceso sin derecho a reembolso.</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- 3. PROCESO DE COMPRA (TDO) -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">3</div>
+        <h2>PROCESO DE COMPRA Y DESPACHO AUTOMATIZADO (TDO)</h2>
+      </div>
+      <div class="legal-card-body">
+        <p>Con el objetivo de garantizar una experiencia ágil y segura, nuestra plataforma utiliza un sistema de <strong>Automatización de Entregas Digitales (TDO / Delivery Operations)</strong>:</p>
+        <ul class="legal-list">
+          <li><strong>Procesamiento en tiempo real:</strong> Una vez confirmado y acreditado el pago por la pasarela correspondiente, el sistema asigna y despacha automáticamente el acceso o licencia digital.</li>
+          <li><strong>Medios de entrega:</strong> Los datos de acceso o credenciales se mostrarán de forma inmediata en la pantalla de confirmación de compra y se enviarán al correo electrónico registrado por el cliente.</li>
+          <li><strong>Responsabilidad del comprador:</strong> Es responsabilidad exclusiva del usuario ingresar una dirección de correo electrónico válida y correcta al momento de concretar la orden.</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- 4. MEDIOS DE PAGO -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">4</div>
+        <h2>MEDIOS DE PAGO Y SEGURIDAD</h2>
+      </div>
+      <div class="legal-card-body">
+        <p>Los pagos se procesan a través de pasarelas de pago externas autorizadas en Chile, tales como <strong>Mercado Pago</strong> y <strong>Flow</strong>. Zona Switch Chile no almacena ni procesa directamente datos bancarios o de tarjetas de crédito/débito de los usuarios.</p>
+      </div>
+    </article>
+
+    <!-- 5. POLÍTICAS DE CAMBIOS Y RETRACTO -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">5</div>
+        <h2>POLÍTICAS DE CAMBIOS, DEVOLUCIONES Y DERECHO DE RETRACTO</h2>
+      </div>
+      <div class="legal-card-body">
+        <div class="legal-alert danger-alert">
+          <div class="legal-alert-icon">⚖️</div>
+          <div>
+            <strong>INFORMACIÓN IMPORTANTE SOBRE PRODUCTOS DIGITALES:</strong><br>
+            Conforme al artículo 3° bis de la Ley N° 19.496 sobre Protección de los Derechos de los Consumidores, y dada la naturaleza intangible e irreversible de los productos digitales (cuya visualización o entrega constituye un consumo o activación inmediata), <strong>no aplica el derecho de retracto ni devoluciones por desestimación de compra</strong> una vez que el producto o la revelación de cuenta se haya despachado al cliente.
+          </div>
+        </div>
+        
+        <p style="margin-top: 1rem;">Se contemplarán excepciones de cambio o reembolso únicamente bajo las siguientes condiciones:</p>
+        <ul class="legal-list">
+          <li><strong>Falla técnica comprobable:</strong> Si los datos de acceso o el producto entregado presentan un error preexistente de validez al momento de la compra.</li>
+          <li><strong>Procedimiento de reclamo:</strong> El cliente deberá reportar la incidencia a través de nuestros canales oficiales dentro de un plazo máximo de 48 horas tras la compra, adjuntando captura de pantalla legible del error emitido por la plataforma (ej. Nintendo eShop).</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- 6. GARANTÍA DE FUNCIONAMIENTO -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">6</div>
+        <h2>GARANTÍA DE FUNCIONAMIENTO</h2>
+      </div>
+      <div class="legal-card-body">
+        <p>Zona Switch Chile garantiza que todos los accesos, licencias y suscripciones entregados son 100% legítimos y funcionales al momento del despacho. La garantía cubre exclusivamente la entrega correcta del producto bajo las instrucciones enviadas.</p>
+        <p><strong>La garantía NO cubre inconvenientes derivados de:</strong></p>
+        <ul class="legal-list">
+          <li>El incumplimiento de las instrucciones de instalación o la modificación no autorizada de las credenciales de la cuenta.</li>
+          <li>Bloqueos, baneos o sanciones aplicadas a la cuenta del usuario por incumplimiento de los Términos de Servicio de Nintendo o terceros.</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- 7. MODIFICACIONES -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">7</div>
+        <h2>MODIFICACIONES DE LOS TÉRMINOS</h2>
+      </div>
+      <div class="legal-card-body">
+        <p>Zona Switch Chile se reserva el derecho de actualizar o modificar los presentes Términos y Condiciones en cualquier momento sin previo aviso. Las modificaciones surtirán efecto desde su publicación en el sitio web oficial y aplicarán a las compras realizadas con posterioridad a dicha fecha.</p>
+      </div>
+    </article>
+
+    <!-- 8. CONTACTO Y SOPORTE -->
+    <article class="legal-card">
+      <div class="legal-card-header">
+        <div class="legal-number-badge">8</div>
+        <h2>CONTACTO Y SOPORTE</h2>
+      </div>
+      <div class="legal-card-body">
+        <p>Para consultas, soporte técnico o asistencia postventa, nuestros canales oficiales de atención se encuentran disponibles a través del formulario de soporte en nuestro sitio web o por correo electrónico de atención al cliente.</p>
+      </div>
+    </article>
+
+  </main>
+
+  <!-- Botón flotante de WhatsApp -->
+  <a href="https://wa.me/message/4GNZ5RBRR3GNE1" target="_blank" rel="noopener noreferrer" class="whatsapp-float-btn" title="Atención directa por WhatsApp">
+    <svg class="whatsapp-icon" xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#ffffff" stroke="none">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.105 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+    </svg>
+    <span class="whatsapp-tooltip">💬 ¿Dudas? Escríbenos por WhatsApp</span>
+  </a>
+
+  <!-- Pie de página unificado ZonaSwitchChile -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-bottom-left">
+        <p>&copy; 2026 ZonaSwitchChile. Todos los derechos reservados. Marca independiente no afiliada a Nintendo Co., Ltd.</p>
+      </div>
+      <div class="footer-bottom-right">
+        <button type="button" class="footer-btn" onclick="openAboutUsModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span>Sobre nosotros</span>
+        </button>
+        <a href="terminos.html" class="footer-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>Términos y condiciones</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS Principal -->
+  <script src="app.js"></script>
+</body>
+</html>
