@@ -1,0 +1,7 @@
+
+node_modules
+.env
+
+# Datos persistentes locales (no subir usuarios/ordenes/stock)
+data/
+*.log
