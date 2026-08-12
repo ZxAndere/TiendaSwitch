@@ -264,10 +264,7 @@ function formatCLP(num) {
 
 function renderGlobalAdminGear() {
   const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
-  const isAdmin = savedUser && (
-    savedUser.role === 'admin' ||
-    (savedUser.username && savedUser.username.toLowerCase() === 'zxandere')
-  );
+  const isAdmin = savedUser && savedUser.role === 'admin';
 
   const gearBtns = document.querySelectorAll('.admin-quick-gear-btn, #admin-game-gear-btn, #global-admin-gear-btn');
 
@@ -619,7 +616,7 @@ function closeUserOrdersModal() { document.getElementById('user-orders-modal-bac
 
 // --- SEGURIDAD Y VERIFICACIÓN DE ADMINISTRADOR ---
 function verifyAdminSecurity() {
-  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+  const isAdmin = currentUser && currentUser.role === 'admin';
   if (!isAdmin) {
     triggerSecurityViolation();
     return false;
@@ -656,7 +653,7 @@ function openUserSettingsModal() {
   if (!backdrop) return;
   const modalCard = backdrop.querySelector('.user-modal-card');
   const adminTabBtn = document.getElementById('admin-tab-btn');
-  const isAdmin = currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'));
+  const isAdmin = currentUser && currentUser.role === 'admin';
 
   if (adminTabBtn) {
     if (isAdmin) {
@@ -691,7 +688,7 @@ function closeUserSettingsModal() { document.getElementById('user-settings-modal
 function openUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.add('active'); }
 function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.remove('active'); }
 
-// --- FUNCIONES DEL PANEL DE ADMINISTRADOR (SOLO PARA "ZxAndere") ---
+// --- FUNCIONES DEL PANEL DE ADMINISTRADOR (PROTEGIDO POR ROL) ---
 
 async function fetchAndRenderAdminGames() {
   if (!verifyAdminSecurity()) return;
@@ -1415,7 +1412,7 @@ function renderCatalog(animatePrices = false) {
   }
 
   const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || currentUser;
-  const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
+  const isAdmin = savedUser && savedUser.role === 'admin';
 
   grid.innerHTML = filtered.map((game) => {
     const slug = slugify(game.titulo || '');
@@ -2199,7 +2196,7 @@ function initRealtimeCatalogStream() {
               renderCartDrawer();
             }
 
-            if (currentUser && (currentUser.role === 'admin' || (currentUser.username && currentUser.username.toLowerCase() === 'zxandere'))) {
+            if (currentUser && currentUser.role === 'admin') {
               if (typeof fetchAndRenderAdminGames === 'function') {
                 fetchAndRenderAdminGames();
               }
@@ -2224,7 +2221,7 @@ let adminCouponsStore = [];
 
 async function fetchCoupons() {
   try {
-    const res = await fetch('/api/coupons');
+    const res = await apiFetch('/api/coupons');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -2398,7 +2395,7 @@ function switchAdminSubtab(subtab) {
   }
 }
 
-function handleApplyCoupon() {
+async function handleApplyCoupon() {
   const input = document.getElementById('coupon-code-input');
   const msgEl = document.getElementById('coupon-message');
   if (!input || !msgEl) return;
@@ -2413,22 +2410,39 @@ function handleApplyCoupon() {
     return;
   }
 
-  const coupon = AVAILABLE_COUPONS[code];
-  if (coupon) {
-    appliedCoupon = coupon;
-    msgEl.className = 'coupon-msg success';
-    msgEl.style.color = '#34d399';
-    msgEl.textContent = `✓ ¡Código aplicado! (${coupon.desc})`;
-    renderCartDrawer();
-    renderPayCarousel();
-    showToast(`¡Código ${coupon.code} aplicado con éxito! 🎉`);
-  } else {
-    appliedCoupon = null;
+  // Validar cupón en el servidor (no exponer lista completa al cliente)
+  msgEl.className = 'coupon-msg';
+  msgEl.style.color = '#94a3b8';
+  msgEl.textContent = 'Verificando código...';
+
+  try {
+    const res = await fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+
+    if (data.valid && data.coupon) {
+      appliedCoupon = data.coupon;
+      msgEl.className = 'coupon-msg success';
+      msgEl.style.color = '#34d399';
+      msgEl.textContent = `✓ ¡Código aplicado! (${data.coupon.desc})`;
+      renderCartDrawer();
+      renderPayCarousel();
+      showToast(`¡Código ${data.coupon.code} aplicado con éxito! 🎉`);
+    } else {
+      appliedCoupon = null;
+      msgEl.className = 'coupon-msg error';
+      msgEl.style.color = '#ff4d6d';
+      msgEl.textContent = data.error || '❌ El código de descuento no existe.';
+      renderCartDrawer();
+      renderPayCarousel();
+    }
+  } catch (err) {
     msgEl.className = 'coupon-msg error';
     msgEl.style.color = '#ff4d6d';
-    msgEl.textContent = '❌ El código de descuento no existe.';
-    renderCartDrawer();
-    renderPayCarousel();
+    msgEl.textContent = '❌ Error de conexión. Intenta de nuevo.';
   }
 }
 

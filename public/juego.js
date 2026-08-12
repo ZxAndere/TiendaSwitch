@@ -641,7 +641,7 @@ function initAdminQuickGearButton() {
 
   const activeGame = (typeof currentDetailGame !== 'undefined' && currentDetailGame) ? currentDetailGame : (window.currentDetailGame || null);
   const savedUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || (typeof currentUser !== 'undefined' ? currentUser : null);
-  const isAdmin = savedUser && (savedUser.role === 'admin' || (savedUser.username && savedUser.username.toLowerCase() === 'zxandere'));
+  const isAdmin = savedUser && savedUser.role === 'admin';
 
   if (isAdmin && activeGame) {
     gearBtn.style.display = 'flex';

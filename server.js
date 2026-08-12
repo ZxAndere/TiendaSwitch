@@ -25,14 +25,20 @@ const PORT = process.env.PORT || 3000;
 let isMongoConnected = false;
 let mongoLastError = null;
 
-const flowHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8'
-};
+// [MOVIDO] flowHeaders está declarado donde se utiliza (sección de Flow)
 
-// Manejo seguro de variables de entorno con fallbacks para evitar caídas del servidor
-const JWT_SECRET = process.env.JWT_SECRET || 'zona_switch_chile_secure_jwt_secret_2026';
+// Manejo seguro de variables de entorno — JWT_SECRET OBLIGATORIO en producción
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.trim() === '') {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT;
+  if (isProduction) {
+    console.error('❌ FATAL: JWT_SECRET no está definido en las variables de entorno. El servidor NO puede arrancar sin esta variable en producción.');
+    process.exit(1);
+  }
+  // En desarrollo local, generar un secreto aleatorio temporal
+  JWT_SECRET = crypto.randomBytes(64).toString('hex');
+  console.warn('⚠️ ADVERTENCIA: JWT_SECRET no definido. Usando secreto temporal aleatorio (NO USAR EN PRODUCCIÓN).');
+}
 
 const OPTIONAL_ENV_VARS = ['FLOW_API_KEY', 'FLOW_SECRET_KEY', 'MP_ACCESS_TOKEN', 'MP_PUBLIC_KEY', 'JWT_SECRET', 'FREECURRENCY_API_KEY'];
 OPTIONAL_ENV_VARS.forEach(v => {
@@ -164,6 +170,15 @@ const userApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: "Demasiadas solicitudes a tu cuenta. Por favor, espera unos minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Rate limiter general para APIs públicas (prevenir abuso/scraping)
+const generalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: "Demasiadas solicitudes. Por favor, espera unos minutos." },
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -402,8 +417,8 @@ if (process.env.MONGODB_URI) {
     });
 }
 
-// Endpoint de diagnóstico de MongoDB
-app.get('/api/debug/mongo', (req, res) => {
+// Endpoint de diagnóstico de MongoDB (PROTEGIDO — solo administradores)
+app.get('/api/debug/mongo', verifyAdmin, (req, res) => {
   res.json({
     connected: isMongoConnected,
     hasUri: !!process.env.MONGODB_URI,
@@ -413,11 +428,14 @@ app.get('/api/debug/mongo', (req, res) => {
 });
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
-const DEFAULT_FLOW_KEY = '6D23C8FB-F6B1-49C0-BBF9-81A16271LED8';
-const DEFAULT_FLOW_SECRET = '7a2084f985ae7624c8b42bbf9e3bdd5ec9e2c963';
+// IMPORTANTE: Las llaves API DEBEN estar configuradas en variables de entorno (.env)
+// NO se proporcionan fallbacks hardcodeados por seguridad
+const FLOW_API_KEY = (process.env.FLOW_API_KEY || '').trim().replace(/^["']|["']$/g, '');
+const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || '').trim().replace(/^["']|["']$/g, '');
 
-const FLOW_API_KEY = (process.env.FLOW_API_KEY || DEFAULT_FLOW_KEY).trim().replace(/^["']|["']$/g, '');
-const FLOW_SECRET_KEY = (process.env.FLOW_SECRET_KEY || DEFAULT_FLOW_SECRET).trim().replace(/^["']|["']$/g, '');
+if (!FLOW_API_KEY || !FLOW_SECRET_KEY) {
+  console.warn('⚠️ ADVERTENCIA: FLOW_API_KEY y/o FLOW_SECRET_KEY no están configuradas. Los pagos con Flow NO funcionarán.');
+}
 
 let targetFlowUrl = (process.env.FLOW_API_URL || 'https://www.flow.cl/api').trim().replace(/^["']|["']$/g, '');
 if (targetFlowUrl.includes('sandbox')) {
@@ -427,8 +445,12 @@ if (targetFlowUrl.includes('sandbox')) {
 }
 const FLOW_API_URL = targetFlowUrl;
 
-const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || 'APP_USR-9c7069d0-f429-41de-9bd0-d662e78f97ad').trim().replace(/^["']|["']$/g, '');
-const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || 'APP_USR-1438717078182417-080719-1f0fd11d06606b6064b7bc44b59e5000-3600552626').trim().replace(/^["']|["']$/g, '');
+const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '');
+const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || '').trim().replace(/^["']|["']$/g, '');
+
+if (!MP_ACCESS_TOKEN) {
+  console.warn('⚠️ ADVERTENCIA: MP_ACCESS_TOKEN no está configurada. Los pagos con Mercado Pago NO funcionarán.');
+}
 
 // Cache temporal en RAM de tamaño limitado para órdenes recientes (Problema 3)
 const ORDERS_MEM_CACHE = new Map();
@@ -563,8 +585,10 @@ async function verifyPassword(inputPassword, storedUser) {
     }
   } catch (e) {}
 
+  // Auto-migración de hashes SHA-256 heredados a bcrypt (sin aceptar plaintext)
   const sha256Hash = crypto.createHash('sha256').update(inputPassword).digest('hex');
-  if (storedUser.passwordHash === sha256Hash || storedUser.password === inputPassword) {
+  if (storedUser.passwordHash === sha256Hash) {
+    console.warn(`⚠️ [SEGURIDAD] Auto-migrando hash SHA-256 a bcrypt para usuario: ${storedUser.username}`);
     storedUser.passwordHash = await bcrypt.hash(inputPassword, 10);
     if (storedUser.password) delete storedUser.password;
     saveUsers(getUsers());
@@ -616,9 +640,70 @@ function formatFlowErrorMessage(flowData) {
   return flowData.message ? `Error Flow: ${flowData.message}` : "No se pudo procesar la transacción con la pasarela Flow.";
 }
 
-// Helper de Hashing seguro para contraseñas
-function hashPassword(pwd) {
-  return crypto.createHash('sha256').update(pwd).digest('hex');
+// [ELIMINADO] hashPassword SHA-256 — código muerto, todas las nuevas contraseñas usan bcrypt
+
+// Función de asignación de cuentas en rotación (Round-Robin 🔄)
+// Se ejecuta SOLO cuando el pago está verificado/confirmado, NO al crear la orden
+function assignAccountsToOrder(orderData) {
+  if (!orderData || !Array.isArray(orderData.carrito)) return;
+
+  let anyAssigned = false;
+
+  orderData.carrito = orderData.carrito.map(item => {
+    // Si ya tiene cuenta asignada, no reasignar
+    if (item.varianteAsignada) return item;
+
+    const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
+    let varianteAsignada = '';
+
+    if (gameInStore && Array.isArray(gameInStore.cuentas) && gameInStore.cuentas.length > 0) {
+      if (typeof gameInStore.siguienteVarianteIndex !== 'number') {
+        gameInStore.siguienteVarianteIndex = 0;
+      }
+      const varIdx = gameInStore.siguienteVarianteIndex % gameInStore.cuentas.length;
+      const rawVariant = gameInStore.cuentas[varIdx];
+
+      // Parsear la cadena: "Cuenta / Contraseña / ListaCodigosComa"
+      const parts = rawVariant.includes('/') ? rawVariant.split('/') : rawVariant.split('|');
+      const cuentaVal = (parts[0] || '').trim();
+      const passVal = (parts[1] || '').trim();
+      const rawCodigos = (parts[2] || parts.slice(2).join('/')).trim();
+
+      let codigoConsumido = '';
+      if (rawCodigos) {
+        const codigosList = rawCodigos.split(/[\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
+        if (codigosList.length > 0) {
+          codigoConsumido = codigosList.shift();
+          const codigosRestantes = codigosList.join(', ');
+          let updatedVariantStr = cuentaVal;
+          if (passVal || codigosRestantes) updatedVariantStr += ` / ${passVal}`;
+          if (codigosRestantes) updatedVariantStr += ` / ${codigosRestantes}`;
+          gameInStore.cuentas[varIdx] = updatedVariantStr;
+        }
+      }
+
+      let finalAssigned = cuentaVal;
+      if (passVal) finalAssigned += ` / ${passVal}`;
+      if (codigoConsumido) finalAssigned += ` / Código OTP: ${codigoConsumido}`;
+
+      varianteAsignada = finalAssigned;
+      gameInStore.siguienteVarianteIndex = (gameInStore.siguienteVarianteIndex + 1) % gameInStore.cuentas.length;
+      anyAssigned = true;
+    }
+
+    return {
+      ...item,
+      varianteAsignada: varianteAsignada || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
+      correoTexto: gameInStore ? (gameInStore.correoTexto || '') : (item.correoTexto || ''),
+      correoImagen: gameInStore ? (gameInStore.correoImagen || '') : (item.correoImagen || '')
+    };
+  });
+
+  if (anyAssigned) {
+    saveGamesLocal(GAMES_STORE);
+    saveSingleOrder(orderData).catch(err => console.error('Error guardando orden con cuentas:', err));
+    console.log(`🔑 [CUENTAS] Cuentas asignadas para orden ${orderData.codigoOrden}`);
+  }
 }
 
 // Helpers para usuarios seguros
@@ -1706,7 +1791,7 @@ function slugify(text) {
 
 
 // Endpoint Público: Retorna solo juegos visibles para los clientes
-app.get('/api/juegos', (req, res) => {
+app.get('/api/juegos', generalApiLimiter, (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -1925,9 +2010,36 @@ function saveCouponsLocal(coupons) {
 
 loadCoupons();
 
-// Endpoint Público: Retorna todos los cupones de descuento activos
-app.get('/api/coupons', (req, res) => {
+// Endpoint Admin: Retorna todos los cupones de descuento (PROTEGIDO)
+app.get('/api/coupons', verifyAdmin, (req, res) => {
   res.json(COUPONS_STORE);
+});
+
+// Endpoint Público: Validar un cupón específico sin revelar la lista completa
+app.post('/api/coupons/validate', generalApiLimiter, (req, res) => {
+  const { code } = req.body;
+  if (!isString(code) || !code.trim()) {
+    return res.status(400).json({ error: "Código de cupón requerido." });
+  }
+
+  const cleanCode = code.trim().toUpperCase();
+
+  // Bloquear cupón de pruebas en producción
+  if (cleanCode === 'PRUEBAXD') {
+    const rawHost = (req.get('x-forwarded-host') || req.get('host') || '').toLowerCase();
+    const isLocal = rawHost.includes('localhost') || rawHost.includes('127.0.0.1');
+    if (process.env.NODE_ENV === 'production' || !isLocal) {
+      return res.json({ valid: false, error: "Cupón no válido." });
+    }
+    return res.json({ valid: true, coupon: { code: 'PRUEBAXD', type: 'percent', value: 100, desc: '100% de descuento (Modo Prueba)' } });
+  }
+
+  const coupon = COUPONS_STORE.find(c => c.code === cleanCode);
+  if (coupon) {
+    res.json({ valid: true, coupon: { code: coupon.code, type: coupon.type, value: coupon.value, desc: coupon.desc } });
+  } else {
+    res.json({ valid: false, error: "Cupón no encontrado o expirado." });
+  }
 });
 
 // Endpoint Admin: Crear / Guardar Cupón Permanente
@@ -2127,25 +2239,48 @@ app.post('/api/admin/gallery/delete', verifyAdmin, (req, res) => {
 app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   const { nombre, apellido, email, carrito, username, metodoPago, couponCode } = req.body;
 
-  // Validación de tipos de datos en body (Problema 6)
+  // Validación de tipos de datos en body
   if (!isString(nombre) || !isString(apellido) || !isString(email) || !Array.isArray(carrito) || carrito.length === 0) {
     return res.status(400).json({ error: "Datos incompletos o en formato incorrecto para procesar la orden." });
   }
 
+  // Validación de tamaño del carrito
+  if (carrito.length > 20) {
+    return res.status(400).json({ error: "El carrito no puede tener más de 20 artículos." });
+  }
+
   const cleanEmail = email.trim();
 
-  // 1. Recalcular subtotal y VALIDAR STOCK DE CUENTAS (Problema 5)
+  // 1. Recalcular subtotal desde precios del SERVIDOR y validar stock
   let calculatedSubtotal = 0;
   for (const item of carrito) {
     if (!item || item.id === undefined) {
       return res.status(400).json({ error: "Artículo inválido en el carrito." });
     }
-    const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
+
+    // Validar que el ID sea un número válido
+    const itemId = Number(item.id);
+    if (isNaN(itemId) || itemId <= 0) {
+      return res.status(400).json({ error: `ID de juego inválido: ${item.id}` });
+    }
+
+    // Validar cantidad: entero entre 1 y 10
+    const cantidad = Number(item.cantidad || 1);
+    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 10) {
+      return res.status(400).json({ error: `Cantidad inválida para el artículo ${item.id}. Debe ser entre 1 y 10.` });
+    }
+
+    // Validar tipo de licencia
+    if (item.licencia !== 'Primaria' && item.licencia !== 'Secundaria') {
+      return res.status(400).json({ error: `Tipo de licencia inválido para el artículo ${item.id}. Debe ser 'Primaria' o 'Secundaria'.` });
+    }
+
+    const gameInStore = GAMES_STORE.find(g => g.id === itemId);
     if (!gameInStore) {
       return res.status(400).json({ error: `El juego con ID ${item.id} no existe en el catálogo.` });
     }
 
-    // Validación de stock de cuentas disponibles antes de cobrar al cliente (Problema 5)
+    // Validación de stock de cuentas disponibles
     if (!gameInStore.cuentas || !Array.isArray(gameInStore.cuentas) || gameInStore.cuentas.length === 0) {
       return res.status(400).json({
         error: `El juego "${gameInStore.titulo}" no cuenta con cuentas de stock disponibles en este momento. Por favor contacta a soporte.`
@@ -2159,8 +2294,9 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
       });
     }
 
+    // PRECIO SIEMPRE del servidor, NUNCA del cliente
     const basePrice = item.licencia === 'Primaria' ? gameInStore.precioPrimaria : gameInStore.precioSecundaria;
-    calculatedSubtotal += basePrice * Number(item.cantidad || 1);
+    calculatedSubtotal += basePrice * cantidad;
   }
 
   // 2. Validar y aplicar cupones de descuento en el servidor
@@ -2192,78 +2328,27 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   const total = Math.max(0, calculatedSubtotal - discountAmount);
   const codigoOrden = `ZSC-${Math.floor(100000 + Math.random() * 900000)}`;
 
-  // Asignación de variantes de cuentas en rotación (Round-Robin 🔄) para cada juego comprado
-  const carritoConVariantes = carrito.map(item => {
+  // Preparar carrito con precios del SERVIDOR (sin asignar cuentas aún — se asignan al confirmar pago)
+  const carritoConPreciosServidor = carrito.map(item => {
     const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
-    let varianteAsignada = '';
-    let correoTextoItem = '';
-    let correoImagenItem = '';
-
-    if (gameInStore) {
-      correoTextoItem = gameInStore.correoTexto || '';
-      correoImagenItem = gameInStore.correoImagen || '';
-
-      if (Array.isArray(gameInStore.cuentas) && gameInStore.cuentas.length > 0) {
-        if (typeof gameInStore.siguienteVarianteIndex !== 'number') {
-          gameInStore.siguienteVarianteIndex = 0;
-        }
-        const varIdx = gameInStore.siguienteVarianteIndex % gameInStore.cuentas.length;
-        const rawVariant = gameInStore.cuentas[varIdx];
-
-        // Parsear la cadena: "Cuenta / Contraseña / ListaCodigosComa"
-        const parts = rawVariant.includes('/') ? rawVariant.split('/') : rawVariant.split('|');
-        const cuentaVal = (parts[0] || '').trim();
-        const passVal = (parts[1] || '').trim();
-        const rawCodigos = (parts[2] || parts.slice(2).join('/')).trim();
-
-        let codigoConsumido = '';
-        if (rawCodigos) {
-          const codigosList = rawCodigos.split(/[\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
-          if (codigosList.length > 0) {
-            // Extraer y consumir el primer código (de un solo uso ⚡)
-            codigoConsumido = codigosList.shift();
-
-            // Reconstruir la lista con los códigos restantes
-            const codigosRestantes = codigosList.join(', ');
-            let updatedVariantStr = cuentaVal;
-            if (passVal || codigosRestantes) updatedVariantStr += ` / ${passVal}`;
-            if (codigosRestantes) updatedVariantStr += ` / ${codigosRestantes}`;
-
-            // Actualizar la variante en el inventario permanente del servidor
-            gameInStore.cuentas[varIdx] = updatedVariantStr;
-          }
-        }
-
-        // Armar el string que se entrega exclusivamente en esta compra específica al cliente
-        let finalAssigned = cuentaVal;
-        if (passVal) finalAssigned += ` / ${passVal}`;
-        if (codigoConsumido) finalAssigned += ` / Código OTP: ${codigoConsumido}`;
-
-        varianteAsignada = finalAssigned;
-
-        // Incrementar índice para el próximo comprador (Round-Robin)
-        gameInStore.siguienteVarianteIndex = (gameInStore.siguienteVarianteIndex + 1) % gameInStore.cuentas.length;
-      }
-    }
-
     return {
-      ...item,
+      id: Number(item.id),
+      titulo: gameInStore ? gameInStore.titulo : item.titulo,
+      cantidad: Number(item.cantidad || 1),
+      licencia: item.licencia,
       precio: item.licencia === 'Primaria' ? gameInStore.precioPrimaria : gameInStore.precioSecundaria,
-      varianteAsignada: varianteAsignada || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
-      correoTexto: correoTextoItem,
-      correoImagen: correoImagenItem
+      correoTexto: gameInStore ? (gameInStore.correoTexto || '') : '',
+      correoImagen: gameInStore ? (gameInStore.correoImagen || '') : ''
     };
   });
-
-  saveGamesLocal(GAMES_STORE);
 
   const orderData = {
     codigoOrden,
     cliente: `${nombre.trim()} ${apellido.trim()}`,
     usuario: isString(username) && username.trim() ? username.trim() : 'Invitado',
     email: cleanEmail,
-    carrito: carritoConVariantes,
-    articulos: carritoConVariantes.reduce((acc, item) => acc + (Number(item.cantidad) || 1), 0),
+    carrito: carritoConPreciosServidor,
+    articulos: carritoConPreciosServidor.reduce((acc, item) => acc + (Number(item.cantidad) || 1), 0),
     total,
     totalFormatted: `$${total.toLocaleString('es-CL')} CLP`,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -2276,7 +2361,8 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
 
   // Si el total es 0 CLP (Cupón del 100% como PRUEBAXD), finalizar orden inmediatamente sin cobrar
   if (total === 0) {
-    // Enviar el correo de entrega al instante 📩
+    // Para órdenes gratis, asignar cuentas inmediatamente y enviar correo
+    assignAccountsToOrder(orderData);
     sendOrderConfirmationEmail(orderData).catch(err => console.error('Error enviando correo:', err));
 
     return res.json({
@@ -2294,11 +2380,11 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   if (metodoPago === 'mercadopago') {
     try {
       const mpBody = {
-        items: carrito.map(item => ({
+        items: carritoConPreciosServidor.map(item => ({
           title: `${item.titulo}`,
           quantity: item.cantidad,
           currency_id: 'CLP',
-          unit_price: item.precio
+          unit_price: item.precio  // Precio recalculado del SERVIDOR, no del cliente
         })),
         payer: {
           name: nombre.trim(),
@@ -2479,8 +2565,9 @@ app.all('/api/flow/return', async (req, res) => {
       await saveSingleOrder(order);
       orderCode = order.codigoOrden;
 
-      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        assignAccountsToOrder(order);
         sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
@@ -2532,8 +2619,9 @@ app.post('/api/flow/confirm', async (req, res) => {
       order.estado = statusData.status === 2 ? 'pagada' : 'rechazada';
       await saveSingleOrder(order);
 
-      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        assignAccountsToOrder(order);
         sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
@@ -2545,38 +2633,122 @@ app.post('/api/flow/confirm', async (req, res) => {
 });
 
 // Retorno del usuario desde la pasarela Mercado Pago
+// NOTA: No confiar en los query params — verificar server-to-server con la API de MP
 app.all('/api/mp/return', async (req, res) => {
   const externalRef = req.query.external_reference || req.query.preference_id;
-  const status = req.query.status || req.query.collection_status || 'approved';
+  const paymentId = req.query.payment_id;
+  let verifiedStatus = 'pending';
+
+  // Verificar el pago server-to-server con la API de Mercado Pago
+  if (paymentId && MP_ACCESS_TOKEN) {
+    try {
+      const mpVerifyRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+      });
+      if (mpVerifyRes.ok) {
+        const mpPayment = await mpVerifyRes.json();
+        verifiedStatus = mpPayment.status; // 'approved', 'rejected', 'pending', etc.
+        console.log(`✅ [MP] Pago ${paymentId} verificado server-to-server. Estado: ${verifiedStatus}`);
+      } else {
+        console.warn(`⚠️ [MP] No se pudo verificar pago ${paymentId}: HTTP ${mpVerifyRes.status}`);
+      }
+    } catch (err) {
+      console.error('❌ Error verificando pago con MP API:', err.message);
+    }
+  } else {
+    // Sin payment_id o sin token, no se puede verificar → NO marcar como pagada
+    console.warn('⚠️ [MP] Retorno sin payment_id o sin MP_ACCESS_TOKEN. No se verificará el pago.');
+  }
 
   if (externalRef && isString(externalRef)) {
     const order = await getOrderByCode(externalRef);
     if (order) {
       const oldStatus = order.estado;
-      order.mpStatus = status;
-      order.estado = (status === 'approved' || status === '2') ? 'pagada' : 'rechazada';
+      order.mpPaymentId = paymentId;
+      order.mpStatus = verifiedStatus;
+      order.estado = verifiedStatus === 'approved' ? 'pagada' : (verifiedStatus === 'rejected' ? 'rechazada' : 'pendiente');
       await saveSingleOrder(order);
 
-      // Enviar correo de entrega si el pedido acaba de ser pagado 📩
+      // Asignar cuentas y enviar correo SOLO si el pago fue verificado como aprobado
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+        assignAccountsToOrder(order);
         sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
       }
     }
   }
 
-  res.redirect(`/?mp_order=${externalRef}&status=${status}`);
+  res.redirect(`/?mp_order=${encodeURIComponent(externalRef || '')}&status=${encodeURIComponent(verifiedStatus)}`);
 });
 
-app.post('/api/mp/confirm', (req, res) => {
+// Webhook IPN de Mercado Pago — verificación asíncrona server-to-server
+app.post('/api/mp/confirm', async (req, res) => {
+  const { type, data } = req.body || {};
+
+  if (type === 'payment' && data && data.id && MP_ACCESS_TOKEN) {
+    try {
+      const mpVerifyRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+      });
+
+      if (mpVerifyRes.ok) {
+        const mpPayment = await mpVerifyRes.json();
+        const externalRef = mpPayment.external_reference;
+        const verifiedStatus = mpPayment.status;
+
+        console.log(`🔔 [MP Webhook] Pago ${data.id} notificado. Estado: ${verifiedStatus}, Ref: ${externalRef}`);
+
+        if (externalRef) {
+          const order = await getOrderByCode(externalRef);
+          if (order) {
+            const oldStatus = order.estado;
+            order.mpPaymentId = data.id;
+            order.mpStatus = verifiedStatus;
+            order.estado = verifiedStatus === 'approved' ? 'pagada' : (verifiedStatus === 'rejected' ? 'rechazada' : order.estado);
+            await saveSingleOrder(order);
+
+            if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+              assignAccountsToOrder(order);
+              sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error en webhook IPN de Mercado Pago:', err.message);
+    }
+  }
+
   res.send('OK');
 });
 
-// Consultar orden por código
-app.get('/api/orders/:code', async (req, res) => {
+// Consultar orden por código (datos sensibles sanitizados para seguridad)
+app.get('/api/orders/:code', generalApiLimiter, async (req, res) => {
   if (!isString(req.params.code)) return res.status(400).json({ error: "Código inválido." });
   const order = await getOrderByCode(req.params.code);
   if (!order) return res.status(404).json({ error: "Orden no encontrada." });
-  res.json(order);
+
+  // Sanitizar datos sensibles: no exponer credenciales de cuentas asignadas
+  const sanitizedOrder = {
+    codigoOrden: order.codigoOrden,
+    cliente: order.cliente,
+    usuario: order.usuario,
+    email: order.email ? order.email.replace(/(.{2}).+(@.+)/, '$1***$2') : '',
+    carrito: Array.isArray(order.carrito) ? order.carrito.map(item => ({
+      titulo: item.titulo,
+      cantidad: item.cantidad,
+      licencia: item.licencia,
+      precio: item.precio
+      // varianteAsignada deliberadamente EXCLUIDA
+    })) : [],
+    articulos: order.articulos,
+    total: order.total,
+    totalFormatted: order.totalFormatted,
+    fecha: order.fecha,
+    estado: order.estado,
+    metodoPago: order.metodoPago
+  };
+
+  res.json(sanitizedOrder);
 });
 
 // Captura global de promesas no manejadas y excepciones para evitar caídas del proceso
