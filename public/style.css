@@ -4123,9 +4123,9 @@ footer.footer {
 
 .legal-alert {
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.1rem 1.4rem;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.4rem;
   border-radius: 14px;
   margin-bottom: 1.2rem;
   line-height: 1.6;
@@ -4145,8 +4145,9 @@ footer.footer {
 }
 
 .legal-alert-icon {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 @media (max-width: 768px) {
