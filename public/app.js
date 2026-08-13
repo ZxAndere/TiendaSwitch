@@ -324,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
   try { initGridViewControls(); } catch (e) { console.error('Error initGridViewControls:', e); }
+  try { initFloatingSearch(); } catch (e) { console.error('Error initFloatingSearch:', e); }
   try { applyTheme(localStorage.getItem('zonaswitch_theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
@@ -3298,7 +3299,7 @@ function selectAutocompleteResult(gameId, dropdownId) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box') && !e.target.closest('.mobile-search-overlay')) {
+  if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box') && !e.target.closest('.mobile-search-overlay') && !e.target.closest('.float-search')) {
     document.querySelectorAll('.search-autocomplete-dropdown').forEach(d => d.classList.remove('active'));
   }
 });
@@ -3406,7 +3407,58 @@ window.addEventListener('scroll', () => {
   }
 
   lastScrollY = currentScrollY;
+
+  // Búsqueda flotante: visible solo mientras el navbar está oculto,
+  // con el valor del input espejado en ambos sentidos
+  if (floatSearchEl) {
+    const show = navbar.classList.contains('nav-hidden');
+    const ds = document.getElementById('search-input');
+    if (show && ds && floatSearchInput) {
+      floatSearchInput.value = ds.value;
+    } else if (!show && ds && floatSearchInput && floatSearchInput.value !== ds.value) {
+      ds.value = floatSearchInput.value;
+    }
+    floatSearchEl.classList.toggle('show', show);
+  }
 }, { passive: true });
+
+// --- BÚSQUEDA FLOTANTE: aparece cuando el navbar se oculta al bajar ---
+let floatSearchEl = null;
+let floatSearchInput = null;
+
+function initFloatingSearch() {
+  if (floatSearchEl) return;
+  if (!document.querySelector('.navbar') || !document.getElementById('search-input')) return;
+
+  const el = document.createElement('div');
+  el.className = 'float-search';
+  el.id = 'float-search';
+  el.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+    <input type="text" id="float-search-input" placeholder="Buscar juegos..." aria-label="Buscar juegos" autocomplete="off">
+    <div class="search-autocomplete-dropdown" id="float-search-suggestions"></div>
+  `;
+  document.body.appendChild(el);
+
+  floatSearchEl = el;
+  floatSearchInput = el.querySelector('input');
+
+  // Mismo comportamiento que #search-input: filtra el catálogo en index
+  // y muestra las sugerencias predictivas en todas las páginas
+  floatSearchInput.addEventListener('input', () => {
+    searchQuery = floatSearchInput.value.toLowerCase().trim();
+    renderCatalog();
+    handleSearchAutocomplete(floatSearchInput, 'float-search-suggestions');
+  });
+
+  floatSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      floatSearchInput.blur();
+      const dd = document.getElementById('float-search-suggestions');
+      if (dd) dd.classList.remove('active');
+    }
+  });
+}
 
 // --- BARRA INFERIOR MÓVIL: SE COMPACTA AL BAJAR Y SE EXPANDE AL SUBIR (rAF) ---
 (function initBottomNavCompact() {

@@ -6455,6 +6455,69 @@ footer.footer {
 }
 
 /* ==========================================================================
+   Barra de búsqueda flotante: aparece cuando el navbar se oculta al bajar
+   ========================================================================== */
+.float-search {
+  position: fixed;
+  top: 0.9rem;
+  left: 50%;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(420px, calc(100% - 2rem));
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(10, 15, 25, 0.92);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-muted);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s 0.15s;
+}
+
+.float-search.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1), transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
+}
+
+.float-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.float-search input::placeholder {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.float-search .search-autocomplete-dropdown {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Modo claro */
+html.light-mode .float-search {
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+}
+
+/* ==========================================================================
    Accesibilidad: respeta la preferencia de movimiento reducido
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
