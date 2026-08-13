@@ -1756,6 +1756,7 @@ function closeRegisterModal() { document.getElementById('register-modal-backdrop
 // --- CATÁLOGO DE JUEGOS CON RETROCESO EXPONENCIAL Y LÍMITE DE REINTENTOS (Problema 7) ---
 let isFetchingCatalog = false;
 let catalogFirstRender = true; // true: primera carga con stagger elegante; luego re-renders rápidos
+let catalogLoaded = false;     // true: el catálogo mostrado viene del servidor (no del placeholder)
 
 async function fetchCatalog(retries = 3, baseDelay = 1000) {
   if (isFetchingCatalog) return;
@@ -1772,6 +1773,7 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         catalog = data;
+        catalogLoaded = true;
         success = true;
       } else {
         throw new Error('Respuesta de catálogo vacía');
@@ -1896,10 +1898,12 @@ function renderCatalog(animatePrices = false) {
     catalog = [...DEFAULT_GAMES_FRONTEND];
   }
 
-  // Choreografía de entrada: la primera carga usa el stagger elegante,
-  // los re-renders (filtros, búsqueda) entran rápido sin escalonado
-  if (catalogFirstRender) {
+  // Choreografía de entrada: el stagger aplica solo a la primera carga con
+  // datos reales del servidor; el render placeholder inicial y los re-renders
+  // (filtros, búsqueda) entran rápido sin escalonado
+  if (catalogFirstRender && catalogLoaded) {
     catalogFirstRender = false;
+    grid.classList.remove('grid-rerender');
   } else {
     grid.classList.add('grid-rerender');
   }
