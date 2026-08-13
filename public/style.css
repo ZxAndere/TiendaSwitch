@@ -1382,18 +1382,6 @@ html.light-mode {
   border: 1px solid rgba(0, 240, 255, 0.3);
 }
 
-.card-size-tag {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background: rgba(0, 0, 0, 0.75);
-  color: #e2e8f0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 3px 7px;
-  border-radius: 4px;
-}
-
 .card-content {
   padding: 1.25rem;
   display: flex;
@@ -2831,7 +2819,6 @@ html.light-mode {
   color: var(--joycon-cyan);
 }
 
-.card-size-tag svg,
 .license-name svg {
   vertical-align: -2px;
   margin-right: 3px;
@@ -3256,13 +3243,6 @@ html.light-mode {
     font-size: 0.6rem !important;
     padding: 2px 5px !important;
     top: 5px !important;
-    left: 5px !important;
-  }
-
-  .card-size-tag {
-    font-size: 0.6rem !important;
-    padding: 2px 5px !important;
-    bottom: 5px !important;
     left: 5px !important;
   }
 
