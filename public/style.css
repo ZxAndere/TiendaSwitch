@@ -38,8 +38,8 @@
   --radius-lg: 20px;
   --radius-full: 9999px;
   --max-width: 1440px;
-  --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-normal: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-normal: 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ==========================================================================
@@ -277,7 +277,7 @@ html.light-mode .admin-create-game-bar strong {
   border-radius: var(--radius-full);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .theme-toggle-btn:hover {
@@ -289,6 +289,31 @@ html.light-mode .admin-create-game-bar strong {
 .theme-toggle-btn:focus-visible {
   outline: 2px solid var(--joycon-cyan);
   outline-offset: 2px;
+}
+
+/* Intercambio sol/luna animado (0.15s rotate/fade) — solo en el botón de navbar */
+.theme-toggle-btn {
+  position: relative;
+}
+
+.theme-toggle-btn .icon-sun,
+.theme-toggle-btn .icon-moon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
+}
+
+html:not(.light-mode) .theme-toggle-btn .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+html.light-mode .theme-toggle-btn .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
 }
 
 /* Iconos sol/luna: se muestra el modo al que se puede cambiar */
@@ -462,7 +487,7 @@ html.light-mode {
   display: flex;
   align-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .header-search-box input::placeholder {
@@ -965,7 +990,7 @@ html.light-mode {
   text-align: right;
   padding: 0 0.75rem;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .filter-price-input:hover {
@@ -991,7 +1016,7 @@ html.light-mode {
   font-weight: 600;
   padding: 0 0.75rem;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .filter-select:hover,
@@ -1013,7 +1038,7 @@ html.light-mode {
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .filter-reset-btn:hover {
@@ -1064,7 +1089,7 @@ html.light-mode {
   flex-direction: column;
   opacity: 1;
   transform: translateY(0) scale(1);
-  animation: cardIn 0.35s ease both;
+  animation: cardIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
   transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   will-change: opacity, transform;
   cursor: pointer;
@@ -1076,6 +1101,12 @@ html.light-mode {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Stagger sutil de la cuadrícula (40ms por tarjeta, tope total < 0.5s) */
+.game-card:nth-child(2) { animation-delay: 0.04s; }
+.game-card:nth-child(3) { animation-delay: 0.08s; }
+.game-card:nth-child(4) { animation-delay: 0.12s; }
+.game-card:nth-child(5) { animation-delay: 0.16s; }
 
 .game-card.in-view {
   opacity: 1;
@@ -1321,7 +1352,7 @@ html.light-mode {
   align-items: center;
   justify-content: center;
   font-size: 1.1rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   opacity: 0.9;
 }
 
@@ -1777,7 +1808,7 @@ html.light-mode {
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
 }
 
@@ -2018,7 +2049,7 @@ html.light-mode {
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(0, 240, 255, 0.15);
   position: relative;
-  animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalPop 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .payment-modal-grid {
@@ -2079,7 +2110,7 @@ html.light-mode {
   border-radius: var(--radius-md);
   padding: 0.85rem 1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .gateway-option-card input[type="radio"] {
@@ -2448,8 +2479,6 @@ html.light-mode {
 
 .toast {
   background: rgba(15, 22, 36, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--joycon-cyan);
   color: var(--text-main);
   padding: 0.85rem 1.2rem;
@@ -2462,7 +2491,7 @@ html.light-mode {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   transform: translateY(20px);
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.26s cubic-bezier(0.22, 0.8, 0.6, 1), opacity 0.26s ease;
   pointer-events: all;
 }
 
@@ -2607,7 +2636,7 @@ html.light-mode {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .user-profile-trigger:hover {
@@ -2628,7 +2657,7 @@ html.light-mode {
   overflow: hidden;
   z-index: 1000;
   display: none;
-  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalPop 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .user-dropdown-menu.active {
@@ -3192,7 +3221,7 @@ html.light-mode {
     overflow: hidden;
     padding: 0 0.75rem;
     border-width: 0;
-    transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease, border-width 0.35s ease;
+    transition: max-height 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1), padding 0.25s cubic-bezier(0.32, 0.72, 0, 1), border-width 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .filter-panel.open {
@@ -3253,8 +3282,6 @@ html.light-mode {
     padding: 10px 14px;
     border-radius: 14px;
     background: rgba(10, 15, 25, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--border-subtle);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     animation: none;
@@ -3296,7 +3323,7 @@ html.light-mode {
     -webkit-backdrop-filter: blur(8px);
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.3s ease;
   }
 
   .mobile-search-overlay.active {
@@ -3310,7 +3337,7 @@ html.light-mode {
     max-width: 560px;
     transform: translateY(-12px);
     opacity: 0;
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .mobile-search-overlay.active .mobile-search-overlay-box {
@@ -3340,7 +3367,7 @@ html.light-mode {
     padding: 0 3rem 0 2.75rem;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .mobile-search-overlay-box input:focus {
@@ -3367,7 +3394,7 @@ html.light-mode {
     border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .mobile-search-overlay-close:hover {
@@ -3387,7 +3414,7 @@ html.light-mode {
 
   /* Sugerencias: entrada escalonada (stagger) al renderizar resultados */
   .mobile-search-overlay-box .search-autocomplete-dropdown .autocomplete-item {
-    animation: suggestIn 0.25s ease both;
+    animation: suggestIn 0.25s cubic-bezier(0.32, 0.72, 0, 1) both;
   }
 
   .mobile-search-overlay-box .search-autocomplete-dropdown .autocomplete-item:nth-child(2) { animation-delay: 0.04s; }
@@ -3432,7 +3459,7 @@ html.light-mode {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .mobile-menu-trigger-btn:hover {
@@ -3474,12 +3501,28 @@ html.light-mode {
   box-shadow: -10px 0 35px rgba(0, 0, 0, 0.9);
   display: flex;
   flex-direction: column;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   overflow-y: auto;
 }
 
 .mobile-nav-drawer.active {
   transform: translateX(-320px);
+}
+
+/* Secciones del menú: entrada escalonada al abrir (50ms por sección) */
+.mobile-nav-drawer.active .mobile-drawer-body > * {
+  animation: drawerItemIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.mobile-nav-drawer.active .mobile-drawer-body > *:nth-child(1) { animation-delay: 0.04s; }
+.mobile-nav-drawer.active .mobile-drawer-body > *:nth-child(2) { animation-delay: 0.08s; }
+.mobile-nav-drawer.active .mobile-drawer-body > *:nth-child(3) { animation-delay: 0.12s; }
+.mobile-nav-drawer.active .mobile-drawer-body > *:nth-child(4) { animation-delay: 0.16s; }
+.mobile-nav-drawer.active .mobile-drawer-body > *:nth-child(5) { animation-delay: 0.2s; }
+
+@keyframes drawerItemIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .mobile-drawer-header {
@@ -3584,7 +3627,7 @@ html.light-mode {
   font-weight: 600;
   outline: none;
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .mobile-currency-select:hover,
@@ -3600,8 +3643,6 @@ html.light-mode {
   gap: 0.75rem;
   min-height: 44px;
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-subtle);
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius-sm);
@@ -3609,7 +3650,7 @@ html.light-mode {
   text-decoration: none;
   font-weight: 700;
   font-size: 0.875rem;
-  transition: all 0.2s ease;
+  transition: background 0.15s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .mobile-drawer-link:hover {
@@ -3689,7 +3730,7 @@ html.light-mode {
   border-radius: 999px;
   padding: 6px 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  transition: padding 0.25s ease;
+  transition: padding 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .mobile-bottom-nav button {
@@ -3703,8 +3744,6 @@ html.light-mode {
   justify-content: center;
   gap: 2px;
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: none;
   border-radius: 999px;
   color: var(--text-muted);
@@ -3712,7 +3751,7 @@ html.light-mode {
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease, min-width 0.25s ease, min-height 0.25s ease, padding 0.25s ease, transform 0.2s ease;
+  transition: color 0.15s cubic-bezier(0.32, 0.72, 0, 1), background 0.15s cubic-bezier(0.32, 0.72, 0, 1), min-width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), min-height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), padding 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -3729,7 +3768,7 @@ html.light-mode {
 }
 
 .mobile-bottom-nav button .bnav-icon svg {
-  transition: width 0.25s ease, height 0.25s ease;
+  transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .mobile-bottom-nav button:active {
@@ -3748,7 +3787,7 @@ html.light-mode {
   max-height: 16px;
   opacity: 1;
   overflow: hidden;
-  transition: opacity 0.2s ease, max-height 0.25s ease;
+  transition: opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Estado compacto al hacer scroll: píldora fina solo con iconos */
@@ -3790,11 +3829,10 @@ html.light-mode {
   background: rgba(4, 7, 13, 0.55);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   padding: 12px;
   visibility: hidden;
   opacity: 0;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.3s ease;
 }
 
 .account-sheet-backdrop.active {
@@ -3811,12 +3849,17 @@ html.light-mode {
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
   overflow: hidden;
-  transform: translateY(20px);
-  opacity: 0;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
 }
 
-.account-sheet-backdrop.active .account-sheet-card {
+/* El slide ocurre en un wrapper interno: la tarjeta tiene backdrop-filter
+   y transform sobre el mismo elemento mataría el blur en WebKit */
+.account-sheet-inner {
+  transform: translateY(20px);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.account-sheet-backdrop.active .account-sheet-inner {
   transform: translateY(0);
   opacity: 1;
 }
@@ -3852,7 +3895,7 @@ html.light-mode {
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .account-sheet-close:hover {
@@ -3879,8 +3922,6 @@ html.light-mode {
   min-height: 48px;
   padding: 0.75rem 0.9rem;
   background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-main);
@@ -3889,7 +3930,7 @@ html.light-mode {
   font-weight: 700;
   cursor: pointer;
   text-align: left;
-  transition: background 0.2s ease;
+  transition: background 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .account-sheet-item:hover {
@@ -3903,6 +3944,28 @@ html.light-mode {
 .account-sheet-item:focus-visible {
   outline: 2px solid var(--joycon-cyan);
   outline-offset: -2px;
+}
+
+/* Entrada escalonada de los ítems (50ms por paso, se reinicia al cerrar) */
+.account-sheet-backdrop .account-sheet-item {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1), transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), background 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.account-sheet-backdrop.active .account-sheet-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.account-sheet-backdrop.active .account-sheet-item:nth-child(1) { transition-delay: 0ms; }
+.account-sheet-backdrop.active .account-sheet-item:nth-child(2) { transition-delay: 50ms; }
+.account-sheet-backdrop.active .account-sheet-item:nth-child(3) { transition-delay: 100ms; }
+.account-sheet-backdrop.active .account-sheet-item:nth-child(4) { transition-delay: 150ms; }
+.account-sheet-backdrop.active .account-sheet-item:nth-child(5) { transition-delay: 200ms; }
+
+.account-sheet-backdrop:not(.active) .account-sheet-item {
+  transition-delay: 0ms;
 }
 
 .account-sheet-item svg {
@@ -4085,7 +4148,7 @@ html.light-mode {
   height: 24px;
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 24px;
-  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .toggle-slider::before {
@@ -4097,7 +4160,7 @@ html.light-mode {
   bottom: 3px;
   background-color: white;
   border-radius: 50%;
-  transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .toggle-switch-label input:checked+.toggle-slider {
@@ -4144,7 +4207,7 @@ html.light-mode {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .admin-icon-btn:hover {
@@ -4215,7 +4278,7 @@ html.light-mode {
   justify-content: center;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .icon-btn-add:hover {
@@ -4297,7 +4360,7 @@ html.light-mode {
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .add-variant-btn-pill:hover {
@@ -4326,8 +4389,6 @@ html.light-mode {
   background: linear-gradient(110deg, rgba(15, 22, 36, 0.96) 0%, rgba(255, 0, 60, 0.22) 35%, rgba(0, 240, 255, 0.25) 70%, rgba(15, 22, 36, 0.96) 100%);
   background-size: 240% 100%;
   animation: toastGradientFlow 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 0, 60, 0.4);
   border-radius: var(--radius-md);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), var(--glow-red);
@@ -4337,10 +4398,22 @@ html.light-mode {
   max-width: 380px;
   opacity: 0;
   transform: translateY(20px) scale(0.95);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.26s cubic-bezier(0.22, 0.8, 0.6, 1), opacity 0.26s ease;
   touch-action: pan-y;
   cursor: grab;
   user-select: none;
+}
+
+/* El difuminado vive en ::after para que transform del toast no mate el blur en WebKit */
+.toast::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .toast::before {
@@ -4434,7 +4507,7 @@ html.light-mode {
    Navegación Sticky Inteligente (Ocultar al bajar / Revelar al subir)
    ========================================================================== */
 .navbar {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 .navbar.nav-hidden {
@@ -4854,8 +4927,6 @@ html.light-mode {
   width: 46px;
   height: 46px;
   background: rgba(10, 15, 25, 0.92);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   color: #25d366;
   border-radius: 50%;
@@ -4863,7 +4934,7 @@ html.light-mode {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.15s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   text-decoration: none;
 }
 
@@ -5355,9 +5426,7 @@ footer.footer {
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -5386,7 +5455,7 @@ footer.footer {
   border: 1px solid rgba(230, 0, 18, 0.4);
   border-radius: 24px;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(230, 0, 18, 0.15);
-  animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation: modalPop 0.4s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
 
 .about-modal-header {
@@ -5459,7 +5528,7 @@ footer.footer {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 25px rgba(230, 0, 18, 0.4);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .modal-pretty-btn:hover {
@@ -5855,8 +5924,23 @@ footer.footer {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ==========================================================================
+   Keyframes de entrada de modales (se referenciaban pero nunca se definieron)
+   ========================================================================== */
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

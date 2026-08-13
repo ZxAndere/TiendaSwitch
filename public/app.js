@@ -1165,13 +1165,15 @@ function buildAccountSheet() {
   sheet.setAttribute('aria-hidden', 'true');
   sheet.innerHTML = `
     <div class="account-sheet-card" role="dialog" aria-label="Menú de cuenta">
-      <div class="account-sheet-header">
-        <span class="account-sheet-title" id="account-sheet-title">Cuenta</span>
-        <button type="button" class="account-sheet-close" id="account-sheet-close" aria-label="Cerrar menú de cuenta">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-        </button>
+      <div class="account-sheet-inner">
+        <div class="account-sheet-header">
+          <span class="account-sheet-title" id="account-sheet-title">Cuenta</span>
+          <button type="button" class="account-sheet-close" id="account-sheet-close" aria-label="Cerrar menú de cuenta">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div class="account-sheet-items" id="account-sheet-items"></div>
       </div>
-      <div class="account-sheet-items" id="account-sheet-items"></div>
     </div>
   `;
   sheet.addEventListener('click', (e) => {
@@ -2565,7 +2567,7 @@ function showPaymentCancelledModal() {
     modal.style.display = 'flex';
     modal.style.zIndex = '100000';
     modal.innerHTML = `
-      <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2.2rem 1.8rem; background: var(--bg-card, #111827); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); animation: modalFadeIn 0.25s ease;">
+      <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2.2rem 1.8rem; background: var(--bg-card, #111827); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); animation: modalFadeIn 0.3s cubic-bezier(0.32, 0.72, 0, 1);">
         <div style="font-size: 3.5rem; margin-bottom: 0.6rem; line-height: 1; display: flex; justify-content: center; color: #f87171;"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></div>
         <h3 style="color: #f87171; font-size: 1.45rem; font-weight: 800; margin-bottom: 0.6rem;">Pago Cancelado</h3>
         <p style="color: var(--text-muted, #94a3b8); font-size: 0.95rem; line-height: 1.55; margin-bottom: 1.8rem;">
@@ -2774,7 +2776,7 @@ function showToast(message, duration = 3500) {
       const direction = deltaX > 0 ? 'right' : 'left';
       dismissToast(toast, direction);
     } else {
-      toast.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+      toast.style.transition = 'transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease';
       toast.style.transform = 'translateX(0)';
       toast.style.opacity = '1';
     }
@@ -2790,7 +2792,7 @@ function showToast(message, duration = 3500) {
 }
 
 function dismissToast(toast, direction = 'right') {
-  toast.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease';
+  toast.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1), opacity 0.2s ease';
   toast.style.transform = direction === 'left' ? 'translateX(-350px)' : 'translateX(350px)';
   toast.style.opacity = '0';
   setTimeout(() => {
