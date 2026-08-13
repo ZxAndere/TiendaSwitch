@@ -41,6 +41,17 @@
   --max-width: 1440px;
   --transition-fast: 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   --transition-normal: 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Sistema de controles: tokens compartidos de botones e inputs */
+  --btn-radius: var(--radius-md);
+  --btn-pad-y: 0.65rem;
+  --btn-pad-x: 1.25rem;
+  --btn-font-size: 0.875rem;
+  --input-radius: var(--radius-sm);
+  --input-pad-y: 0.7rem;
+  --input-pad-x: 0.9rem;
+  --input-font-size: 0.875rem;
+  --input-focus-ring: 0 0 0 3px rgba(0, 240, 255, 0.15);
 }
 
 /* ==========================================================================
@@ -6509,6 +6520,82 @@ footer.footer {
   .mobile-search-overlay {
     display: none !important;
   }
+}
+
+/* ==========================================================================
+   Sistema de controles consolidado: estados y tokens compartidos
+   (los colores/gradientes de cada clase no cambian; se unifican las
+   proporciones, el foco, el movimiento hover y el estado deshabilitado)
+   ========================================================================== */
+
+/* Foco visible uniforme (teclado): anillo cian 2px para todos los botones */
+button:focus-visible {
+  outline: 2px solid var(--joycon-cyan);
+  outline-offset: 2px;
+}
+
+/* El buscador del header conserva su resplandor propio (sistema flotante) */
+.header-search-box input:focus-visible {
+  outline: none;
+}
+
+/* Foco de inputs estándar: borde cian + anillo suave (mismo lenguaje que
+   los filtros del catálogo; antes cada input tenía un foco distinto) */
+.form-group input:focus,
+.admin-search-input:focus,
+.variant-field input:focus,
+.variant-field textarea:focus,
+.coupon-input-group input:focus {
+  border-color: var(--joycon-cyan);
+  box-shadow: var(--input-focus-ring);
+  outline: none;
+}
+
+/* Inputs estándar: tokens compartidos (radio, tipografía y padding) */
+.form-group input,
+.admin-search-input,
+.variant-field input,
+.variant-field textarea,
+.coupon-input-group input {
+  border-radius: var(--input-radius);
+  padding: var(--input-pad-y) var(--input-pad-x);
+  font-family: var(--font-body);
+  font-size: var(--input-font-size);
+}
+
+/* Botones de acción: lenguaje de movimiento compartido (0.15s entrada,
+   sombra 0.2s) — los hoveres y colores existentes no cambian */
+.cart-trigger-btn,
+.banner-cta-btn,
+.modal-pretty-btn,
+.submit-payment-btn,
+.btn-close-modal,
+.auth-submit-btn,
+.filter-reset-btn,
+.add-variant-btn-pill,
+.apply-coupon-btn,
+.nav-auth-btn,
+.nav-faq-btn,
+.footer-btn,
+.back-home-btn {
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* El botón de compra del modal tenía una transición antigua con !important:
+   se reemplaza por el lenguaje compartido */
+.btn-buy-now {
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1), background 0.15s cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+
+/* Deshabilitado uniforme (los que ya tenían su propio estado lo conservan) */
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Radio unificado para la acción destructiva de cuenta */
+.delete-account-btn {
+  border-radius: var(--btn-radius);
 }
 
 /* ==========================================================================
