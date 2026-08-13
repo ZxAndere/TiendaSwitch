@@ -1029,7 +1029,7 @@ body {
 
 .license-options-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   margin-bottom: 0.85rem;
 }
@@ -1122,7 +1122,7 @@ body {
 
 .gmodal-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -1592,7 +1592,7 @@ body {
 
 .form-group-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -2675,6 +2675,25 @@ body {
   .oh-header {
     flex-wrap: wrap;
     gap: 0.4rem;
+  }
+
+  /* Filas de formulario apiladas en celular (inputs no bajan de su ancho mínimo) */
+  .form-group-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* faq.html usa la barra de escritorio sin clases desktop-only: ocultarla en móvil */
+  .logo-text,
+  .currency-select-wrapper,
+  .user-nav-area {
+    display: none !important;
+  }
+
+  /* Modal admin quick-edit: filas con display:flex inline desbordan en 360px */
+  .auth-modal-card.wide-admin-game .form-group-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
   }
 }
 
@@ -4754,7 +4773,11 @@ footer.footer {
   }
 
   .user-modal-card.wide-admin .admin-subtabs {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .user-modal-card.wide-admin .admin-subtabs .tab-btn {
+    white-space: normal;
   }
 
   .user-modal-card.wide-admin .admin-game-row {

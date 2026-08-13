@@ -464,7 +464,7 @@
 
 .jd-license-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -603,7 +603,7 @@
 /* Botones CTAs */
 .jd-cta-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -906,6 +906,10 @@
     gap: 0.5rem;
   }
   .jd-gallery-header-row, .jd-video-header-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .jd-price-header, .jd-price-row, .jd-section-label {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
