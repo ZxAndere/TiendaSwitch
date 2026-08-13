@@ -442,7 +442,6 @@ html.light-mode {
   height: 44px;
   object-fit: contain;
   border-radius: 8px;
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.3);
 }
 
 .logo-text {
