@@ -1519,6 +1519,13 @@ function toggleFavoriteGame(gameId, event) {
   if (favoriteGameIds.has(id)) favoriteGameIds.delete(id); else favoriteGameIds.add(id);
   localStorage.setItem('zonaswitch_favorites', JSON.stringify([...favoriteGameIds]));
   renderCatalog();
+  // Micro-pop del corazón (Apple: escala con overshoot al tocar)
+  const heartBtn = document.querySelector(`.favorite-game-btn[data-fav-id="${id}"]`);
+  if (heartBtn) {
+    heartBtn.classList.remove('heart-pop');
+    void heartBtn.offsetWidth;
+    heartBtn.classList.add('heart-pop');
+  }
   showToast(favoriteGameIds.has(id) ? '❤️ Agregado a favoritos' : '🤍 Eliminado de favoritos');
 }
 
@@ -1748,6 +1755,7 @@ function closeRegisterModal() { document.getElementById('register-modal-backdrop
 
 // --- CATÁLOGO DE JUEGOS CON RETROCESO EXPONENCIAL Y LÍMITE DE REINTENTOS (Problema 7) ---
 let isFetchingCatalog = false;
+let catalogFirstRender = true; // true: primera carga con stagger elegante; luego re-renders rápidos
 
 async function fetchCatalog(retries = 3, baseDelay = 1000) {
   if (isFetchingCatalog) return;
@@ -1888,6 +1896,14 @@ function renderCatalog(animatePrices = false) {
     catalog = [...DEFAULT_GAMES_FRONTEND];
   }
 
+  // Choreografía de entrada: la primera carga usa el stagger elegante,
+  // los re-renders (filtros, búsqueda) entran rápido sin escalonado
+  if (catalogFirstRender) {
+    catalogFirstRender = false;
+  } else {
+    grid.classList.add('grid-rerender');
+  }
+
   const filtered = catalog.filter(game => {
     if (!game) return false;
     const title = (game.titulo || '').toLowerCase();
@@ -1968,7 +1984,7 @@ function renderCatalog(animatePrices = false) {
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
         <span class="card-size-tag"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> ${escapeHTML(game.peso || 'N/A')}</span>
-        <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">${isGameInFavorites(game.id)
+        <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" data-fav-id="${game.id}" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">${isGameInFavorites(game.id)
           ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'
           : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'}</button>
         ${isAdmin ? `<button type="button" class="card-admin-gear" onclick="event.preventDefault(); event.stopPropagation(); openGameEditModal(${game.id});" title="Editar juego en tiempo real (Admin)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>` : ''}
@@ -2200,7 +2216,16 @@ function updateCartBadge() {
   const drawerCount = document.getElementById('drawer-count');
   const totalCount = cart.reduce((acc, item) => acc + item.cantidad, 0);
 
-  if (badge) badge.textContent = totalCount;
+  if (badge) {
+    const changed = badge.textContent !== String(totalCount);
+    badge.textContent = totalCount;
+    // Micro-pop del contador al cambiar (Apple: rebote corto)
+    if (changed && totalCount > 0) {
+      badge.classList.remove('badge-pop');
+      void badge.offsetWidth;
+      badge.classList.add('badge-pop');
+    }
+  }
   if (drawerCount) drawerCount.textContent = totalCount;
 }
 

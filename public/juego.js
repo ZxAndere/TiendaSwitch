@@ -190,7 +190,7 @@ function renderGameDetailView(animatePrice = false) {
     if (strip) {
       strip.innerHTML = (detailImagesList || []).map((imgUrl, idx) => `
         <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
-          <img src="${safeEscapeHTML(imgUrl)}" alt="Captura ${idx + 1}">
+          <img src="${safeEscapeHTML(imgUrl)}" alt="Captura ${idx + 1}" loading="lazy">
         </div>
       `).join('');
     }

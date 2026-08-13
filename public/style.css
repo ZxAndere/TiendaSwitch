@@ -122,7 +122,22 @@ html.light-mode .mobile-bottom-nav button,
 html.light-mode .mobile-drawer-link,
 html.light-mode .mobile-search-box .search-input,
 html.light-mode .account-sheet-item {
-  background: rgba(15, 23, 42, 0.05);
+  background: transparent;
+}
+
+@media (hover: hover) {
+  html.light-mode .mobile-bottom-nav button:hover {
+    background: rgba(15, 23, 42, 0.06);
+  }
+
+  html.light-mode .mobile-drawer-link:hover,
+  html.light-mode .account-sheet-item:hover {
+    background: rgba(15, 23, 42, 0.06);
+  }
+}
+
+html.light-mode .mobile-bottom-nav button:active {
+  background: rgba(15, 23, 42, 0.12);
 }
 
 html.light-mode .whatsapp-float-btn {
@@ -280,10 +295,12 @@ html.light-mode .admin-create-game-bar strong {
   transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.theme-toggle-btn:hover {
-  color: var(--joycon-cyan);
-  border-color: rgba(0, 240, 255, 0.4);
-  background: rgba(0, 240, 255, 0.1);
+@media (hover: hover) {
+  .theme-toggle-btn:hover {
+    color: var(--joycon-cyan);
+    border-color: rgba(0, 240, 255, 0.4);
+    background: rgba(0, 240, 255, 0.1);
+  }
 }
 
 .theme-toggle-btn:focus-visible {
@@ -593,9 +610,11 @@ html.light-mode {
   white-space: nowrap;
 }
 
-.cart-trigger-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 0, 60, 0.45);
+@media (hover: hover) {
+  .cart-trigger-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 0, 60, 0.45);
+  }
 }
 
 .cart-badge {
@@ -728,10 +747,22 @@ html.light-mode {
   }
 }
 
-.full-width-banner-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--switch-red);
-  box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 0, 60, 0.35);
+@media (hover: hover) {
+  .full-width-banner-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--switch-red);
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 0, 60, 0.35);
+  }
+
+  .full-width-banner-card:hover .hero-banner-img {
+    transform: scale(1.03);
+  }
+
+  .full-width-banner-card:hover .banner-cta-btn {
+    background: white;
+    color: var(--switch-red);
+    transform: translateX(4px);
+  }
 }
 
 .hero-banner-img {
@@ -740,10 +771,6 @@ html.light-mode {
   object-fit: cover;
   object-position: center;
   transition: transform 0.6s ease;
-}
-
-.full-width-banner-card:hover .hero-banner-img {
-  transform: scale(1.03);
 }
 
 .banner-overlay-content {
@@ -790,12 +817,6 @@ html.light-mode {
   transition: all 0.25s ease;
 }
 
-.full-width-banner-card:hover .banner-cta-btn {
-  background: white;
-  color: var(--switch-red);
-  transform: translateX(4px);
-}
-
 /* ==========================================================================
    Filter Section (Category Chips)
    ========================================================================== */
@@ -837,9 +858,11 @@ html.light-mode {
   transition: all 0.2s;
 }
 
-.pill-btn:hover {
-  color: var(--text-main);
-  border-color: rgba(255, 255, 255, 0.2);
+@media (hover: hover) {
+  .pill-btn:hover {
+    color: var(--text-main);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
 }
 
 .pill-btn.active {
@@ -910,9 +933,11 @@ html.light-mode {
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.filter-toggle-btn:hover {
-  border-color: rgba(0, 240, 255, 0.4);
-  background: rgba(21, 30, 48, 0.8);
+@media (hover: hover) {
+  .filter-toggle-btn:hover {
+    border-color: rgba(0, 240, 255, 0.4);
+    background: rgba(21, 30, 48, 0.8);
+  }
 }
 
 .filter-toggle-btn .filter-toggle-icon {
@@ -1041,10 +1066,12 @@ html.light-mode {
   transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.filter-reset-btn:hover {
-  background: var(--switch-red);
-  border-color: var(--switch-red);
-  color: #fff;
+@media (hover: hover) {
+  .filter-reset-btn:hover {
+    background: var(--switch-red);
+    border-color: var(--switch-red);
+    color: #fff;
+  }
 }
 
 .filter-check-label {
@@ -1108,15 +1135,77 @@ html.light-mode {
 .game-card:nth-child(4) { animation-delay: 0.12s; }
 .game-card:nth-child(5) { animation-delay: 0.16s; }
 
+/* Re-render de filtros: entrada rápida sin stagger (se siente instantánea) */
+.games-grid.grid-rerender .game-card {
+  animation: cardIn 0.2s cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation-delay: 0s !important;
+}
+
+/* Coreografía de carga de página: banner primero, luego secciones, luego grid */
+.full-width-banner-section {
+  animation: fadeUp 0.2s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.hero-section {
+  animation: fadeUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) 0.05s both;
+}
+
+.trust-banner-section {
+  animation: fadeUp 0.25s cubic-bezier(0.32, 0.72, 0, 1) 0.1s both;
+}
+
+.section-header,
+.category-pills {
+  animation: fadeUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) 0.15s both;
+}
+
+/* .filter-panel NO anima opacity en la carga: su transición de abrir/cerrar
+   (max-height/opacity) debe quedar libre de fills de animación */
+
+.faq-hero,
+.terms-hero,
+.juego-detail-wrapper {
+  animation: fadeUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Micro-pop del corazón al marcar/quitar favorito */
+.favorite-game-btn.heart-pop {
+  animation: heartPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Micro-pop del contador del carrito al cambiar */
+.cart-badge.badge-pop {
+  animation: badgePop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes badgePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
 .game-card.in-view {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
 
-.game-card.in-view:hover {
-  transform: translateY(-6px) scale(1);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 0, 60, 0.15);
+@media (hover: hover) {
+  .game-card.in-view:hover {
+    transform: translateY(-6px) scale(1);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(255, 0, 60, 0.15);
+  }
 }
 
 .card-media {
@@ -1135,8 +1224,10 @@ html.light-mode {
   transition: transform 0.5s ease;
 }
 
-.game-card:hover .card-media img {
-  transform: scale(1.06);
+@media (hover: hover) {
+  .game-card:hover .card-media img {
+    transform: scale(1.06);
+  }
 }
 
 .card-tag {
@@ -1356,12 +1447,14 @@ html.light-mode {
   opacity: 0.9;
 }
 
-.slider-arrow:hover {
-  background: var(--switch-red);
-  border-color: var(--switch-red);
-  transform: translateY(-50%) scale(1.1);
-  opacity: 1;
-  box-shadow: 0 0 12px rgba(255, 0, 60, 0.5);
+@media (hover: hover) {
+  .slider-arrow:hover {
+    background: var(--switch-red);
+    border-color: var(--switch-red);
+    transform: translateY(-50%) scale(1.1);
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(255, 0, 60, 0.5);
+  }
 }
 
 .slider-arrow.prev {
@@ -3336,13 +3429,13 @@ html.light-mode {
     position: relative;
     width: 100%;
     max-width: 560px;
-    transform: translateY(-12px);
+    transform: translateY(-16px) scale(0.98);
     opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform 0.32s cubic-bezier(0.22, 0.8, 0.6, 1), opacity 0.25s ease-out;
   }
 
   .mobile-search-overlay.active .mobile-search-overlay-box {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
   }
 
@@ -3353,6 +3446,17 @@ html.light-mode {
     transform: translateY(-50%);
     color: var(--text-muted);
     pointer-events: none;
+  }
+
+  /* Micro-detalle tipo Spotlight: el icono hace un pequeño "pop" al abrir */
+  .mobile-search-overlay.active .mobile-search-overlay-box .search-icon {
+    animation: searchIconPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes searchIconPop {
+    0% { transform: translateY(-50%) scale(1); }
+    40% { transform: translateY(-50%) scale(1.12); }
+    100% { transform: translateY(-50%) scale(1); }
   }
 
   .mobile-search-overlay-box input {
@@ -3654,9 +3758,11 @@ html.light-mode {
   transition: background 0.15s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.mobile-drawer-link:hover {
-  background: rgba(0, 240, 255, 0.1);
-  border-color: rgba(0, 240, 255, 0.3);
+@media (hover: hover) {
+  .mobile-drawer-link:hover {
+    background: rgba(0, 240, 255, 0.1);
+    border-color: rgba(0, 240, 255, 0.3);
+  }
 }
 
 .mobile-drawer-link:active {
@@ -3744,7 +3850,7 @@ html.light-mode {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   border: none;
   border-radius: 999px;
   color: var(--text-muted);
@@ -3756,10 +3862,13 @@ html.light-mode {
   -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-bottom-nav button:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.05);
-  transform: scale(1.05);
+/* Hover solo para dispositivos con puntero (sin hover pegajoso en táctiles) */
+@media (hover: hover) {
+  .mobile-bottom-nav button:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.06);
+    transform: scale(1.04);
+  }
 }
 
 .mobile-bottom-nav button .bnav-icon {
@@ -3772,10 +3881,11 @@ html.light-mode {
   transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Al tocar: píldora interior sutil (como tab bar de iOS) */
 .mobile-bottom-nav button:active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--text-main);
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .mobile-bottom-nav button:focus-visible {
@@ -3899,10 +4009,12 @@ html.light-mode {
   transition: all 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.account-sheet-close:hover {
-  color: #fff;
-  background: rgba(255, 0, 60, 0.25);
-  border-color: var(--switch-red);
+@media (hover: hover) {
+  .account-sheet-close:hover {
+    color: #fff;
+    background: rgba(255, 0, 60, 0.25);
+    border-color: var(--switch-red);
+  }
 }
 
 .account-sheet-close:focus-visible {
@@ -3934,8 +4046,10 @@ html.light-mode {
   transition: background 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.account-sheet-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+@media (hover: hover) {
+  .account-sheet-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .account-sheet-item:active {
@@ -4840,10 +4954,12 @@ html.light-mode {
   transition: var(--transition-fast);
 }
 
-.gallery-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(0, 240, 255, 0.3);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+@media (hover: hover) {
+  .gallery-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(0, 240, 255, 0.3);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+  }
 }
 
 .gallery-card img {
@@ -4939,10 +5055,12 @@ html.light-mode {
   text-decoration: none;
 }
 
-.whatsapp-float-btn:hover {
-  transform: scale(1.08);
-  border-color: rgba(37, 211, 102, 0.5);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 14px rgba(37, 211, 102, 0.25);
+@media (hover: hover) {
+  .whatsapp-float-btn:hover {
+    transform: scale(1.08);
+    border-color: rgba(37, 211, 102, 0.5);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55), 0 0 14px rgba(37, 211, 102, 0.25);
+  }
 }
 
 .whatsapp-tooltip {
@@ -4963,9 +5081,11 @@ html.light-mode {
   transform: translateX(10px);
 }
 
-.whatsapp-float-btn:hover .whatsapp-tooltip {
-  opacity: 1;
-  transform: translateX(0);
+@media (hover: hover) {
+  .whatsapp-float-btn:hover .whatsapp-tooltip {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Microinteracciones de Botones (Checkmark & Color Shift) */
