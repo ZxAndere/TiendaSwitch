@@ -1749,36 +1749,47 @@ async function handleLoginSubmit(e) {
 }
 
 // Los modales de auth (login/registro/ajustes) están SIEMPRE en el DOM con sus
-// campos de contraseña. Si quedan como type="password" al cargar la página, los
-// gestores de contraseñas ofrecen autofill aunque no haya pantalla de login.
-// En reposo los campos son type="text" (sin hint de autocomplete) y se activan
+// campos de autofill. Si quedan como type="password" o con hints de autocomplete
+// al cargar la página, los gestores de contraseñas (incl. iCloud Passwords)
+// ofrecen autofill aunque no haya pantalla de login. En reposo todos los campos
+// quedan inertes (type="text", autocomplete="off", forms sin hint) y se activan
 // solo mientras su modal está abierto. Un MutationObserver cubre TODAS las vías
 // de apertura/cierre (botones, ESC, clicks en el backdrop, subtabs).
-const AUTH_PASSWORD_FIELDS = {
-  'login-password': 'current-password',
-  'register-password': 'new-password',
-  'username-current-password': 'current-password',
-  'email-current-password': 'current-password',
-  'new-password-input': 'new-password'
+const AUTH_AUTOFILL_FIELDS = {
+  'login-password': { type: 'password', hint: 'current-password' },
+  'register-password': { type: 'password', hint: 'new-password' },
+  'username-current-password': { type: 'password', hint: 'current-password' },
+  'email-current-password': { type: 'password', hint: 'current-password' },
+  'new-password-input': { type: 'password', hint: 'new-password' },
+  'login-username': { type: 'text', hint: 'username' },
+  'register-username': { type: 'text', hint: 'username' },
+  'register-email': { type: 'text', hint: 'email' },
+  'new-username-input': { type: 'text', hint: 'username' },
+  'new-email-input': { type: 'text', hint: 'email' }
 };
 const AUTH_MODAL_IDS = ['login-modal-backdrop', 'register-modal-backdrop', 'user-settings-modal-backdrop'];
+const AUTH_FORM_IDS = ['login-form', 'register-form', 'tab-username', 'tab-email', 'tab-password'];
 
 function syncAuthPasswordFields() {
   const anyOpen = AUTH_MODAL_IDS.some(id => {
     const b = document.getElementById(id);
     return b && b.classList.contains('active');
   });
-  for (const [id, hint] of Object.entries(AUTH_PASSWORD_FIELDS)) {
+  for (const [id, cfg] of Object.entries(AUTH_AUTOFILL_FIELDS)) {
     const el = document.getElementById(id);
     if (!el) continue;
     if (anyOpen) {
-      el.type = 'password';
-      el.autocomplete = hint;
+      if (el.type !== cfg.type) el.type = cfg.type;
+      el.autocomplete = cfg.hint;
     } else {
       el.type = 'text';
       el.autocomplete = 'off';
     }
   }
+  AUTH_FORM_IDS.forEach(id => {
+    const f = document.getElementById(id);
+    if (f) f.autocomplete = anyOpen ? 'on' : 'off';
+  });
 }
 
 function initAuthPasswordFieldsObserver() {
