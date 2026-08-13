@@ -31,6 +31,7 @@
   --glow-red: 0 0 20px rgba(255, 0, 60, 0.35);
   --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.35);
   --shadow-lg: 0 16px 32px -8px rgba(0, 0, 0, 0.6);
+  --img-placeholder: linear-gradient(180deg, rgba(15, 20, 30, 0.85), rgba(10, 14, 22, 0.9));
 
   /* Spacing & Layout */
   --radius-sm: 8px;
@@ -60,6 +61,7 @@ html.light-mode {
   --glow-red: 0 0 20px rgba(255, 0, 60, 0.15);
   --glow-cyan: 0 0 20px rgba(0, 163, 176, 0.2);
   --shadow-lg: 0 16px 32px -8px rgba(15, 23, 42, 0.18);
+  --img-placeholder: linear-gradient(180deg, rgba(226, 232, 240, 0.9), rgba(203, 213, 225, 0.9));
 }
 
 /* Fondo del body con tintes más suaves */
@@ -160,7 +162,7 @@ html.light-mode .game-card {
 }
 
 html.light-mode .card-media {
-  background: #e8edf3;
+  background: var(--img-placeholder);
 }
 
 /* Textos de tarjetas del catálogo → contraste sólido sobre superficie clara */
@@ -1360,14 +1362,19 @@ html.light-mode {
   aspect-ratio: 16 / 9;
   height: auto;
   overflow: hidden;
-  background-color: #05080e;
+  background: var(--img-placeholder);
 }
 
 .card-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1), transform 0.5s ease;
+}
+
+.card-media img.loaded {
+  opacity: 1;
 }
 
 @media (hover: hover) {

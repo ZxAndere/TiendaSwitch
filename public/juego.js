@@ -509,7 +509,7 @@ function renderRelatedGames() {
     return `
       <article class="game-card in-view" onclick="window.location.href='/juego?id=${g.id}'">
         <div class="card-media">
-          <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy">
+          <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
           <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>
         </div>
         <div class="card-content">

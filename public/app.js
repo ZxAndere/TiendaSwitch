@@ -266,8 +266,10 @@ async function loadLiveExchangeRates() {
       });
       // Actualizar vista actual tras cargar las tasas reales
       // (fast=false: sincronización de fondo — mantener la entrada escalonada
-      //  si la carga inicial aún está animando, no cortarla a mitad)
-      if (typeof renderCatalog === 'function') renderCatalog(false, false);
+      //  si la carga inicial aún está animando, no cortarla a mitad;
+      //  si el catálogo real aún no llegó, no renderizar: el render de
+      //  fetchCatalog toma las tasas ya aplicadas en CURRENCY_RATES)
+      if (catalogLoaded && typeof renderCatalog === 'function') renderCatalog(false, false);
       if (typeof renderGameDetailView === 'function') renderGameDetailView();
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
     }
@@ -321,7 +323,6 @@ document.addEventListener('DOMContentLoaded', () => {
     apiFetch('/api/auth/me').catch(() => {});
   }
 
-  try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
   try { applyTheme(localStorage.getItem('zonaswitch_theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
@@ -1758,13 +1759,12 @@ function closeRegisterModal() { document.getElementById('register-modal-backdrop
 // --- CATÁLOGO DE JUEGOS CON RETROCESO EXPONENCIAL Y LÍMITE DE REINTENTOS (Problema 7) ---
 let isFetchingCatalog = false;
 let catalogFirstRender = true; // true: primera carga con stagger elegante; luego re-renders rápidos
-let catalogLoaded = false;     // true: el catálogo mostrado viene del servidor (no del placeholder)
+let catalogLoaded = false;     // true: el catálogo mostrado está listo (servidor o fallback local)
 let lastCatalogFetchAt = 0;    // cooldown anti-race: evita que el auto-refresh pise la carga inicial
 
 async function fetchCatalog(retries = 3, baseDelay = 1000) {
   if (isFetchingCatalog) return;
   isFetchingCatalog = true;
-  renderCatalog();
 
   let attempt = 0;
   let success = false;
@@ -1794,6 +1794,7 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   if (!success && (!Array.isArray(catalog) || catalog.length === 0)) {
     console.warn('⚠️ Se agotaron los reintentos de red. Cargando catálogo por defecto.');
     catalog = [...DEFAULT_GAMES_FRONTEND];
+    catalogLoaded = true;
   }
 
   isFetchingCatalog = false;
@@ -1991,7 +1992,7 @@ function renderCatalog(animatePrices = false, fast = true) {
     return `
     <a href="${targetUrl}" class="game-card in-view" onclick="openGameModal(${game.id}); return false;">
       <div class="card-media">
-        <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
+        <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
         <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" data-fav-id="${game.id}" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">${isGameInFavorites(game.id)
           ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'
