@@ -54,6 +54,9 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       // 'unsafe-inline' requerido por los onclick= inline de la app; bloquea scripts externos
       scriptSrc: ["'self'", "'unsafe-inline'"],
+      // helmet pone script-src-attr 'none' por defecto, lo que bloquea los onclick= inline
+      // (la directiva script-src-attr tiene precedencia sobre script-src)
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -361,6 +364,11 @@ const loginAttempts = new Map();
 
 function recordLoginFailure(key) {
   const cur = loginAttempts.get(key) || { count: 0, lockedUntil: 0 };
+  // Si el bloqueo ya expiró, reiniciar el contador (evita relockear con un solo fallo)
+  if (cur.lockedUntil && Date.now() >= cur.lockedUntil) {
+    cur.count = 0;
+    cur.lockedUntil = 0;
+  }
   cur.count += 1;
   cur.lockedUntil = cur.count >= 5 ? Date.now() + LOGIN_LOCKOUT_MS : cur.lockedUntil;
   loginAttempts.set(key, cur);
@@ -1198,7 +1206,7 @@ const JUEGOS = [
 ];
 
 // --- INTEGRACIÓN RESEND API Y CÓDIGOS DE VERIFICACIÓN (OTP) ---
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY.trim()) : null;
 const OTP_STORE = new Map();
 
 async function sendVerificationEmail(toEmail, code, subjectTitle = 'Código de Verificación - ZonaSwitchChile') {
