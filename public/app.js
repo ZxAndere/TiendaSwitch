@@ -264,12 +264,11 @@ async function loadLiveExchangeRates() {
           CURRENCY_RATES[code] = data.rates[code];
         }
       });
-      // Actualizar vista actual tras cargar las tasas reales
-      // (fast=false: sincronización de fondo — mantener la entrada escalonada
-      //  si la carga inicial aún está animando, no cortarla a mitad;
-      //  si el catálogo real aún no llegó, no renderizar: el render de
-      //  fetchCatalog toma las tasas ya aplicadas en CURRENCY_RATES)
-      if (catalogLoaded && typeof renderCatalog === 'function') renderCatalog(false, false);
+      // Actualizar precios visibles con las tasas reales SIN re-renderizar el
+      // grid (un re-render repetiría la animación de entrada = sensación de
+      // "carga doble"). Si el catálogo aún no llegó, el render de fetchCatalog
+      // toma las tasas ya aplicadas en CURRENCY_RATES.
+      if (catalogLoaded && typeof refreshCatalogPricesInPlace === 'function') refreshCatalogPricesInPlace();
       if (typeof renderGameDetailView === 'function') renderGameDetailView();
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
     }
@@ -1990,7 +1989,7 @@ function renderCatalog(animatePrices = false, fast = true) {
     const targetUrl = `/juego?id=${game.id}&slug=${encodeURIComponent(slug)}`;
     const origPrice = Number(game.precioOriginal) || (Number(game.precioSecundaria) * 1.5);
     return `
-    <a href="${targetUrl}" class="game-card in-view" onclick="openGameModal(${game.id}); return false;">
+    <a href="${targetUrl}" class="game-card in-view" data-id="${game.id}" onclick="openGameModal(${game.id}); return false;">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
@@ -2040,6 +2039,23 @@ function renderCatalog(animatePrices = false, fast = true) {
       el.classList.add('price-anim-pop');
     });
   }
+}
+
+// Actualiza SOLO los precios visibles (tasas de cambio) sin re-renderizar el
+// grid: evita que la sincronización de fondo repita la animación de entrada
+function refreshCatalogPricesInPlace() {
+  document.querySelectorAll('.game-card[data-id]').forEach(card => {
+    const g = catalog.find(x => x && String(x.id) === card.dataset.id);
+    if (!g) return;
+    const orig = Number(g.precioOriginal) || (Number(g.precioSecundaria) * 1.5);
+    const priceEls = card.querySelectorAll('.license-price');
+    if (priceEls[0]) priceEls[0].textContent = formatCLP(g.precioSecundaria);
+    if (priceEls[1]) priceEls[1].textContent = formatCLP(g.precioPrimaria);
+    const cur = card.querySelector('.current-price');
+    if (cur) cur.innerHTML = `<small style="font-size: 0.75em; font-weight: 600; opacity: 0.85; margin-right: 3px;">Desde</small> ${formatCLP(g.precioSecundaria)}`;
+    const origEl = card.querySelector('.original-price');
+    if (origEl) origEl.textContent = formatCLP(orig);
+  });
 }
 
 // Observador para animar tarjetas al scroll (Aparecer gradualmente al estar en vista)
