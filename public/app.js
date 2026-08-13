@@ -265,7 +265,9 @@ async function loadLiveExchangeRates() {
         }
       });
       // Actualizar vista actual tras cargar las tasas reales
-      if (typeof renderCatalog === 'function') renderCatalog();
+      // (fast=false: sincronización de fondo — mantener la entrada escalonada
+      //  si la carga inicial aún está animando, no cortarla a mitad)
+      if (typeof renderCatalog === 'function') renderCatalog(false, false);
       if (typeof renderGameDetailView === 'function') renderGameDetailView();
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
     }
@@ -1891,7 +1893,7 @@ function resetFilters() {
   applyFilters();
 }
 
-function renderCatalog(animatePrices = false) {
+function renderCatalog(animatePrices = false, fast = true) {
   const grid = document.getElementById('games-grid');
   const countLabel = document.getElementById('games-count');
   if (!grid) return;
@@ -1901,13 +1903,15 @@ function renderCatalog(animatePrices = false) {
   }
 
   // Choreografía de entrada: el stagger aplica solo a la primera carga con
-  // datos reales del servidor; el render placeholder inicial y los re-renders
-  // (filtros, búsqueda) entran rápido sin escalonado
+  // datos reales del servidor y a las sincronizaciones de fondo (fast=false);
+  // los re-renders de interacción (filtros, búsqueda) entran rápido sin escalonado
   if (catalogFirstRender && catalogLoaded) {
     catalogFirstRender = false;
     grid.classList.remove('grid-rerender');
-  } else {
+  } else if (fast) {
     grid.classList.add('grid-rerender');
+  } else {
+    grid.classList.remove('grid-rerender');
   }
 
   const filtered = catalog.filter(game => {
