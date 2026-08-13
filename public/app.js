@@ -1757,6 +1757,7 @@ function closeRegisterModal() { document.getElementById('register-modal-backdrop
 let isFetchingCatalog = false;
 let catalogFirstRender = true; // true: primera carga con stagger elegante; luego re-renders rápidos
 let catalogLoaded = false;     // true: el catálogo mostrado viene del servidor (no del placeholder)
+let lastCatalogFetchAt = 0;    // cooldown anti-race: evita que el auto-refresh pise la carga inicial
 
 async function fetchCatalog(retries = 3, baseDelay = 1000) {
   if (isFetchingCatalog) return;
@@ -1794,6 +1795,7 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   }
 
   isFetchingCatalog = false;
+  lastCatalogFetchAt = Date.now();
   renderCatalog();
   // Re-sincronizar el tope del rango de precio con el catálogo real cargado
   // (initFilters en DOMContentLoaded se ejecuta antes de que llegue la API)
@@ -3694,11 +3696,13 @@ function updateVariantBadges() {
 }
 
 // Auto-refrescar datos del catálogo sin necesidad de Control + F5
+// (cooldown 5s: los eventos focus/visibility de la carga inicial no deben
+//  re-renderizar el grid y cortar la animación de entrada)
 window.addEventListener('focus', () => {
-  if (typeof fetchCatalog === 'function') fetchCatalog();
+  if (typeof fetchCatalog === 'function' && Date.now() - lastCatalogFetchAt > 5000) fetchCatalog();
 });
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && typeof fetchCatalog === 'function') {
+  if (!document.hidden && typeof fetchCatalog === 'function' && Date.now() - lastCatalogFetchAt > 5000) {
     fetchCatalog();
   }
 });
