@@ -25,6 +25,7 @@
   padding: 0.85rem 1.25rem;
   background: rgba(15, 22, 36, 0.65);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
 }
@@ -96,6 +97,7 @@
   position: relative;
   background: rgba(15, 22, 36, 0.8);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -705,6 +707,7 @@
 .jd-tabs-section {
   background: rgba(15, 22, 36, 0.75);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   overflow: hidden;

@@ -237,6 +237,21 @@ const CURRENCY_RATES = {
 
 let currentCurrency = localStorage.getItem('zonaswitch_currency') || 'CLP';
 
+// --- TEMA CLARO / OSCURO ---
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.documentElement.classList.toggle('light-mode', isLight);
+  try { localStorage.setItem('zonaswitch_theme', isLight ? 'light' : 'dark'); } catch (e) {}
+  document.querySelectorAll('[data-theme-label]').forEach(el => {
+    el.textContent = isLight ? 'Modo oscuro' : 'Modo claro';
+  });
+}
+
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('light-mode') ? 'dark' : 'light';
+  applyTheme(next);
+}
+
 async function loadLiveExchangeRates() {
   try {
     const res = await fetch('/api/exchange-rates');
@@ -306,6 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
+  try { applyTheme(localStorage.getItem('zonaswitch_theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
   try { renderGlobalAdminGear(); } catch (e) { console.error('Error renderGlobalAdminGear:', e); }
@@ -453,14 +469,44 @@ function initEventListeners() {
   if (filterPriceMin) {
     filterPriceMin.addEventListener('input', () => {
       const valEl = document.getElementById('filter-price-min-val');
-      if (valEl) valEl.textContent = formatCLP(Number(filterPriceMin.value));
+      if (valEl) valEl.value = filterPriceMin.value;
       applyFilters();
     });
   }
   if (filterPriceMax) {
     filterPriceMax.addEventListener('input', () => {
       const valEl = document.getElementById('filter-price-max-val');
-      if (valEl) valEl.textContent = formatCLP(Number(filterPriceMax.value));
+      if (valEl) valEl.value = filterPriceMax.value;
+      applyFilters();
+    });
+  }
+
+  // Campos numéricos de precio: Enter/blur sincroniza el slider con límites
+  const priceMinInput = document.getElementById('filter-price-min-val');
+  const priceMaxInput = document.getElementById('filter-price-max-val');
+  if (priceMinInput && filterPriceMin) {
+    priceMinInput.addEventListener('change', () => {
+      const maxVal = Math.max(0, Number(priceMinInput.max) || Number(filterPriceMin.max) || 0);
+      let v = Math.round(Number(priceMinInput.value) || 0);
+      v = Math.max(0, Math.min(maxVal, v));
+      if (priceMaxInput && priceMaxInput.value !== '') {
+        v = Math.min(v, Number(priceMaxInput.value) || 0);
+      }
+      filterPriceMin.value = v;
+      priceMinInput.value = filterPriceMin.value;
+      applyFilters();
+    });
+  }
+  if (priceMaxInput && filterPriceMax) {
+    priceMaxInput.addEventListener('change', () => {
+      const maxVal = Math.max(0, Number(priceMaxInput.max) || Number(filterPriceMax.max) || 0);
+      let v = Math.round(Number(priceMaxInput.value) || 0);
+      v = Math.max(0, Math.min(maxVal, v));
+      if (priceMinInput && priceMinInput.value !== '') {
+        v = Math.max(v, Number(priceMinInput.value) || 0);
+      }
+      filterPriceMax.value = v;
+      priceMaxInput.value = filterPriceMax.value;
       applyFilters();
     });
   }
@@ -1143,6 +1189,13 @@ function renderAccountSheetContent(sheet) {
   const title = sheet.querySelector('#account-sheet-title');
   const items = sheet.querySelector('#account-sheet-items');
   const loggedIn = !!(currentUser && currentUser.username);
+  const themeItem = `
+      <button type="button" class="account-sheet-item" data-theme-btn onclick="toggleTheme()" style="border-top: 1px solid var(--border-subtle); border-radius: 0;">
+        <span class="icon-sun"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></span>
+        <span class="icon-moon"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></span>
+        <span data-theme-label>Modo claro</span>
+      </button>
+  `;
   if (loggedIn) {
     title.textContent = currentUser.username;
     items.innerHTML = `
@@ -1155,7 +1208,7 @@ function renderAccountSheetContent(sheet) {
       <button type="button" class="account-sheet-item account-sheet-item-danger" onclick="closeAccountSheet(); handleLogout();">
         <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg> Cerrar sesión
       </button>
-    `;
+    ` + themeItem;
   } else {
     title.textContent = 'Cuenta';
     items.innerHTML = `
@@ -1165,7 +1218,7 @@ function renderAccountSheetContent(sheet) {
       <button type="button" class="account-sheet-item" onclick="closeAccountSheet(); openRegisterModal();">
         <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg> Crear Cuenta
       </button>
-    `;
+    ` + themeItem;
   }
 }
 
@@ -1744,24 +1797,24 @@ function initFilters() {
   if (minEl) {
     minEl.max = rangeMax;
     const valEl = document.getElementById('filter-price-min-val');
-    if (valEl) valEl.textContent = formatCLP(Number(minEl.value));
+    if (valEl) { valEl.max = rangeMax; valEl.value = minEl.value; }
   }
   if (maxEl) {
     maxEl.max = rangeMax;
     maxEl.value = rangeMax;
     const valEl = document.getElementById('filter-price-max-val');
-    if (valEl) valEl.textContent = formatCLP(rangeMax);
+    if (valEl) { valEl.max = rangeMax; valEl.value = rangeMax; }
   }
 }
 
-// Etiquetas de precio del panel de filtros en la moneda actual (los valores internos quedan en CLP)
+// Sincroniza los campos numéricos de precio con los sliders (valores crudos en CLP)
 function updateFilterPriceLabels() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   const minVal = document.getElementById('filter-price-min-val');
   const maxVal = document.getElementById('filter-price-max-val');
-  if (minEl && minVal) minVal.textContent = formatCLP(Number(minEl.value));
-  if (maxEl && maxVal) maxVal.textContent = formatCLP(Number(maxEl.value));
+  if (minEl && minVal) minVal.value = minEl.value;
+  if (maxEl && maxVal) maxVal.value = maxEl.value;
 }
 
 function applyFilters() {
@@ -1780,7 +1833,7 @@ function applyFilters() {
       maxEl.max = rangeMax;
       maxEl.value = rangeMax;
       const valEl = document.getElementById('filter-price-max-val');
-      if (valEl) valEl.textContent = formatCLP(rangeMax);
+      if (valEl) { valEl.max = rangeMax; valEl.value = rangeMax; }
     }
   }
 
@@ -1801,12 +1854,12 @@ function resetFilters() {
   if (minEl) {
     minEl.value = minEl.min || '0';
     const valEl = document.getElementById('filter-price-min-val');
-    if (valEl) valEl.textContent = formatCLP(Number(minEl.value));
+    if (valEl) valEl.value = minEl.value;
   }
   if (maxEl) {
     maxEl.value = maxEl.max;
     const valEl = document.getElementById('filter-price-max-val');
-    if (valEl) valEl.textContent = formatCLP(Number(maxEl.value));
+    if (valEl) valEl.value = maxEl.value;
   }
   if (sortEl) sortEl.value = '';
   if (licEl) licEl.value = '';
