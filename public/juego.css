@@ -901,6 +901,14 @@
   .jd-tabs-body {
     padding: 1.25rem 1rem;
   }
+  .jd-hero-footer-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .jd-gallery-header-row, .jd-video-header-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 }
 
 /* --- ANIMACIONES MICRO-INTERACTIVAS 2026 (LICENCIAS Y BOTONES CTA) --- */
