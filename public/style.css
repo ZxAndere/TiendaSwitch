@@ -2593,25 +2593,29 @@ body {
   }
 
   .payment-modal-card {
-    height: 92vh !important;
-    max-height: 700px !important;
+    height: auto !important;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem) !important;
+    overflow-y: auto !important;
     border-radius: var(--radius-md) !important;
   }
 
   .payment-modal-grid {
     grid-template-columns: 1fr !important;
-    grid-template-rows: auto auto !important;
-    overflow-y: auto !important;
+    grid-template-rows: none !important;
+    overflow-y: visible !important;
   }
 
   .payment-left-col {
     padding: 1.25rem 1rem !important;
     border-right: none !important;
     border-bottom: 1px solid var(--border-subtle) !important;
+    overflow-y: visible !important;
   }
 
   .payment-right-col {
     padding: 1.25rem 1rem !important;
+    overflow-y: visible !important;
   }
 
   .modal-backdrop#user-settings-modal-backdrop,
