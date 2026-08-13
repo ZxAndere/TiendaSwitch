@@ -331,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { if (currentUser && currentUser.role === 'admin') fetchCoupons(); } catch (e) { console.error('Error fetchCoupons:', e); }
   try { fetchCatalog(); } catch (e) { console.error('Error fetchCatalog:', e); }
   try { fetchAndRenderGallery(); } catch (e) { console.error('Error fetchAndRenderGallery:', e); }
+  try { initAuthPasswordFieldsObserver(); } catch (e) { console.error('Error initAuthPasswordFieldsObserver:', e); }
   try { updateCartBadge(); } catch (e) { console.error('Error updateCartBadge:', e); }
   try { checkPaymentReturnUrls(); } catch (e) { console.error('Error checkPaymentReturnUrls:', e); }
   try { initRealtimeCatalogStream(); } catch (e) { console.error('Error initRealtimeCatalogStream:', e); }
@@ -1745,6 +1746,48 @@ async function handleLoginSubmit(e) {
   } catch (err) {
     errorMsg.textContent = 'Error de comunicación con el servidor.';
   }
+}
+
+// Los modales de auth (login/registro/ajustes) están SIEMPRE en el DOM con sus
+// campos de contraseña. Si quedan como type="password" al cargar la página, los
+// gestores de contraseñas ofrecen autofill aunque no haya pantalla de login.
+// En reposo los campos son type="text" (sin hint de autocomplete) y se activan
+// solo mientras su modal está abierto. Un MutationObserver cubre TODAS las vías
+// de apertura/cierre (botones, ESC, clicks en el backdrop, subtabs).
+const AUTH_PASSWORD_FIELDS = {
+  'login-password': 'current-password',
+  'register-password': 'new-password',
+  'username-current-password': 'current-password',
+  'email-current-password': 'current-password',
+  'new-password-input': 'new-password'
+};
+const AUTH_MODAL_IDS = ['login-modal-backdrop', 'register-modal-backdrop', 'user-settings-modal-backdrop'];
+
+function syncAuthPasswordFields() {
+  const anyOpen = AUTH_MODAL_IDS.some(id => {
+    const b = document.getElementById(id);
+    return b && b.classList.contains('active');
+  });
+  for (const [id, hint] of Object.entries(AUTH_PASSWORD_FIELDS)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (anyOpen) {
+      el.type = 'password';
+      el.autocomplete = hint;
+    } else {
+      el.type = 'text';
+      el.autocomplete = 'off';
+    }
+  }
+}
+
+function initAuthPasswordFieldsObserver() {
+  syncAuthPasswordFields();
+  const mo = new MutationObserver(() => syncAuthPasswordFields());
+  AUTH_MODAL_IDS.forEach(id => {
+    const b = document.getElementById(id);
+    if (b) mo.observe(b, { attributes: true, attributeFilter: ['class'] });
+  });
 }
 
 function openLoginModal() { document.getElementById('login-modal-backdrop').classList.add('active'); }
