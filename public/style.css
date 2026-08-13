@@ -3851,16 +3851,6 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
     overflow: hidden;
   }
 
-/* Búsqueda flotante móvil (abierta desde la barra inferior) — SOLO móvil:
-   fuera de su media query queda como un bloque estático en el pie, por eso
-   se oculta en escritorio */
-@media (min-width: 769px) {
-  .mobile-search-overlay {
-    display: none !important;
-  }
-}
-
-@media (max-width: 768px) {
   /* Búsqueda flotante móvil (abierta desde la barra inferior) */
   .mobile-search-overlay {
     position: fixed;
@@ -6496,6 +6486,14 @@ footer.footer {
 
   .user-modal-card.wide-admin .admin-game-actions {
     flex-wrap: wrap;
+  }
+}
+
+/* El overlay de búsqueda móvil es SOLO móvil: fuera de su media query queda
+   como un bloque estático en el pie de la página en escritorio — se oculta */
+@media (min-width: 769px) {
+  .mobile-search-overlay {
+    display: none !important;
   }
 }
 
