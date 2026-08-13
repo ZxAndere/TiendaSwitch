@@ -878,7 +878,10 @@ html.light-mode {
 }
 
 .gradient-text {
-  background-image: linear-gradient(135deg, var(--switch-red) 30%, var(--joycon-cyan) 100%);
+  /* El degradado EMPIEZA y TERMINA en el mismo color (rojo): al recorrer el
+     fondo al 200% el borde del patrón se encuentra rojo-con-rojo, así el loop
+     es continuo y el azul→rojo también es un fundido (no un corte seco) */
+  background-image: linear-gradient(135deg, var(--switch-red) 0%, var(--joycon-cyan) 50%, var(--switch-red) 100%);
   background-size: 200% auto;
   background-position: 0% 50%;
   -webkit-background-clip: text;
