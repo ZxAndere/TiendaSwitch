@@ -4,6 +4,7 @@ let currentSelectedLicense = null;
 let detailActiveThumbIndex = 0;
 let detailImagesList = [];
 let currentThumbOffsetIndex = 0;
+let catalogLoadedFromServer = false;
 let currentTrailerList = [];
 let currentTrailerIndex = 0;
 let isTrailerInitialized = false;
@@ -63,50 +64,42 @@ async function initJuegoPage() {
     }
   }
 
-  // 1. Consultar endpoint directo /api/juegos/:identifier por ID o Slug
-  if (rawParam) {
+  // Cargar SIEMPRE el catálogo oficial del servidor para que los relacionados
+  // coincidan exclusivamente con los juegos visibles que existen en la tienda.
+  try {
+    const listRes = await fetch('/api/juegos');
+    if (listRes.ok) {
+      const serverGames = await listRes.json();
+      if (Array.isArray(serverGames) && serverGames.length > 0) {
+        catalog = serverGames.filter(g => g && g.visible !== false);
+        catalogLoadedFromServer = true;
+      }
+    }
+  } catch (e) {}
+
+  // Buscar primero el producto dentro del catálogo oficial.
+  if (rawParam && Array.isArray(catalog) && catalog.length > 0) {
+    const clean = rawParam.toLowerCase().trim();
+    currentDetailGame = catalog.find(g =>
+      slugify(g.titulo).toLowerCase() === clean ||
+      String(g.id) === clean
+    ) || null;
+  }
+
+  // Si no está en el listado oficial, intentar el endpoint individual.
+  if (!currentDetailGame && rawParam) {
     try {
       const res = await fetch(`/api/juegos/${encodeURIComponent(rawParam)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.id) {
-          currentDetailGame = data;
-        }
+        if (data && data.id) currentDetailGame = data;
       }
     } catch (e) {}
-  }
-
-  // 2. Fallback a catálogo completo si la API individual no responde
-  if (!currentDetailGame) {
-    if (!Array.isArray(catalog) || catalog.length === 0) {
-      try {
-        const res = await fetch('/api/juegos');
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) catalog = data;
-        }
-      } catch (e) {}
-    }
-
-    if (!Array.isArray(catalog) || catalog.length === 0) {
-      catalog = Array.isArray(window.DEFAULT_GAMES_FRONTEND) ? window.DEFAULT_GAMES_FRONTEND : [];
-    }
-
-    if (rawParam) {
-      const clean = rawParam.toLowerCase().trim();
-      currentDetailGame = catalog.find(g =>
-        slugify(g.titulo).toLowerCase() === clean ||
-        String(g.id) === clean ||
-        clean.includes(slugify(g.titulo).toLowerCase())
-      );
-    }
   }
 
   if (!currentDetailGame && Array.isArray(catalog) && catalog.length > 0) {
     currentDetailGame = catalog[0];
   }
-
-  if (!currentDetailGame) return;
 
   // Actualizar la URL de la barra de direcciones a la limpia SEO (ej: https://zonaswitchchile.com/Mario-Kart-8-Deluxe)
   if (currentDetailGame.titulo && window.history && window.history.replaceState) {
@@ -471,6 +464,11 @@ function handleDirectDetailCheckout() {
     promptSelectLicense();
     return;
   }
+  const selectedStock = currentSelectedLicense === 'primaria' ? currentDetailGame.stockPrimaria : currentDetailGame.stockSecundaria;
+  if (Number.isInteger(selectedStock) && selectedStock <= 0) {
+    if (typeof showToast === 'function') showToast('⚠️ Fuera de Stock.');
+    return;
+  }
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
   if (typeof openPaymentModal === 'function') {
     openPaymentModal();
@@ -496,9 +494,9 @@ function switchDetailTab(tabId) {
 
 function renderRelatedGames() {
   const container = document.getElementById('jd-related-grid');
-  if (!container || !currentDetailGame || !Array.isArray(catalog)) return;
+  if (!container || !currentDetailGame || !Array.isArray(catalog) || !catalogLoadedFromServer) return;
 
-  const otherGames = catalog.filter(g => g.id !== currentDetailGame.id && g.visible !== false);
+  const otherGames = catalog.filter(g => g && Number(g.id) !== Number(currentDetailGame.id) && g.visible !== false);
   if (otherGames.length === 0) return;
 
   // Seleccionar 4 juegos al azar del catálogo existente

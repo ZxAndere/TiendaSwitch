@@ -124,6 +124,14 @@ const DEFAULT_GAMES_FRONTEND = [
 
 let catalog = [...DEFAULT_GAMES_FRONTEND];
 let cart = JSON.parse(localStorage.getItem('zonaswitch_cart_v4')) || [];
+cart = Array.isArray(cart) ? cart.map(item => {
+  if (!item || typeof item !== 'object') return null;
+  const raw = String(item.licencia || '').trim().toLowerCase();
+  if (raw.includes('primaria')) item.licencia = 'Primaria';
+  else if (raw.includes('secundaria')) item.licencia = 'Secundaria';
+  return item;
+}).filter(Boolean) : [];
+localStorage.setItem('zonaswitch_cart_v4', JSON.stringify(cart));
 let currentUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || null;
 let favoriteGameIds = new Set(JSON.parse(localStorage.getItem('zonaswitch_favorites') || '[]').map(Number));
 
@@ -533,15 +541,23 @@ function initEventListeners() {
     });
   }
 
-  // Tabs de configuración de cuenta
+  // Tabs de configuración de cuenta + layout especial para Admin
   document.querySelectorAll('.settings-tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.settings-tabs .tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.settings-tab-content .tab-pane').forEach(p => p.classList.remove('active'));
-      e.target.classList.add('active');
-      const tabId = e.target.dataset.tab;
+      e.currentTarget.classList.add('active');
+      const tabId = e.currentTarget.dataset.tab;
       const pane = document.getElementById(tabId);
       if (pane) pane.classList.add('active');
+
+      const backdrop = document.getElementById('user-settings-modal-backdrop');
+      const modalCard = backdrop ? backdrop.querySelector('.user-modal-card') : null;
+      const isAdmin = !!(currentUser && currentUser.role === 'admin');
+      const adminMode = isAdmin && tabId === 'tab-admin';
+      if (modalCard) modalCard.classList.toggle('wide-admin', adminMode);
+      if (backdrop) backdrop.classList.toggle('admin-mode', adminMode);
+      if (adminMode && typeof fetchAndRenderAdminGames === 'function') fetchAndRenderAdminGames();
     });
   });
 
@@ -689,18 +705,13 @@ function openUserSettingsModal() {
   }
 
   const activeTab = backdrop.querySelector('.settings-tabs .tab-btn.active');
-  if (modalCard) {
-    if (activeTab && activeTab.getAttribute('data-tab') === 'tab-admin' && isAdmin) {
-      modalCard.classList.add('wide-admin');
-    } else {
-      modalCard.classList.remove('wide-admin');
-    }
-  }
-
+  const adminMode = !!(activeTab && activeTab.getAttribute('data-tab') === 'tab-admin' && isAdmin);
+  if (modalCard) modalCard.classList.toggle('wide-admin', adminMode);
+  backdrop.classList.toggle('admin-mode', adminMode);
   backdrop.classList.add('active');
 }
 
-function closeUserSettingsModal() { document.getElementById('user-settings-modal-backdrop').classList.remove('active'); }
+function closeUserSettingsModal() { const b=document.getElementById('user-settings-modal-backdrop'); if(b){ b.classList.remove('active','admin-mode'); const card=b.querySelector('.user-modal-card'); if(card) card.classList.remove('wide-admin'); } }
 function openUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.add('active'); }
 function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.remove('active'); }
 
@@ -1777,13 +1788,23 @@ function handleBuySelectedLicenseNow() {
 }
 
 function addGameWithLicenseToCart(game, licenseType) {
-  const isPrimaria = licenseType === 'primaria';
+  const normalizedLicense = String(licenseType || '').trim().toLowerCase();
+  if (normalizedLicense !== 'primaria' && normalizedLicense !== 'secundaria') {
+    showToast('⚠️ Tipo de licencia inválido.');
+    return;
+  }
+  const isPrimaria = normalizedLicense === 'primaria';
   const price = isPrimaria ? game.precioPrimaria : game.precioSecundaria;
-  const accountTitle = isPrimaria ? 'Cuenta Primaria' : 'Cuenta Secundaria';
+  const accountTitle = isPrimaria ? 'Primaria' : 'Secundaria';
+  const stock = isPrimaria ? game.stockPrimaria : game.stockSecundaria;
 
-  const cartItemId = `${game.id}-${licenseType}`;
+  if (Number.isInteger(stock) && stock <= 0) {
+    showToast(`⚠️ Cuenta ${accountTitle} fuera de stock.`);
+    return;
+  }
+
+  const cartItemId = `${game.id}-${normalizedLicense}`;
   const existingIndex = cart.findIndex(item => item.cartItemId === cartItemId);
-
   if (existingIndex > -1) {
     cart[existingIndex].cantidad += 1;
   } else {
@@ -1794,13 +1815,14 @@ function addGameWithLicenseToCart(game, licenseType) {
       precio: price,
       imagen: game.imagen,
       licencia: accountTitle,
-      cantidad: 1
+      cantidad: 1,
+      stockMax: Number.isInteger(stock) ? stock : null
     });
   }
 
   saveCart();
   updateCartBadge();
-  showToast(`¡"${game.titulo}" (${accountTitle}) añadido al carrito!`);
+  showToast(`¡"${game.titulo}" (Cuenta ${accountTitle}) añadido al carrito!`);
 }
 
 // --- CARRITO ---

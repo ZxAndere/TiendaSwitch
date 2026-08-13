@@ -2336,10 +2336,21 @@ body {
 
 .modal-backdrop#user-settings-modal-backdrop,
 .modal-backdrop#user-orders-modal-backdrop {
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* Cuenta normal centrada; Admin solo pasa a la vista ancha superior. */
+.modal-backdrop#user-settings-modal-backdrop.admin-mode {
+  align-items: flex-start;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.modal-backdrop#user-settings-modal-backdrop.admin-mode .user-modal-card.wide-admin {
+  max-height: calc(100vh - 2rem);
 }
 
 .user-modal-card.wide {
@@ -2589,9 +2600,14 @@ body {
 
   .modal-backdrop#user-settings-modal-backdrop,
   .modal-backdrop#user-orders-modal-backdrop {
-    align-items: flex-start !important;
+    align-items: center !important;
     padding: 0.5rem !important;
     overflow-y: auto !important;
+  }
+
+  .modal-backdrop#user-settings-modal-backdrop.admin-mode {
+    align-items: flex-start !important;
+    padding-top: 0.5rem !important;
   }
 
   .user-modal-card {
