@@ -469,7 +469,10 @@ function handleDirectDetailCheckout() {
     if (typeof showToast === 'function') showToast('⚠️ Fuera de Stock.');
     return;
   }
-  addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
+  // Compra directa: el ítem va al pago SIN agregarlo al carrito
+  if (typeof buildDirectCheckoutItem === 'function') {
+    directCheckoutItem = buildDirectCheckoutItem(currentDetailGame, currentSelectedLicense);
+  }
   if (typeof openPaymentModal === 'function') {
     openPaymentModal();
   } else {

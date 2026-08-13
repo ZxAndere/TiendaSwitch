@@ -2291,9 +2291,30 @@ function handleAddSelectedLicenseToCart() {
 
 function handleBuySelectedLicenseNow() {
   if (!selectedGameForModal || !selectedLicenseType) return;
-  addGameWithLicenseToCart(selectedGameForModal, selectedLicenseType);
+  directCheckoutItem = buildDirectCheckoutItem(selectedGameForModal, selectedLicenseType);
   closeGameModal();
   openPaymentModal();
+}
+
+// Ítem de compra directa ("Comprar ahora"): misma forma que un ítem del carrito,
+// pero sin tocar el carrito real. buildDirectCheckoutItem comparte la lógica
+// de precio/título con addGameWithLicenseToCart.
+function buildDirectCheckoutItem(game, licenseType) {
+  const normalizedLicense = String(licenseType || '').trim().toLowerCase();
+  const isPrimaria = normalizedLicense === 'primaria';
+  const price = isPrimaria ? game.precioPrimaria : game.precioSecundaria;
+  const accountTitle = isPrimaria ? 'Primaria' : 'Secundaria';
+  const stock = isPrimaria ? game.stockPrimaria : game.stockSecundaria;
+  return {
+    cartItemId: `${game.id}-${normalizedLicense}`,
+    id: game.id,
+    titulo: game.titulo,
+    precio: price,
+    imagen: game.imagen,
+    licencia: accountTitle,
+    cantidad: 1,
+    stockMax: Number.isInteger(stock) ? stock : null
+  };
 }
 
 function addGameWithLicenseToCart(game, licenseType) {
@@ -2336,7 +2357,8 @@ function addGameWithLicenseToCart(game, licenseType) {
 
 // --- CARRITO ---
 function saveCart() {
-  localStorage.setItem('zonaswitch_cart_v4', JSON.stringify(cart));
+localStorage.setItem('zonaswitch_cart_v4', JSON.stringify(cart));
+let directCheckoutItem = null; // "Comprar ahora": ítem de pago directo SIN tocar el carrito
 }
 
 function updateCartBadge() {
@@ -2467,7 +2489,7 @@ function removeFromCart(cartItemId) {
 
 // --- MODAL DE SELECCIÓN DE MÉTODO DE PAGO Y CHECKOUT ---
 function openPaymentModal() {
-  if (cart.length === 0) {
+  if (cart.length === 0 && !directCheckoutItem) {
     alert('Tu carrito está vacío.');
     return;
   }
@@ -2496,30 +2518,32 @@ function openPaymentModal() {
 
 function closePaymentModal() {
   document.getElementById('payment-modal-backdrop').classList.remove('active');
+  directCheckoutItem = null;
 }
 
 function renderPayCarousel() {
-  if (cart.length === 0) return;
+  const items = directCheckoutItem ? [directCheckoutItem] : cart;
+  if (items.length === 0) return;
 
-  if (payCarouselIndex >= cart.length) payCarouselIndex = 0;
-  if (payCarouselIndex < 0) payCarouselIndex = cart.length - 1;
+  if (payCarouselIndex >= items.length) payCarouselIndex = 0;
+  if (payCarouselIndex < 0) payCarouselIndex = items.length - 1;
 
-  const currentItem = cart[payCarouselIndex];
+  const currentItem = items[payCarouselIndex];
   document.getElementById('pay-carousel-img').src = currentItem.imagen;
   document.getElementById('pay-carousel-title').textContent = currentItem.titulo;
   document.getElementById('pay-carousel-lic').textContent = `Licencia ${currentItem.licencia} (${currentItem.cantidad}x)`;
 
   const prevBtn = document.getElementById('pay-slider-prev');
   const nextBtn = document.getElementById('pay-slider-next');
-  const showArrows = cart.length > 1;
+  const showArrows = items.length > 1;
   if (prevBtn) prevBtn.style.display = showArrows ? 'flex' : 'none';
   if (nextBtn) nextBtn.style.display = showArrows ? 'flex' : 'none';
 
   // Puntos del carrusel
   const dotsContainer = document.getElementById('pay-slider-dots');
   if (dotsContainer) {
-    if (cart.length > 1) {
-      dotsContainer.innerHTML = cart.map((_, idx) => `
+    if (items.length > 1) {
+      dotsContainer.innerHTML = items.map((_, idx) => `
         <span class="dot ${idx === payCarouselIndex ? 'active' : ''}" onclick="setPaySliderIndex(${idx})"></span>
       `).join('');
     } else {
@@ -2527,8 +2551,8 @@ function renderPayCarousel() {
     }
   }
 
-  const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
-  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const totalItems = items.reduce((acc, item) => acc + item.cantidad, 0);
+  const subtotal = items.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
 
   let discount = 0;
   if (appliedCoupon) {
@@ -2581,7 +2605,7 @@ function setPaySliderIndex(index) {
 
 async function handlePaymentSubmit(e) {
   if (e) e.preventDefault();
-  if (cart.length === 0) return;
+  if (cart.length === 0 && !directCheckoutItem) return;
 
   const nombre = document.getElementById('checkout-name').value.trim();
   const apellido = document.getElementById('checkout-surname').value.trim();
@@ -2602,7 +2626,8 @@ async function handlePaymentSubmit(e) {
     return;
   }
 
-  const subtotal = cart.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
+  const checkoutItems = directCheckoutItem ? [directCheckoutItem] : cart;
+  const subtotal = checkoutItems.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
   let discount = 0;
   if (appliedCoupon) {
     if (appliedCoupon.type === 'percent') {
@@ -2622,17 +2647,20 @@ async function handlePaymentSubmit(e) {
     const res = await apiFetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: cart, couponCode: appliedCoupon ? appliedCoupon.code : null })
+      body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: directCheckoutItem ? [directCheckoutItem] : cart, couponCode: appliedCoupon ? appliedCoupon.code : null })
     });
 
     const data = await res.json();
     if (data.exito) {
       // Si el total es $0 CLP (Cupón PRUEBAXD), finalizar de inmediato sin salir del sitio
       if (montoTotal === 0) {
+        const wasDirect = !!directCheckoutItem;
         closePaymentModal();
-        cart = [];
-        saveCart();
-        updateCartBadge();
+        if (!wasDirect) {
+          cart = [];
+          saveCart();
+          updateCartBadge();
+        }
         openReceiptModal({
           codigoOrden: data.codigoOrden,
           cliente: `${nombre} ${apellido}`,
@@ -2645,6 +2673,12 @@ async function handlePaymentSubmit(e) {
       }
 
       if (data.redirectUrl) {
+        // Compra directa: marcar en localStorage para que el retorno de la
+        // pasarela NO vacíe el carrito real (que nunca se tocó)
+        if (directCheckoutItem) {
+          localStorage.setItem('zonaswitch_direct_checkout', '1');
+          directCheckoutItem = null;
+        }
         const pasarelaNombre = metodoPago === 'mercadopago' ? 'Mercado Pago 💙' : 'Flow Chile 💳';
         showToast(`¡Redirigiendo a la pasarela segura de ${pasarelaNombre}!`);
         setTimeout(() => {
@@ -2686,9 +2720,14 @@ async function checkPaymentReturnUrls() {
           const res = await apiFetch(`/api/orders/${orderCode}`);
           if (res.ok) {
             const order = await res.json();
-            cart = [];
-            saveCart();
-            updateCartBadge();
+            // Compra directa: el carrito real nunca se tocó — no vaciarlo
+            if (localStorage.getItem('zonaswitch_direct_checkout') === '1') {
+              localStorage.removeItem('zonaswitch_direct_checkout');
+            } else {
+              cart = [];
+              saveCart();
+              updateCartBadge();
+            }
             openReceiptModal({
               codigoOrden: order.codigoOrden,
               cliente: order.cliente,
