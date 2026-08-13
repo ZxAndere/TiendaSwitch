@@ -2895,8 +2895,8 @@ body {
   /* Botones flotantes por encima de la barra inferior (fallback sin env()) */
   .whatsapp-float-btn,
   .admin-quick-gear-btn {
-    bottom: 80px;
-    bottom: calc(76px + env(safe-area-inset-bottom));
+    bottom: 80px !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
   }
 
   /* Búsqueda flotante móvil (abierta desde la barra inferior) */
