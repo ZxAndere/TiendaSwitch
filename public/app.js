@@ -416,6 +416,7 @@ function initEventListeners() {
       renderCatalog(true);
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
       if (typeof renderGameDetailView === 'function') renderGameDetailView(true);
+      if (typeof updateFilterPriceLabels === 'function') updateFilterPriceLabels();
       if (selectedGameForModal) {
         document.getElementById('gmodal-price-sec').textContent = formatCLP(selectedGameForModal.precioSecundaria);
         document.getElementById('gmodal-price-prim').textContent = formatCLP(selectedGameForModal.precioPrimaria);
@@ -452,14 +453,14 @@ function initEventListeners() {
   if (filterPriceMin) {
     filterPriceMin.addEventListener('input', () => {
       const valEl = document.getElementById('filter-price-min-val');
-      if (valEl) valEl.textContent = '$' + Number(filterPriceMin.value).toLocaleString('es-CL');
+      if (valEl) valEl.textContent = formatCLP(Number(filterPriceMin.value));
       applyFilters();
     });
   }
   if (filterPriceMax) {
     filterPriceMax.addEventListener('input', () => {
       const valEl = document.getElementById('filter-price-max-val');
-      if (valEl) valEl.textContent = '$' + Number(filterPriceMax.value).toLocaleString('es-CL');
+      if (valEl) valEl.textContent = formatCLP(Number(filterPriceMax.value));
       applyFilters();
     });
   }
@@ -608,6 +609,7 @@ function initEventListeners() {
       renderCatalog();
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
       if (typeof renderGameDetailView === 'function') renderGameDetailView();
+      if (typeof updateFilterPriceLabels === 'function') updateFilterPriceLabels();
     });
   }
 
@@ -1742,14 +1744,24 @@ function initFilters() {
   if (minEl) {
     minEl.max = rangeMax;
     const valEl = document.getElementById('filter-price-min-val');
-    if (valEl) valEl.textContent = '$' + Number(minEl.value).toLocaleString('es-CL');
+    if (valEl) valEl.textContent = formatCLP(Number(minEl.value));
   }
   if (maxEl) {
     maxEl.max = rangeMax;
     maxEl.value = rangeMax;
     const valEl = document.getElementById('filter-price-max-val');
-    if (valEl) valEl.textContent = '$' + rangeMax.toLocaleString('es-CL');
+    if (valEl) valEl.textContent = formatCLP(rangeMax);
   }
+}
+
+// Etiquetas de precio del panel de filtros en la moneda actual (los valores internos quedan en CLP)
+function updateFilterPriceLabels() {
+  const minEl = document.getElementById('filter-price-min');
+  const maxEl = document.getElementById('filter-price-max');
+  const minVal = document.getElementById('filter-price-min-val');
+  const maxVal = document.getElementById('filter-price-max-val');
+  if (minEl && minVal) minVal.textContent = formatCLP(Number(minEl.value));
+  if (maxEl && maxVal) maxVal.textContent = formatCLP(Number(maxEl.value));
 }
 
 function applyFilters() {
@@ -1768,7 +1780,7 @@ function applyFilters() {
       maxEl.max = rangeMax;
       maxEl.value = rangeMax;
       const valEl = document.getElementById('filter-price-max-val');
-      if (valEl) valEl.textContent = '$' + rangeMax.toLocaleString('es-CL');
+      if (valEl) valEl.textContent = formatCLP(rangeMax);
     }
   }
 
@@ -1789,12 +1801,12 @@ function resetFilters() {
   if (minEl) {
     minEl.value = minEl.min || '0';
     const valEl = document.getElementById('filter-price-min-val');
-    if (valEl) valEl.textContent = '$' + Number(minEl.value).toLocaleString('es-CL');
+    if (valEl) valEl.textContent = formatCLP(Number(minEl.value));
   }
   if (maxEl) {
     maxEl.value = maxEl.max;
     const valEl = document.getElementById('filter-price-max-val');
-    if (valEl) valEl.textContent = '$' + Number(maxEl.value).toLocaleString('es-CL');
+    if (valEl) valEl.textContent = formatCLP(Number(maxEl.value));
   }
   if (sortEl) sortEl.value = '';
   if (licEl) licEl.value = '';
@@ -2579,16 +2591,83 @@ function copyOrderCode() {
   });
 }
 
+// --- ICONOS SVG PARA NOTIFICACIONES (reemplazan los emojis de prefijo) ---
+const TOAST_ICON_SVGS = {
+  'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path>',
+  'alert-circle': '<circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line>',
+  'x-circle': '<circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>',
+  'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>',
+  'info': '<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>',
+  'heart': '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>',
+  'shopping-cart': '<circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>',
+  'package': '<path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path>',
+  'mail': '<rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>',
+  'search': '<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>',
+  'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line>',
+  'ticket': '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path>',
+  'gamepad': '<line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path>',
+  'camera': '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle>',
+  'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>',
+  'key': '<path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"></path>',
+  'undo-2': '<path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path>',
+  'send': '<path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path>'
+};
+
+const TOAST_EMOJI_ICONS = {
+  '⛔': 'alert-circle', '❌': 'x-circle', '✖️': 'x-circle',
+  '⚠️': 'alert-triangle', '⚠': 'alert-triangle',
+  '✅': 'check-circle', '🎉': 'check-circle',
+  '❤️': 'heart', '🤍': 'heart',
+  '🛒': 'shopping-cart', '📦': 'package',
+  '📩': 'mail', '📧': 'mail', '🔎': 'search', '🔍': 'search',
+  '💳': 'credit-card', '🎟️': 'ticket',
+  '🎮': 'gamepad', '📸': 'camera',
+  '🔐': 'lock', '🔑': 'key',
+  '↩️': 'undo-2', '✉️': 'send'
+};
+
+const TOAST_ICON_COLORS = {
+  'check-circle': '#34d399',
+  'alert-circle': '#f87171',
+  'x-circle': '#f87171',
+  'alert-triangle': '#fbbf24',
+  'heart': '#ff4d6d',
+  'undo-2': '#fbbf24',
+  'info': '#00f0ff',
+  'search': '#00f0ff',
+  'lock': '#00f0ff',
+  'key': '#00f0ff',
+  'mail': '#00f0ff',
+  'send': '#00f0ff',
+  'credit-card': '#00f0ff',
+  'shopping-cart': '#00f0ff',
+  'package': '#00f0ff',
+  'ticket': '#00f0ff',
+  'gamepad': '#00f0ff',
+  'camera': '#00f0ff'
+};
+
 function showToast(message, duration = 3500) {
   const container = document.getElementById('toast-container');
   if (!container) return;
+
+  // Detectar el emoji inicial/final del mensaje y elegir icono SVG (se quita el glifo)
+  const emojiRe = /^([\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{21A9}\u{FE0F}]+)\s*/u;
+  const trailingRe = /\s*([\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{21A9}\u{FE0F}]+)$/u;
+  const raw = String(message);
+  const prefixMatch = raw.match(emojiRe);
+  const prefix = prefixMatch ? prefixMatch[1] : '';
+  const clean = raw.replace(emojiRe, '').replace(trailingRe, '');
+  const iconName = TOAST_EMOJI_ICONS[prefix] || (prefix.includes('⚠') ? 'alert-triangle' : 'info');
+  const iconColor = TOAST_ICON_COLORS[iconName] || '#00f0ff';
+  const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TOAST_ICON_SVGS[iconName]}</svg>`;
 
   const toast = document.createElement('div');
   toast.className = 'toast';
   toast.innerHTML = `
     <div class="toast-content">
-      <span class="toast-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span>
-      <span class="toast-text">${escapeHTML(message)}</span>
+      <span class="toast-icon">${iconSvg}</span>
+      <span class="toast-text">${escapeHTML(clean)}</span>
       <button class="toast-close-btn" aria-label="Cerrar">&times;</button>
     </div>
   `;
@@ -3121,13 +3200,25 @@ window.addEventListener('scroll', () => {
   lastScrollY = currentScrollY;
 }, { passive: true });
 
-// --- BARRA INFERIOR MÓVIL: SE COMPACTA AL HACER SCROLL (rAF, sin librerías) ---
+// --- BARRA INFERIOR MÓVIL: SE COMPACTA AL BAJAR Y SE EXPANDE AL SUBIR (rAF) ---
 (function initBottomNavCompact() {
   const nav = document.getElementById('mobile-bottom-nav');
   if (!nav) return;
   let ticking = false;
+  let lastScrollY = window.scrollY;
   function update() {
-    nav.classList.toggle('nav-compact', window.scrollY > 120);
+    const y = window.scrollY;
+    if (y < 10) {
+      // En la parte superior siempre expandida
+      nav.classList.remove('nav-compact');
+    } else if (y > lastScrollY + 4) {
+      // Bajando → píldora compacta
+      nav.classList.add('nav-compact');
+    } else if (y < lastScrollY - 4) {
+      // Subiendo → píldora expandida
+      nav.classList.remove('nav-compact');
+    }
+    lastScrollY = y;
     ticking = false;
   }
   window.addEventListener('scroll', () => {
