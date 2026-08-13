@@ -317,14 +317,13 @@ function safeReadJsonSync(filePath, fallback = []) {
 // Helpers de seguridad (audit 2026)
 // ============================================================
 
-// --- Campo público de juegos: NUNCA exponer stock de cuentas ni contadores internos ---
+// --- Campos NO públicos de juegos: credenciales y contadores internos ---
+// stockPrimaria/stockSecundaria SÍ se exponen (la tienda muestra disponibilidad).
 const PUBLIC_GAME_STRIPPED_FIELDS = [
   'cuentas',               // credenciales reales (cuenta / password / OTP)
   'siguienteVarianteIndex', // puntero round-robin interno
   'soldPrimaria',
   'soldSecundaria',
-  'stockPrimaria',
-  'stockSecundaria',
   'deletedAt'
 ];
 
