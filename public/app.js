@@ -194,7 +194,7 @@ const apiFetch = function (resource, init) {
 
 let activeCategory = 'todos';
 let searchQuery = '';
-let filterState = { priceMin: null, priceMax: null, sort: '', license: '' };
+let filterState = { priceMin: null, priceMax: null, sort: '' };
 let selectedGameForModal = null;
 let selectedLicenseType = null;
 let currentModalImages = [];
@@ -476,9 +476,7 @@ function initEventListeners() {
   }
 
   const filterSort = document.getElementById('filter-sort');
-  const filterLicense = document.getElementById('filter-license');
   if (filterSort) filterSort.addEventListener('change', applyFilters);
-  if (filterLicense) filterLicense.addEventListener('change', applyFilters);
 
   const filterResetBtn = document.getElementById('filter-reset-btn');
   if (filterResetBtn) filterResetBtn.addEventListener('click', resetFilters);
@@ -1630,7 +1628,7 @@ function initFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   if (!minEl && !maxEl) return;
-  const rangeMax = Math.max(60000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+  const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
   if (minEl) {
     minEl.max = rangeMax;
     const valEl = document.getElementById('filter-price-min-val');
@@ -1648,11 +1646,10 @@ function applyFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   const sortEl = document.getElementById('filter-sort');
-  const licEl = document.getElementById('filter-license');
 
   // Mantener el tope del rango alineado con el precio máximo real del catálogo
   if (minEl || maxEl) {
-    const rangeMax = Math.max(60000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+    const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
     if (minEl) minEl.max = rangeMax;
     if (maxEl && Number(maxEl.value) >= Number(maxEl.max)) {
       maxEl.max = rangeMax;
@@ -1665,7 +1662,6 @@ function applyFilters() {
   filterState.priceMin = minEl && Number(minEl.value) > 0 ? Number(minEl.value) : null;
   filterState.priceMax = maxEl ? Number(maxEl.value) : null;
   filterState.sort = sortEl ? sortEl.value : '';
-  filterState.license = licEl ? licEl.value : '';
   renderCatalog();
 }
 
@@ -1673,7 +1669,6 @@ function resetFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   const sortEl = document.getElementById('filter-sort');
-  const licEl = document.getElementById('filter-license');
   if (minEl) {
     minEl.value = minEl.min || '0';
     const valEl = document.getElementById('filter-price-min-val');
@@ -1685,7 +1680,6 @@ function resetFilters() {
     if (valEl) valEl.textContent = '$' + Number(maxEl.value).toLocaleString('es-CL');
   }
   if (sortEl) sortEl.value = '';
-  if (licEl) licEl.value = '';
 
   // Limpiar también búsqueda y categoría para un reinicio completo
   searchQuery = '';
@@ -1723,12 +1717,7 @@ function renderCatalog(animatePrices = false) {
     const matchPrice = (filterState.priceMin == null || price >= filterState.priceMin) &&
                        (filterState.priceMax == null || price <= filterState.priceMax);
 
-    // Filtro por tipo de licencia (usa los campos de stock reales del catálogo)
-    const matchLicense = !filterState.license ||
-      (filterState.license === 'secundaria' && !(Number.isInteger(game.stockSecundaria) && game.stockSecundaria <= 0)) ||
-      (filterState.license === 'primaria' && !(Number.isInteger(game.stockPrimaria) && game.stockPrimaria <= 0));
-
-    return matchCategory && matchSearch && matchPrice && matchLicense;
+    return matchCategory && matchSearch && matchPrice;
   });
 
   // Ordenamiento elegido por el usuario (nunca modifica el catálogo original)
