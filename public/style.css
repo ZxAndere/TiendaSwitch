@@ -163,6 +163,143 @@ html.light-mode .card-media {
   background: #e8edf3;
 }
 
+/* Textos de tarjetas del catálogo → contraste sólido sobre superficie clara */
+html.light-mode .card-title {
+  color: #0f172a;
+}
+
+html.light-mode .card-desc {
+  color: #55657c;
+}
+
+html.light-mode .current-price {
+  color: #047857;
+}
+
+html.light-mode .card-rating {
+  color: #b45309;
+}
+
+html.light-mode .card-license-hint {
+  color: #007a85;
+  border-color: rgba(0, 163, 176, 0.35);
+  background: rgba(0, 163, 176, 0.06);
+}
+
+html.light-mode .card-license-option {
+  background: rgba(15, 23, 42, 0.04);
+  border-color: rgba(0, 163, 176, 0.25);
+}
+
+html.light-mode .card-license-option .license-name {
+  color: #007a85;
+}
+
+html.light-mode .card-license-option .license-price {
+  color: #0f172a;
+}
+
+html.light-mode .card-license-option.in-stock .license-stock {
+  color: #047857;
+}
+
+html.light-mode .card-license-option.out-of-stock {
+  opacity: 1;
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+html.light-mode .card-license-option.out-of-stock .license-stock {
+  color: #dc2626;
+}
+
+/* Sombras suaves en modo claro (alpha bajo, tono neutro oscuro) */
+html.light-mode .game-card.in-view:hover {
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.12), 0 0 20px rgba(255, 0, 60, 0.1);
+}
+
+html.light-mode .full-width-banner-card {
+  box-shadow: var(--shadow-lg), 0 0 35px rgba(15, 23, 42, 0.18);
+}
+
+html.light-mode .full-width-banner-card:hover {
+  box-shadow: var(--shadow-lg), 0 0 40px rgba(255, 0, 60, 0.18);
+}
+
+html.light-mode .header-search-box input {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+html.light-mode .cart-drawer {
+  box-shadow: -10px 0 40px rgba(15, 23, 42, 0.15);
+}
+
+html.light-mode .mobile-nav-drawer {
+  box-shadow: -10px 0 35px rgba(15, 23, 42, 0.18);
+}
+
+html.light-mode .user-dropdown-menu {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+}
+
+html.light-mode .navbar.nav-scrolled {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+html.light-mode .game-modal-card,
+html.light-mode .auth-modal-card,
+html.light-mode .user-modal-card,
+html.light-mode .receipt-modal {
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
+}
+
+html.light-mode .payment-modal-card {
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.3), 0 0 35px rgba(0, 163, 176, 0.12);
+}
+
+html.light-mode .about-modal-content {
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.3);
+}
+
+html.light-mode .cart-games-preview-box,
+html.light-mode .variant-row-card,
+html.light-mode .jd-video-trailer-section {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+html.light-mode .jd-video-wrapper {
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+}
+
+html.light-mode .account-sheet-card {
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+html.light-mode .footer-btn,
+html.light-mode .legal-card {
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.08);
+}
+
+html.light-mode .whatsapp-float-btn {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.15);
+}
+
+html.light-mode .whatsapp-float-btn:hover {
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18), 0 0 14px rgba(37, 211, 102, 0.15);
+}
+
+html.light-mode .gallery-card:hover {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+}
+
+html.light-mode .user-profile-trigger {
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.12);
+}
+
+html.light-mode .user-profile-trigger:hover {
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15);
+}
+
 html.light-mode .jd-price-box {
   background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
 }
@@ -3076,6 +3213,11 @@ html.light-mode {
     position: relative !important;
     overflow: hidden !important;
     min-width: 0 !important;
+  }
+
+  /* Modo claro: sombra suave sobre tarjeta clara (gana por especificidad) */
+  html.light-mode .game-card {
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
   }
 
   /* Muesca superior del cartucho Nintendo Switch */
