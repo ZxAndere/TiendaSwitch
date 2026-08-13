@@ -1033,6 +1033,14 @@ html.light-mode {
   border-radius: var(--radius-lg);
 }
 
+/* Alinear el panel de filtros con el ancho del mosaico: el panel se
+   extiende sobre el padding horizontal del contenedor (1.5rem) y su
+   contenido queda alineado con los bordes de las tarjetas del grid */
+#catalog-section .section-header {
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+}
+
 .section-header-top {
   display: flex;
   justify-content: space-between;
@@ -1270,7 +1278,7 @@ html.light-mode {
   height: 32px;
   margin: 0;
   background-color: transparent;
-  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0 2px, transparent 2px 33.5px);
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.3) 0 2px, transparent 2px 44.67px);
   background-position: 8px center;
   background-repeat: no-repeat;
   background-size: 100% 8px;
@@ -1358,80 +1366,32 @@ html.light-mode {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
-/* Densidades del mosaico (0 = compacto, 4 = espacioso; 2 = aspecto actual).
-   Progresión suave: en 1440px ≈ 6 / 5 / 4 / 3 / 2 columnas. */
-.games-grid.density-0 { grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); }
-.games-grid.density-1 { grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); }
-.games-grid.density-2 { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-.games-grid.density-3 { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
-.games-grid.density-4 { grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); }
+/* Densidades del mosaico (1 = compacto, 4 = espacioso; 2 = aspecto actual).
+   Columnas deterministas: la escalera es estrictamente creciente en cada
+   ancho (menos columnas = tarjetas más anchas a mayor densidad). */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .games-grid.density-1 { grid-template-columns: repeat(3, 1fr); }
+  .games-grid.density-2 { grid-template-columns: repeat(3, 1fr); }
+  .games-grid.density-3 { grid-template-columns: repeat(2, 1fr); }
+  .games-grid.density-4 { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (min-width: 1024px) {
-  .games-grid.density-0 { grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); }
-  .games-grid.density-1 { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .games-grid.density-1 { grid-template-columns: repeat(5, 1fr); }
   .games-grid.density-2 { grid-template-columns: repeat(4, 1fr); }
-  .games-grid.density-3 { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
-  .games-grid.density-4 { grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); }
+  .games-grid.density-3 { grid-template-columns: repeat(3, 1fr); }
+  .games-grid.density-4 { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* Adaptación de la tarjeta por densidad (solo escritorio; en móvil el
    mosaico es fijo de 2 columnas y las densidades quedan inertes) */
 @media (min-width: 769px) {
-  /* Compacto: sin descripción; título a 1 línea */
-  .games-grid.density-0 .card-desc,
+  /* Compacto: sin descripción */
   .games-grid.density-1 .card-desc {
     display: none;
   }
 
-  /* Densidad 0 (tarjetas ~200px): una sola fila de licencia, texto mínimo */
-  .games-grid.density-0 .card-title {
-    font-size: 0.95rem;
-    height: auto;
-    -webkit-line-clamp: 1;
-  }
-
-  .games-grid.density-0 .card-content {
-    padding: 0.7rem;
-  }
-
-  .games-grid.density-0 .card-license-hint {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    padding: 0.35rem;
-    gap: 0.3rem;
-    margin-bottom: 0.6rem;
-  }
-
-  .games-grid.density-0 .card-license-option {
-    padding: 0.2rem 0.3rem;
-  }
-
-  .games-grid.density-0 .card-license-option:nth-child(2) {
-    display: none;
-  }
-
-  .games-grid.density-0 .license-name { font-size: 0.68rem; }
-  .games-grid.density-0 .license-price { font-size: 0.7rem; }
-  .games-grid.density-0 .license-stock { font-size: 0.62rem; }
-
-  .games-grid.density-0 .card-footer {
-    padding-top: 0.5rem;
-  }
-
-  .games-grid.density-0 .original-price {
-    display: none;
-  }
-
-  .games-grid.density-0 .current-price {
-    font-size: 1rem;
-  }
-
-  .games-grid.density-0 .buy-card-btn {
-    padding: 0.45rem 0.6rem;
-    font-size: 0.75rem;
-  }
-
-  /* Densidad 1 (~250px): sin descripción, títulos y licencias compactos */
+  /* Densidad 1 (~250px): títulos y licencias compactos */
   .games-grid.density-1 .card-title {
     font-size: 1rem;
   }
@@ -1614,7 +1574,7 @@ html.light-mode {
 
 /* Modo claro: controles de vista */
 html.light-mode .grid-density-slider {
-  background-image: repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.35) 0 2px, transparent 2px 33.5px);
+  background-image: repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.35) 0 2px, transparent 2px 44.67px);
 }
 
 html.light-mode .grid-density-slider::-webkit-slider-runnable-track {
@@ -3595,8 +3555,10 @@ html.light-mode .view-toggle button.active {
     font-size: 0.775rem !important;
   }
 
-  .section-header {
-    padding: 0.85rem 1rem !important;
+  #catalog-section .section-header {
+    margin-left: -0.75rem !important;
+    margin-right: -0.75rem !important;
+    padding: 0.85rem 0.75rem !important;
     margin-bottom: 1rem !important;
   }
 

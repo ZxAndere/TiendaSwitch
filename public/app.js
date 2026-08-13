@@ -1869,7 +1869,8 @@ function loadGridViewPref() {
     const raw = localStorage.getItem(GRID_VIEW_STORAGE_KEY);
     if (!raw) return;
     const pref = JSON.parse(raw);
-    if (Number.isInteger(pref.density) && pref.density >= 0 && pref.density <= 4) gridViewDensity = pref.density;
+    // Migración: rango nuevo 1-4 (la antigua densidad 0 se sube a 1)
+    if (Number.isInteger(pref.density)) gridViewDensity = Math.min(4, Math.max(1, pref.density));
     if (typeof pref.list === 'boolean') gridViewList = pref.list;
   } catch (e) {}
 }
@@ -1883,7 +1884,7 @@ function saveGridViewPref() {
 function applyGridViewClasses() {
   const grid = document.getElementById('games-grid');
   if (!grid) return;
-  grid.classList.remove('density-0', 'density-1', 'density-2', 'density-3', 'density-4', 'mode-list');
+  grid.classList.remove('density-1', 'density-2', 'density-3', 'density-4', 'mode-list');
   grid.classList.add('density-' + gridViewDensity);
   grid.classList.toggle('mode-list', gridViewList);
 }
