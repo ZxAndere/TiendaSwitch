@@ -194,7 +194,7 @@ const apiFetch = function (resource, init) {
 
 let activeCategory = 'todos';
 let searchQuery = '';
-let filterState = { priceMin: null, priceMax: null, sort: '' };
+let filterState = { priceMin: null, priceMax: null, sort: '', license: '', inStockOnly: false };
 let selectedGameForModal = null;
 let selectedLicenseType = null;
 let currentModalImages = [];
@@ -478,20 +478,46 @@ function initEventListeners() {
   const filterSort = document.getElementById('filter-sort');
   if (filterSort) filterSort.addEventListener('change', applyFilters);
 
+  const filterLicense = document.getElementById('filter-license');
+  if (filterLicense) filterLicense.addEventListener('change', applyFilters);
+
+  const filterInStock = document.getElementById('filter-in-stock');
+  if (filterInStock) filterInStock.addEventListener('change', applyFilters);
+
   const filterResetBtn = document.getElementById('filter-reset-btn');
   if (filterResetBtn) filterResetBtn.addEventListener('click', resetFilters);
 
-  // Barra inferior móvil: Buscar abre el menú lateral y enfoca la búsqueda
+  // Barra inferior móvil: Buscar abre la búsqueda flotante
   const bottomNavSearchBtn = document.getElementById('bottom-nav-search-btn');
   if (bottomNavSearchBtn) {
-    bottomNavSearchBtn.addEventListener('click', () => {
-      openMobileDrawer();
-      setTimeout(() => {
-        const mobileSearch = document.getElementById('mobile-search-input');
-        if (mobileSearch) mobileSearch.focus();
-      }, 400);
+    bottomNavSearchBtn.addEventListener('click', openMobileSearchOverlay);
+  }
+
+  // Búsqueda flotante móvil
+  const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+  const mobileSearchOverlayInput = document.getElementById('mobile-search-overlay-input');
+  const mobileSearchOverlayClose = document.getElementById('mobile-search-overlay-close');
+  if (mobileSearchOverlayInput) {
+    mobileSearchOverlayInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      const desktopSearch = document.getElementById('search-input');
+      if (desktopSearch) desktopSearch.value = e.target.value;
+      renderCatalog();
+      handleSearchAutocomplete(mobileSearchOverlayInput, 'mobile-search-overlay-suggestions');
     });
   }
+  if (mobileSearchOverlay && mobileSearchOverlayClose) {
+    mobileSearchOverlayClose.addEventListener('click', closeMobileSearchOverlay);
+    mobileSearchOverlay.addEventListener('click', (e) => {
+      if (e.target === mobileSearchOverlay) closeMobileSearchOverlay();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('mobile-search-overlay');
+      if (overlay && overlay.classList.contains('active')) closeMobileSearchOverlay();
+    }
+  });
 
   // Barra inferior móvil: Cuenta abre opciones si hay sesión, si no el login
   const bottomNavAccountBtn = document.getElementById('bottom-nav-account-btn');
@@ -736,7 +762,7 @@ function toggleAdminCouponsVisibility() {
     container.style.display = adminCouponsVisible ? 'block' : 'none';
   }
   if (btn) {
-    btn.textContent = adminCouponsVisible ? '🔒 Ocultar Cupones' : '👁️ Ver Cupones';
+    btn.textContent = adminCouponsVisible ? 'Ocultar Cupones' : 'Ver Cupones';
   }
 }
 
@@ -821,12 +847,12 @@ function renderAdminGamesList(gamesList) {
         </div>
         <div class="admin-game-actions">
           <label class="toggle-switch-label" title="Mostrar u Ocultar en la tienda">
-            <span>${isVisible ? '🟢 Visible' : '🔴 Oculto'}</span>
+            <span>${isVisible ? 'Visible' : 'Oculto'}</span>
             <input type="checkbox" ${isVisible ? 'checked' : ''} onchange="toggleGameVisibility(${game.id}, this.checked)">
             <span class="toggle-slider"></span>
           </label>
-          <button type="button" class="edit-game-gear-btn" onclick="openGameEditModal(${game.id})" title="Editar datos del juego (Tuerca ⚙️)">
-            ⚙️
+          <button type="button" class="edit-game-gear-btn" onclick="openGameEditModal(${game.id})" title="Editar datos del juego">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
           </button>
         </div>
       </div>
@@ -970,7 +996,7 @@ async function handleGameCreateSubmit(e) {
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Crear y Guardar Juego';
+      saveBtn.textContent = 'Crear y Guardar Juego';
     }
   }
 }
@@ -1051,7 +1077,7 @@ async function handleGameEditSubmit(e) {
     if (!res.ok || !data.exito) {
       errorMsg.textContent = data.error || 'No se pudo guardar la información.';
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Guardar Cambios en Tiempo Real';
+      saveBtn.textContent = 'Guardar Cambios en Tiempo Real';
       return;
     }
 
@@ -1077,6 +1103,29 @@ function closeMobileDrawer() {
   document.getElementById('mobile-drawer-overlay').classList.remove('active');
 }
 
+// --- BÚSQUEDA FLOTANTE MÓVIL (barra inferior → Buscar) ---
+function openMobileSearchOverlay() {
+  const overlay = document.getElementById('mobile-search-overlay');
+  if (!overlay) return;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('scroll-locked');
+  setTimeout(() => {
+    const input = document.getElementById('mobile-search-overlay-input');
+    if (input) input.focus();
+  }, 60);
+}
+
+function closeMobileSearchOverlay() {
+  const overlay = document.getElementById('mobile-search-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('scroll-locked');
+  const input = document.getElementById('mobile-search-overlay-input');
+  if (input) input.blur();
+}
+
 // --- GESTIÓN DE CONFIGURACIÓN DE CUENTA Y ÓRDENES ---
 async function fetchAndRenderUserOrders() {
   const container = document.getElementById('user-orders-container');
@@ -1087,19 +1136,19 @@ async function fetchAndRenderUserOrders() {
     const orders = await res.json();
     if (!res.ok) throw new Error(orders.error || 'Error');
     if (!Array.isArray(orders) || !orders.length) {
-      container.innerHTML = '<div style=\"text-align:center;padding:2rem;color:var(--text-muted)\"><div style=\"font-size:2.5rem\">📦</div><p>Aún no has realizado ninguna compra.</p></div>';
+      container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)"><div style="font-size:2.5rem;display:flex;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg></div><p>Aún no has realizado ninguna compra.</p></div>';
       return;
     }
     container.innerHTML = orders.map(order => {
       const paid = order.estado === 'pagada';
       const retryable = ['pendiente','rechazada','cancelada'].includes(order.estado);
       return `<div class=\"order-history-card\">
-        <div class=\"oh-header\"><div><span class=\"oh-code\">${escapeHTML(order.codigoOrden)}</span><div class=\"oh-date\">${escapeHTML(order.fecha || '')}</div></div><span class=\"oh-badge ${paid?'pagada':'pendiente'}\">${paid?'🟢 Pagada':'🟡 '+escapeHTML(order.estado||'Pendiente')}</span></div>
+        <div class="oh-header"><div><span class="oh-code">${escapeHTML(order.codigoOrden)}</span><div class="oh-date">${escapeHTML(order.fecha || '')}</div></div><span class="oh-badge ${paid?'pagada':'pendiente'}">${paid?'Pagada':escapeHTML(order.estado||'Pendiente')}</span></div>
         <div class=\"oh-body\">${Array.isArray(order.carrito)?order.carrito.map(i=>`<div class=\"oh-item\"><span>• ${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}</span><strong>${formatCLP((Number(i.precio)||0)*(Number(i.cantidad)||1))}</strong></div>`).join(''):''}</div>
         <div class=\"oh-footer\"><span>Total:</span><span class=\"highlight-green\">${escapeHTML(order.totalFormatted || formatCLP(order.total))}</span></div>
         <div style=\"display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem\">
-          <button type=\"button\" class=\"tab-btn\" onclick=\"showUserOrderDetail('${escapeHTML(order.codigoOrden)}')\">🔎 Ver detalle</button>
-          ${retryable?`<button type=\"button\" class=\"tab-btn\" onclick=\"retryOrderPayment('${escapeHTML(order.codigoOrden)}','${escapeHTML(order.email||'')}')\">🔄 Reintentar pago</button>`:''}
+          <button type="button" class="tab-btn" onclick="showUserOrderDetail('${escapeHTML(order.codigoOrden)}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg> Ver detalle</button>
+          ${retryable?`<button type="button" class="tab-btn" onclick="retryOrderPayment('${escapeHTML(order.codigoOrden)}','${escapeHTML(order.email||'')}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg> Reintentar pago</button>`:''}
         </div>
       </div>`;
     }).join('');
@@ -1115,7 +1164,7 @@ async function showUserOrderDetail(code) {
     if (!res.ok) return showToast(data.error || 'No se pudo cargar la orden.');
     const history = Array.isArray(data.history) ? data.history.map(h=>`<li><strong>${escapeHTML(h.type)}</strong> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join('') : '';
     const items = Array.isArray(data.carrito) ? data.carrito.map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}</li>`).join('') : '';
-    showSimpleModal(`📦 Orden ${escapeHTML(data.codigoOrden)}`, `<p><strong>Estado:</strong> ${escapeHTML(data.estado)}</p><p><strong>Entrega:</strong> ${escapeHTML(data.deliveryStatus||'')}</p><p><strong>Total:</strong> ${escapeHTML(data.totalFormatted||formatCLP(data.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${history || '<li>Sin eventos</li>'}</ul>`);
+    showSimpleModal(`Orden ${escapeHTML(data.codigoOrden)}`, `<p><strong>Estado:</strong> ${escapeHTML(data.estado)}</p><p><strong>Entrega:</strong> ${escapeHTML(data.deliveryStatus||'')}</p><p><strong>Total:</strong> ${escapeHTML(data.totalFormatted||formatCLP(data.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${history || '<li>Sin eventos</li>'}</ul>`);
   } catch (e) { showToast('No se pudo cargar el detalle.'); }
 }
 
@@ -1289,14 +1338,14 @@ function initUserSession() {
     const userHtml = `
       <div class="user-profile-menu-container">
         <button class="user-profile-trigger" id="user-menu-trigger">
-          <span>👤</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           <span>${escapeHTML(currentUser.username)}</span>
           <span style="font-size: 0.7rem;">▼</span>
         </button>
         <div class="user-dropdown-menu" id="user-dropdown-menu">
-          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();">📦 Mis Órdenes</button>
-          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();">⚙️ Opciones de Cuenta</button>
-          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();">🚪 Cerrar Sesión</button>
+          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> Mis Órdenes</button>
+          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg> Opciones de Cuenta</button>
+          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg> Cerrar Sesión</button>
         </div>
       </div>
     `;
@@ -1305,10 +1354,10 @@ function initUserSession() {
     if (mobileUserContainer) {
       mobileUserContainer.innerHTML = `
         <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 0.6rem;">
-          <div style="font-weight: 800; font-size: 0.9rem; color: var(--joycon-cyan);">👤 ${escapeHTML(currentUser.username)}</div>
-          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();" style="padding: 0.4rem 0;">📦 Mis Órdenes</button>
-          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();" style="padding: 0.4rem 0;">⚙️ Opciones de Cuenta</button>
-          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();" style="padding: 0.4rem 0;">🚪 Cerrar Sesión</button>
+          <div style="font-weight: 800; font-size: 0.9rem; color: var(--joycon-cyan); display: flex; align-items: center; gap: 0.5rem;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ${escapeHTML(currentUser.username)}</div>
+          <button class="dropdown-item" onclick="openUserOrdersModal(); closeMobileDrawer();" style="padding: 0.4rem 0;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> Mis Órdenes</button>
+          <button class="dropdown-item" onclick="openUserSettingsModal(); closeMobileDrawer();" style="padding: 0.4rem 0;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg> Opciones de Cuenta</button>
+          <button class="dropdown-item danger" onclick="handleLogout(); closeMobileDrawer();" style="padding: 0.4rem 0;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg> Cerrar Sesión</button>
         </div>
       `;
     }
@@ -1369,12 +1418,12 @@ function ensureRecoveryUi() {
 }
 function openRecoveryModal() {
   let m=document.getElementById('recovery-modal'); if(!m){ m=document.createElement('div'); m.id='recovery-modal'; m.className='modal-backdrop active'; document.body.appendChild(m); }
-  m.innerHTML=`<div class=\"auth-modal-card\"><button class=\"modal-close-x\" onclick=\"document.getElementById('recovery-modal').remove()\">&times;</button><div class=\"auth-modal-header\"><h3>🔐 Recuperar contraseña</h3><p>Te enviaremos un código de 6 dígitos.</p></div><form id=\"recovery-form\" class=\"auth-form\"><div class=\"form-group\"><label>Correo</label><input id=\"recovery-email\" type=\"email\" required></div><div class=\"auth-error-msg\" id=\"recovery-error\"></div><button class=\"auth-submit-btn\" type=\"submit\">Enviar código</button></form></div>`;
+  m.innerHTML=`<div class="auth-modal-card"><button class="modal-close-x" onclick="document.getElementById('recovery-modal').remove()">&times;</button><div class="auth-modal-header"><div class="otp-badge-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div><h3>Recuperar contraseña</h3><p>Te enviaremos un código de 6 dígitos.</p></div><form id="recovery-form" class="auth-form"><div class="form-group"><label>Correo</label><input id="recovery-email" type="email" required></div><div class="auth-error-msg" id="recovery-error"></div><button class="auth-submit-btn" type="submit">Enviar código</button></form></div>`;
   document.getElementById('recovery-form').onsubmit=async e=>{e.preventDefault(); const email=document.getElementById('recovery-email').value.trim(); const err=document.getElementById('recovery-error'); const r=await originalFetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const d=await r.json(); if(!r.ok){err.textContent=d.error||'No se pudo enviar.';return;} document.getElementById('recovery-modal').remove(); openResetPasswordModal(email);};
 }
 function openResetPasswordModal(email) {
   const m=document.createElement('div'); m.id='reset-modal'; m.className='modal-backdrop active'; document.body.appendChild(m);
-  m.innerHTML=`<div class=\"auth-modal-card\"><button class=\"modal-close-x\" onclick=\"document.getElementById('reset-modal').remove()\">&times;</button><div class=\"auth-modal-header\"><h3>🔑 Restablecer contraseña</h3><p>Ingresa el código recibido y una nueva contraseña.</p></div><form id=\"reset-form\" class=\"auth-form\"><div class=\"form-group\"><label>Código</label><input id=\"reset-code\" maxlength=\"6\" required></div><div class=\"form-group\"><label>Nueva contraseña</label><input id=\"reset-password\" type=\"password\" minlength=\"6\" required></div><div class=\"auth-error-msg\" id=\"reset-error\"></div><button class=\"auth-submit-btn\">Cambiar contraseña</button></form></div>`;
+  m.innerHTML=`<div class="auth-modal-card"><button class="modal-close-x" onclick="document.getElementById('reset-modal').remove()">&times;</button><div class="auth-modal-header"><div class="otp-badge-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg></div><h3>Restablecer contraseña</h3><p>Ingresa el código recibido y una nueva contraseña.</p></div><form id="reset-form" class="auth-form"><div class="form-group"><label>Código</label><input id="reset-code" maxlength="6" required></div><div class="form-group"><label>Nueva contraseña</label><input id="reset-password" type="password" minlength="6" required></div><div class="auth-error-msg" id="reset-error"></div><button class="auth-submit-btn">Cambiar contraseña</button></form></div>`;
   document.getElementById('reset-form').onsubmit=async e=>{e.preventDefault(); const code=document.getElementById('reset-code').value.trim(); const newPassword=document.getElementById('reset-password').value; const r=await originalFetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})}); const d=await r.json(); if(!r.ok){document.getElementById('reset-error').textContent=d.error||'No se pudo restablecer.';return;} m.remove(); openLoginModal(); showToast('Contraseña restablecida correctamente.');};
 }
 function ensureAccountDeleteUi(){
@@ -1393,11 +1442,11 @@ function ensureAdminOrdersUi(){
   // en cada carga de página.
   if (!currentUser || currentUser.role !== 'admin') return;
   const tabs=document.querySelector('.admin-subtabs'); const games=document.getElementById('admin-view-games'); if(!tabs||!games||document.getElementById('btn-subtab-orders')) return;
-  const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-orders'; b.textContent='📦 Pedidos'; b.onclick=()=>switchAdminSubtab('orders'); tabs.appendChild(b);
-  const view=document.createElement('div'); view.id='admin-view-orders'; view.style.display='none'; view.innerHTML=`<div style=\"display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem\"><input id=\"admin-order-search\" class=\"admin-search-input\" placeholder=\"🔎 Código, email o usuario\" style=\"flex:1\"><select id=\"admin-order-status\" style=\"min-width:160px;background:var(--bg-dark);color:#fff;border:1px solid var(--border-subtle);padding:.6rem;border-radius:8px\"><option value=\"\">Todos los estados</option><option>pendiente</option><option>pagada</option><option>rechazada</option><option>cancelada</option><option>reembolsada</option></select><button type=\"button\" class=\"auth-submit-btn\" style=\"width:auto\" onclick=\"fetchAdminOrders()\">Actualizar</button></div><div id=\"admin-orders-container\" class=\"admin-games-container\"></div>`; games.parentElement.insertBefore(view, games.nextSibling); document.getElementById('admin-order-search').addEventListener('input', fetchAdminOrders); document.getElementById('admin-order-status').addEventListener('change', fetchAdminOrders);
+  const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-orders'; b.textContent='Pedidos'; b.onclick=()=>switchAdminSubtab('orders'); tabs.appendChild(b);
+  const view=document.createElement('div'); view.id='admin-view-orders'; view.style.display='none'; view.innerHTML=`<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem"><input id="admin-order-search" class="admin-search-input" placeholder="Código, email o usuario" style="flex:1"><select id="admin-order-status" style="min-width:160px;background:var(--bg-dark);color:#fff;border:1px solid var(--border-subtle);padding:.6rem;border-radius:8px"><option value="">Todos los estados</option><option>pendiente</option><option>pagada</option><option>rechazada</option><option>cancelada</option><option>reembolsada</option></select><button type="button" class="auth-submit-btn" style="width:auto" onclick="fetchAdminOrders()">Actualizar</button></div><div id="admin-orders-container" class="admin-games-container"></div>`; games.parentElement.insertBefore(view, games.nextSibling); document.getElementById('admin-order-search').addEventListener('input', fetchAdminOrders); document.getElementById('admin-order-status').addEventListener('change', fetchAdminOrders);
 }
-async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await apiFetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\">🔎</button><button type=\"button\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\">📩</button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}','${escapeHTML(o.emailCompleto||'')}')\">💳</button>`:''}<button type=\"button\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\">✖️</button><button type=\"button\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\">↩️</button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
-async function showAdminOrderDetail(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`📦 ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
+async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await apiFetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" class=\"admin-icon-btn\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\" title=\"Ver detalle\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\" title=\"Reenviar entrega\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m22 2-7 20-4-9-9-4Z\"></path><path d=\"M22 2 11 13\"></path></svg></button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" class=\"admin-icon-btn\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}','${escapeHTML(o.emailCompleto||'')}')\" title=\"Reintentar pago\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg></button>`:''}<button type=\"button\" class=\"admin-icon-btn\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Cancelar orden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Reembolsar\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 14 4 9l5-5\"></path><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11\"></path></svg></button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
+async function showAdminOrderDetail(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`Orden ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
 async function resendAdminDelivery(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/resend-delivery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();showToast(r.ok?'📩 Entrega reenviada.':(d.error||'No se pudo reenviar.')); if(r.ok)fetchAdminOrders(); }
 async function retryAdminPayment(code, email){ const r=await apiFetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`,{method:'POST',body:JSON.stringify({email:email||''}),headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo reintentar.');if(d.redirectUrl)window.location.href=d.redirectUrl; }
 async function cancelAdminOrder(code){ const reason=prompt('Motivo de la cancelación:','Cancelada por administración');if(reason===null)return;const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/cancel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'✖️ Orden cancelada.':(d.error||'No se pudo cancelar.'));if(r.ok)fetchAdminOrders();}
@@ -1414,18 +1463,18 @@ function validateRegisterPasswordForm() {
 
   if (isLenValid) {
     ruleLen.className = 'rule-item valid';
-    ruleLen.textContent = '✔️ Mínimo 6 caracteres completado';
+    ruleLen.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg> Mínimo 6 caracteres completado';
   } else {
     ruleLen.className = 'rule-item invalid';
-    ruleLen.textContent = '❌ Mínimo 6 letras / caracteres';
+    ruleLen.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg> Mínimo 6 letras / caracteres';
   }
 
   if (isNumValid) {
     ruleNum.className = 'rule-item valid';
-    ruleNum.textContent = '✔️ Al menos 1 número completado';
+    ruleNum.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg> Al menos 1 número completado';
   } else {
     ruleNum.className = 'rule-item invalid';
-    ruleNum.textContent = '❌ Al menos 1 número';
+    ruleNum.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg> Al menos 1 número';
   }
 
   const username = document.getElementById('register-username').value.trim();
@@ -1631,7 +1680,7 @@ function initFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   if (!minEl && !maxEl) return;
-  const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+  const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0, Number(g && g.precioPrimaria) || 0), 0) / 500) * 500);
   if (minEl) {
     minEl.max = rangeMax;
     const valEl = document.getElementById('filter-price-min-val');
@@ -1649,10 +1698,13 @@ function applyFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   const sortEl = document.getElementById('filter-sort');
+  const licEl = document.getElementById('filter-license');
+  const inStockEl = document.getElementById('filter-in-stock');
 
   // Mantener el tope del rango alineado con el precio máximo real del catálogo
+  // (considera precioSecundaria Y precioPrimaria, que llega hasta $50.000)
   if (minEl || maxEl) {
-    const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+    const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0, Number(g && g.precioPrimaria) || 0), 0) / 500) * 500);
     if (minEl) minEl.max = rangeMax;
     if (maxEl && Number(maxEl.value) >= Number(maxEl.max)) {
       maxEl.max = rangeMax;
@@ -1665,6 +1717,8 @@ function applyFilters() {
   filterState.priceMin = minEl && Number(minEl.value) > 0 ? Number(minEl.value) : null;
   filterState.priceMax = maxEl ? Number(maxEl.value) : null;
   filterState.sort = sortEl ? sortEl.value : '';
+  filterState.license = licEl ? licEl.value : '';
+  filterState.inStockOnly = !!(inStockEl && inStockEl.checked);
   renderCatalog();
 }
 
@@ -1672,6 +1726,8 @@ function resetFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   const sortEl = document.getElementById('filter-sort');
+  const licEl = document.getElementById('filter-license');
+  const inStockEl = document.getElementById('filter-in-stock');
   if (minEl) {
     minEl.value = minEl.min || '0';
     const valEl = document.getElementById('filter-price-min-val');
@@ -1683,6 +1739,8 @@ function resetFilters() {
     if (valEl) valEl.textContent = '$' + Number(maxEl.value).toLocaleString('es-CL');
   }
   if (sortEl) sortEl.value = '';
+  if (licEl) licEl.value = '';
+  if (inStockEl) inStockEl.checked = false;
 
   // Limpiar también búsqueda y categoría para un reinicio completo
   searchQuery = '';
@@ -1715,12 +1773,31 @@ function renderCatalog(animatePrices = false) {
     const matchCategory = activeCategory === 'todos' || game.categoria === activeCategory;
     const matchSearch = title.includes(q) || category.includes(q);
 
-    // Filtro de precio (sobre el precio "Desde" / cuenta secundaria)
-    const price = Number(game.precioSecundaria) || 0;
-    const matchPrice = (filterState.priceMin == null || price >= filterState.priceMin) &&
-                       (filterState.priceMax == null || price <= filterState.priceMax);
+    // Precios y disponibilidad reales por tipo de cuenta
+    const secPrice = Number(game.precioSecundaria) || 0;
+    const primPrice = Number(game.precioPrimaria) || 0;
+    const secAvail = !(Number.isInteger(game.stockSecundaria) && game.stockSecundaria <= 0);
+    const primAvail = !(Number.isInteger(game.stockPrimaria) && game.stockPrimaria <= 0);
 
-    return matchCategory && matchSearch && matchPrice;
+    // Filtro por tipo de licencia
+    let matchLicense = true;
+    if (filterState.license === 'secundaria') matchLicense = secAvail;
+    else if (filterState.license === 'primaria') matchLicense = primAvail;
+    else if (filterState.license === 'ambas') matchLicense = secAvail || primAvail;
+
+    // El precio a comparar depende del tipo seleccionado; con "Todas" se usa
+    // el menor de los dos (el precio "Desde" que se muestra en la tarjeta)
+    const filterPrice = filterState.license === 'secundaria' ? secPrice
+      : filterState.license === 'primaria' ? primPrice
+      : (secPrice && primPrice ? Math.min(secPrice, primPrice) : (secPrice || primPrice));
+
+    const matchPrice = (filterState.priceMin == null || filterPrice >= filterState.priceMin) &&
+                       (filterState.priceMax == null || filterPrice <= filterState.priceMax);
+
+    // Ocultar juegos totalmente agotados (ambos stocks en 0)
+    const matchInStock = !filterState.inStockOnly || secAvail || primAvail;
+
+    return matchCategory && matchSearch && matchPrice && matchLicense && matchInStock;
   });
 
   // Ordenamiento elegido por el usuario (nunca modifica el catálogo original)
@@ -1741,7 +1818,7 @@ function renderCatalog(animatePrices = false) {
   if (filtered.length === 0) {
     grid.innerHTML = `
       <div class="no-results">
-        <div class="no-results-icon">🔍</div>
+        <div class="no-results-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
         <h3>No se encontraron juegos</h3>
       </div>
     `;
@@ -1760,21 +1837,23 @@ function renderCatalog(animatePrices = false) {
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
-        <span class="card-size-tag">📦 ${escapeHTML(game.peso || 'N/A')}</span>
-        <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;font-size:1.1rem;">${isGameInFavorites(game.id) ? '❤️' : '🤍'}</button>
-        ${isAdmin ? `<button type="button" class="card-admin-gear" onclick="event.preventDefault(); event.stopPropagation(); openGameEditModal(${game.id});" title="Editar juego en tiempo real (Admin ⚙️)">⚙️</button>` : ''}
+        <span class="card-size-tag"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> ${escapeHTML(game.peso || 'N/A')}</span>
+        <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">${isGameInFavorites(game.id)
+          ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'
+          : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'}</button>
+        ${isAdmin ? `<button type="button" class="card-admin-gear" onclick="event.preventDefault(); event.stopPropagation(); openGameEditModal(${game.id});" title="Editar juego en tiempo real (Admin)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>` : ''}
       </div>
       <div class="card-content">
         <h3 class="card-title">${escapeHTML(game.titulo || '')}</h3>
         <p class="card-desc">${escapeHTML(game.descripcion || '')}</p>
         <div class="card-license-hint">
           <div class="card-license-option ${Number.isInteger(game.stockSecundaria) && game.stockSecundaria <= 0 ? 'out-of-stock' : 'in-stock'}">
-            <span class="license-name">🎮 Secundaria</span>
+            <span class="license-name"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg> Secundaria</span>
             <span class="license-price">${formatCLP(game.precioSecundaria)}</span>
             <span class="license-stock">${Number.isInteger(game.stockSecundaria) ? (game.stockSecundaria <= 0 ? '⛔ Fuera de Stock' : `✅ ${game.stockSecundaria} disponibles`) : '✅ Disponible'}</span>
           </div>
           <div class="card-license-option ${Number.isInteger(game.stockPrimaria) && game.stockPrimaria <= 0 ? 'out-of-stock' : 'in-stock'}">
-            <span class="license-name">🎮 Primaria</span>
+            <span class="license-name"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg> Primaria</span>
             <span class="license-price">${formatCLP(game.precioPrimaria)}</span>
             <span class="license-stock">${Number.isInteger(game.stockPrimaria) ? (game.stockPrimaria <= 0 ? '⛔ Fuera de Stock' : `✅ ${game.stockPrimaria} disponibles`) : '✅ Disponible'}</span>
           </div>
@@ -2015,7 +2094,7 @@ function renderCartDrawer() {
   if (cart.length === 0) {
     container.innerHTML = `
       <div class="empty-cart-view">
-        <div class="empty-cart-icon">🛒</div>
+        <div class="empty-cart-icon"><svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg></div>
         <h4>Tu carrito está vacío</h4>
         <p style="font-size: 0.85rem;">Explora el catálogo y selecciona tu juego y tipo de cuenta.</p>
       </div>
@@ -2037,7 +2116,7 @@ function renderCartDrawer() {
         <img class="cart-item-img" src="${escapeHTML(item.imagen)}" alt="${escapeHTML(item.titulo)}">
         <div class="cart-item-info">
           <div class="cart-item-title">${escapeHTML(item.titulo)}</div>
-          <div class="cart-item-license-tag">📌 ${item.licencia}</div>
+          <div class="cart-item-license-tag">${item.licencia}</div>
           <div class="cart-item-price">${formatCLP(item.precio)} c/u</div>
           <div class="cart-item-controls">
             <button class="qty-btn" onclick="changeQuantity('${item.cartItemId}', -1)">-</button>
@@ -2045,8 +2124,8 @@ function renderCartDrawer() {
             <button class="qty-btn" onclick="changeQuantity('${item.cartItemId}', 1)">+</button>
           </div>
         </div>
-        <button class="remove-item-btn" onclick="removeFromCart('${item.cartItemId}')">
-          🗑️
+        <button class="remove-item-btn" onclick="removeFromCart('${item.cartItemId}')" aria-label="Eliminar del carrito">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
         </button>
       </div>
     `;
@@ -2353,17 +2432,19 @@ function showPaymentCancelledModal() {
     modal.style.zIndex = '100000';
     modal.innerHTML = `
       <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2.2rem 1.8rem; background: var(--bg-card, #111827); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.7); animation: modalFadeIn 0.25s ease;">
-        <div style="font-size: 3.5rem; margin-bottom: 0.6rem; line-height: 1;">❌</div>
+        <div style="font-size: 3.5rem; margin-bottom: 0.6rem; line-height: 1; display: flex; justify-content: center; color: #f87171;"><svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></div>
         <h3 style="color: #f87171; font-size: 1.45rem; font-weight: 800; margin-bottom: 0.6rem;">Pago Cancelado</h3>
         <p style="color: var(--text-muted, #94a3b8); font-size: 0.95rem; line-height: 1.55; margin-bottom: 1.8rem;">
           La transacción en la pasarela de pago fue cancelada o no se pudo procesar. Tu carrito sigue guardado y no se ha realizado ningún cargo.
         </p>
         <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-          <button id="btn-cancel-retry-pay" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 0.9rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);">
-            🔄 Reintentar Pago
+          <button id="btn-cancel-retry-pay" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 0.9rem 1.2rem; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+            Reintentar Pago
           </button>
-          <button id="btn-cancel-go-home" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease;">
-            🏠 Volver al Inicio
+          <button id="btn-cancel-go-home" style="background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0.8rem 1.2rem; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Volver al Inicio
           </button>
         </div>
       </div>
@@ -2397,13 +2478,14 @@ function openReceiptModal(detalles) {
   if (itemsContainer) {
     if (Array.isArray(detalles.carrito) && detalles.carrito.length > 0) {
       itemsContainer.innerHTML = `
-        <h5 style="color: var(--joycon-cyan); font-size: 0.9rem; font-weight: 800; margin-bottom: 0.6rem;">🎮 Datos de Acceso Entregados (Correo Digital):</h5>
+        <h5 style="color: var(--joycon-cyan); font-size: 0.9rem; font-weight: 800; margin-bottom: 0.6rem;">Datos de Acceso Entregados (Correo Digital):</h5>
         ${detalles.carrito.map(item => `
           <div style="background: rgba(15, 22, 36, 0.9); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 0.6rem;">
             <div style="font-weight: 800; color: #ffffff; font-size: 0.9rem;">${escapeHTML(item.titulo)} (${item.licencia})</div>
             ${item.correoTexto ? `<p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.3rem 0;">${escapeHTML(item.correoTexto)}</p>` : ''}
-            <div style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); padding: 0.6rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: var(--joycon-cyan); margin-top: 0.4rem; word-break: break-all;">
-              🔑 ${escapeHTML(item.varianteAsignada || 'Asignación automática enviada a tu correo')}
+            <div style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); padding: 0.6rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem; color: var(--joycon-cyan); margin-top: 0.4rem; word-break: break-all; display: flex; align-items: flex-start; gap: 0.5rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0; margin-top: 2px;"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+              ${escapeHTML(item.varianteAsignada || 'Asignación automática enviada a tu correo')}
             </div>
             ${item.correoImagen ? `<img src="${escapeHTML(item.correoImagen)}" alt="Banner correo" style="width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-top: 0.5rem;">` : ''}
           </div>
@@ -2436,7 +2518,7 @@ function showToast(message, duration = 3500) {
   toast.className = 'toast';
   toast.innerHTML = `
     <div class="toast-content">
-      <span class="toast-icon">🇨🇱</span>
+      <span class="toast-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span>
       <span class="toast-text">${escapeHTML(message)}</span>
       <button class="toast-close-btn" aria-label="Cerrar">&times;</button>
     </div>
@@ -2614,15 +2696,15 @@ function renderAdminCouponsList(coupons) {
   container.innerHTML = coupons.map(c => `
     <div class="admin-game-row">
       <div class="admin-game-info">
-        <div style="font-size: 1.5rem; margin-right: 0.5rem;">🎟️</div>
+        <div style="font-size: 1.5rem; margin-right: 0.5rem; display: flex;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg></div>
         <div class="admin-game-details">
           <span class="admin-game-title" style="color: var(--joycon-cyan); font-weight: 800;">${escapeHTML(c.code)}</span>
           <span class="admin-game-sub">${escapeHTML(c.desc || (c.type === 'percent' ? `${c.value}% OFF` : `$${c.value} CLP OFF`))}</span>
         </div>
       </div>
       <div class="admin-game-actions">
-        <button type="button" class="remove-item-btn" onclick="deleteCoupon('${escapeHTML(c.code)}')" title="Eliminar cupón permanente">
-          🗑️ Eliminar
+        <button type="button" class="remove-item-btn" onclick="deleteCoupon('${escapeHTML(c.code)}')" title="Eliminar cupón permanente" style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg> Eliminar
         </button>
       </div>
     </div>
@@ -2685,7 +2767,7 @@ async function handleAdminAddCouponSubmit(e) {
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = '🎟️ Guardar Cupón Permanente';
+      saveBtn.textContent = 'Guardar Cupón Permanente';
     }
   }
 }
@@ -2862,7 +2944,7 @@ function selectAutocompleteResult(gameId, dropdownId) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box')) {
+  if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box') && !e.target.closest('.mobile-search-overlay')) {
     document.querySelectorAll('.search-autocomplete-dropdown').forEach(d => d.classList.remove('active'));
   }
 });
@@ -2889,19 +2971,19 @@ function switchGuideTab(type) {
 
     content.innerHTML = `
       <div class="guide-step-card">
-        <h5>1️⃣ Paso 1: Crear Usuario en tu Consola</h5>
+        <h5>Paso 1: Crear Usuario en tu Consola</h5>
         <p>Ve a <strong>Configuración de la Consola -> Usuarios -> Agregar usuario -> Crear un nuevo usuario</strong>. Elige cualquier ícono y apodo.</p>
       </div>
       <div class="guide-step-card">
-        <h5>2️⃣ Paso 2: Vincular Cuenta de Nintendo</h5>
+        <h5>Paso 2: Vincular Cuenta de Nintendo</h5>
         <p>Selecciona <strong>"Vincular una cuenta de Nintendo"</strong> e ingresa el correo y la contraseña que te enviamos tras tu compra.</p>
       </div>
       <div class="guide-step-card">
-        <h5>3️⃣ Paso 3: Descargar el Juego desde eShop</h5>
+        <h5>Paso 3: Descargar el Juego desde eShop</h5>
         <p>Abre <strong>Nintendo eShop</strong> usando el nuevo usuario creado. Haz clic en el ícono de perfil arriba a la derecha -> <strong>Volver a descargar</strong> -> Selecciona tu juego y presiona Descargar.</p>
       </div>
       <div class="guide-step-card">
-        <h5>4️⃣ Paso 4: Cómo Jugar (Licencia Secundaria)</h5>
+        <h5>Paso 4: Cómo Jugar (Licencia Secundaria)</h5>
         <p>Para jugar, debes abrir el juego usando el usuario entregado y tener tu consola conectada a Internet al iniciar el juego.</p>
       </div>
     `;
@@ -2911,19 +2993,19 @@ function switchGuideTab(type) {
 
     content.innerHTML = `
       <div class="guide-step-card">
-        <h5>1️⃣ Paso 1: Crear Usuario y Vincular</h5>
+        <h5>Paso 1: Crear Usuario y Vincular</h5>
         <p>Agrega un nuevo usuario en la consola e ingresa los datos de la Cuenta Primaria enviados a tu correo.</p>
       </div>
       <div class="guide-step-card">
-        <h5>2️⃣ Paso 2: Confirmar Consola Principal</h5>
+        <h5>Paso 2: Confirmar Consola Principal</h5>
         <p>Ingresa a Nintendo eShop. La cuenta se registrará automáticamente como <strong>Consola Principal</strong>.</p>
       </div>
       <div class="guide-step-card">
-        <h5>3️⃣ Paso 3: Descargar el Juego</h5>
+        <h5>Paso 3: Descargar el Juego</h5>
         <p>Ve a <strong>Perfil de eShop -> Volver a descargar</strong> y presiona el botón de descarga.</p>
       </div>
       <div class="guide-step-card">
-        <h5>4️⃣ Paso 4: ¡Juega con tu Cuenta Personal!</h5>
+        <h5>Paso 4: ¡Juega con tu Cuenta Personal!</h5>
         <p>¡Listo! Puedes cambiar a tu perfil personal de siempre. El juego funcionará con tu usuario personal, trofeos propios y sin necesidad de internet.</p>
       </div>
     `;
@@ -2998,12 +3080,12 @@ function applyGalleryVisibility() {
 
   if (toggleBtn) {
     if (isGalleryEnabled) {
-      toggleBtn.innerHTML = '🟢 Habilitada (Visible en tienda)';
+      toggleBtn.innerHTML = 'Habilitada (Visible en tienda)';
       toggleBtn.style.background = 'rgba(52, 211, 153, 0.2)';
       toggleBtn.style.color = '#34d399';
       toggleBtn.style.borderColor = '#34d399';
     } else {
-      toggleBtn.innerHTML = '🔴 Deshabilitada (Oculta)';
+      toggleBtn.innerHTML = 'Deshabilitada (Oculta)';
       toggleBtn.style.background = 'rgba(255, 0, 60, 0.2)';
       toggleBtn.style.color = '#ff4d6d';
       toggleBtn.style.borderColor = '#ff4d6d';
@@ -3130,8 +3212,8 @@ function renderAdminGalleryList(items) {
         </div>
       </div>
       <div class="admin-game-actions">
-        <button type="button" class="remove-item-btn" onclick="deleteGalleryItem(${item.id})" title="Eliminar reseña de la tienda">
-          🗑️ Eliminar
+        <button type="button" class="remove-item-btn" onclick="deleteGalleryItem(${item.id})" title="Eliminar reseña de la tienda" style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-muted);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg> Eliminar
         </button>
       </div>
     </div>
@@ -3182,7 +3264,7 @@ async function handleAdminAddGallerySubmit(e) {
     errorMsg.textContent = 'Error al conectar con el servidor.';
   } finally {
     saveBtn.disabled = false;
-    saveBtn.textContent = '📸 Publicar Foto en Galería';
+    saveBtn.textContent = 'Publicar Foto en Galería';
   }
 }
 
@@ -3244,8 +3326,8 @@ function appendAccountVariantCard(container, cuenta = '', pass = '', codigo = ''
     <div class="variant-row-header">
       <span class="variant-number-badge">Variante #1</span>
       <div class="variant-row-actions">
-        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta">➕</button>
-        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante">🗑️</button>
+        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></button>
       </div>
     </div>
     <div class="variant-inputs-grid">
@@ -3291,8 +3373,8 @@ function addAccountVariantRowAfter(btnEl) {
     <div class="variant-row-header">
       <span class="variant-number-badge">Variante #1</span>
       <div class="variant-row-actions">
-        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta">➕</button>
-        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante">🗑️</button>
+        <button type="button" class="icon-btn-add" onclick="addAccountVariantRowAfter(this)" title="Agregar variante después de esta"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+        <button type="button" class="icon-btn-delete" onclick="removeAccountVariantRow(this)" title="Eliminar variante"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></button>
       </div>
     </div>
     <div class="variant-inputs-grid">
@@ -3373,7 +3455,7 @@ function openAboutUsModal() {
       <div class="modal-card about-modal-content">
         <div class="about-modal-header">
           <h3>
-            <span>🎮</span> Sobre ZonaSwitchChile
+            <span><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg></span> Sobre ZonaSwitchChile
           </h3>
           <button type="button" onclick="closeAboutUsModal()" class="about-modal-close-btn">&times;</button>
         </div>
@@ -3381,9 +3463,9 @@ function openAboutUsModal() {
           <p><strong>ZonaSwitchChile</strong> es tu tienda de confianza en Chile para la adquisición de juegos digitales de Nintendo Switch al mejor precio del mercado.</p>
           <p>Nos especializamos en brindar licencias <strong>100% digitales y originales</strong> (Cuentas Primarias y Secundarias), Directamente descargables desde nintendo eshop con máximo ahorro y soporte permanente.</p>
           <ul>
-            <li>⚡ <strong>Entrega Digital 24/7:</strong> Recibe tu juego de forma inmediata tras completar la compra.</li>
-            <li>🛡️ <strong>Garantía VIP Permanente:</strong> Atención personalizada y garantía total de uso.</li>
-            <li>💳 <strong>Múltiples Medios de Pago:</strong> Transferencias y pago online seguro en pesos chilenos (CLP).</li>
+            <li><strong>Entrega Digital 24/7:</strong> Recibe tu juego de forma inmediata tras completar la compra.</li>
+            <li><strong>Garantía VIP Permanente:</strong> Atención personalizada y garantía total de uso.</li>
+            <li><strong>Múltiples Medios de Pago:</strong> Transferencias y pago online seguro en pesos chilenos (CLP).</li>
           </ul>
         </div>
         <div class="about-modal-footer">

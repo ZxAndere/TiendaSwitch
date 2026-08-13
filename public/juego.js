@@ -177,7 +177,7 @@ function renderGameDetailView(animatePrice = false) {
     if (discBadge) discBadge.textContent = `-${pct}% OFF`;
 
     const sizeBadge = document.getElementById('jd-hero-size-badge');
-    if (sizeBadge) sizeBadge.textContent = `📦 ${game.peso || '15 GB'}`;
+    if (sizeBadge) sizeBadge.textContent = `${game.peso || '15 GB'}`;
 
     const ratingElem = document.getElementById('jd-hero-rating-badge');
     if (ratingElem) ratingElem.style.display = 'none';
@@ -511,7 +511,7 @@ function renderRelatedGames() {
         <div class="card-media">
           <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy">
           <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>
-          <span class="card-size-tag">📦 ${escapeHTML(g.peso || 'N/A')}</span>
+          <span class="card-size-tag"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> ${escapeHTML(g.peso || 'N/A')}</span>
         </div>
         <div class="card-content">
           <h3 class="card-title">${escapeHTML(g.titulo || '')}</h3>
@@ -754,7 +754,7 @@ function addAdminQuickTrailerInput(val = '') {
   div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
   div.innerHTML = `
     <input type="url" class="admin-extra-trailer-input" placeholder="https://www.youtube.com/watch?v=..." value="${escapeHTML(val)}" style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #fff; padding: 0.55rem; border-radius: 4px;">
-    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️</button>
+    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></button>
   `;
   container.appendChild(div);
 }
@@ -768,7 +768,7 @@ function addAdminQuickImageInput(val = '') {
   div.style.cssText = 'display: flex; gap: 0.5rem; align-items: center;';
   div.innerHTML = `
     <input type="url" class="admin-extra-img-input" placeholder="https://..." value="${escapeHTML(val)}" style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border-subtle); color: #fff; padding: 0.55rem; border-radius: 4px;">
-    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold;">🗑️</button>
+    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,0,60,0.2); border: 1px solid var(--switch-red); color: var(--switch-red); padding: 0.55rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg></button>
   `;
   container.appendChild(div);
 }
@@ -843,7 +843,7 @@ async function handleAdminQuickGameSubmit(e) {
       if (errorMsg) errorMsg.textContent = data.error || 'Error al actualizar juego.';
       if (saveBtn) {
         saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Guardar Cambios en Juego';
+        saveBtn.textContent = 'Guardar Cambios en Juego';
       }
       return;
     }
@@ -887,7 +887,7 @@ async function handleAdminQuickGameSubmit(e) {
   } finally {
     if (saveBtn) {
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Guardar Cambios en Juego';
+      saveBtn.textContent = 'Guardar Cambios en Juego';
     }
   }
 }
