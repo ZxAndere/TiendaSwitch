@@ -407,8 +407,10 @@ function verifyToken(req, res, next) {
     const findUser = async () => {
       if (isMongoConnected) {
         try {
-          return await UserModel.findOne({ id: decoded.id });
+          const mongoUser = await UserModel.findOne({ id: decoded.id });
+          if (mongoUser) return mongoUser;
         } catch (e) {}
+        // Si Mongo no tiene al usuario (desync), no rechazar el token: fallback local
       }
       const users = getUsers();
       return users.find(u => u.id === decoded.id);

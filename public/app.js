@@ -177,9 +177,10 @@ window.fetch = async function (resource, init) {
 
   const response = await originalFetch(resource, init);
 
-  // Si el servidor retorna 401 o 403 (token inválido/expirado), y no es una ruta de auth, cerrar sesión
-  const isAuthRoute = typeof resource === 'string' && (resource.includes('/api/auth/login') || resource.includes('/api/auth/send-register-code') || resource.includes('/api/auth/verify-register-code'));
-  if ((response.status === 401 || response.status === 403) && !isAuthRoute) {
+  // Solo /api/auth/me indica el estado real de la sesión. Otros 401/403 (ej: rutas
+  // admin-only) NO deben cerrar la sesión de un usuario válido.
+  const isSessionProbe = typeof resource === 'string' && resource.includes('/api/auth/me');
+  if ((response.status === 401 || response.status === 403) && isSessionProbe) {
     console.warn('⚠️ Sesión expirada o token inválido. Cerrando sesión...');
     handleLogout();
   }
@@ -307,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
   try { renderGlobalAdminGear(); } catch (e) { console.error('Error renderGlobalAdminGear:', e); }
   try { fetchSettings(); } catch (e) { console.error('Error fetchSettings:', e); }
-  try { fetchCoupons(); } catch (e) { console.error('Error fetchCoupons:', e); }
+  try { if (currentUser && currentUser.role === 'admin') fetchCoupons(); } catch (e) { console.error('Error fetchCoupons:', e); }
   try { fetchCatalog(); } catch (e) { console.error('Error fetchCatalog:', e); }
   try { fetchAndRenderGallery(); } catch (e) { console.error('Error fetchAndRenderGallery:', e); }
   try { updateCartBadge(); } catch (e) { console.error('Error updateCartBadge:', e); }
