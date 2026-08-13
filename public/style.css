@@ -4056,7 +4056,7 @@ body {
 /* Los hijos flex de body no deben ensancharse más allá del viewport
    (los flex items no se encogen por debajo de su min-width por defecto) */
 body > * {
-  max-width: 100%;
+  max-width: 100% !important;
 }
 
 .faq-hero {
