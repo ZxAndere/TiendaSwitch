@@ -243,6 +243,7 @@ html.light-mode .user-dropdown-menu {
 }
 
 html.light-mode .navbar.nav-scrolled {
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
 }
 
@@ -1491,13 +1492,21 @@ html.light-mode {
   font-weight: 800;
   font-size: 0.875rem;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(255, 0, 60, 0.3);
-  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(255, 0, 60, 0.16);
+  transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.buy-card-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(255, 0, 60, 0.45);
+@media (hover: hover) {
+  .buy-card-btn:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 6px 16px rgba(255, 0, 60, 0.2);
+  }
+}
+
+.buy-card-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 1px 4px rgba(255, 0, 60, 0.12);
+  transition: transform 0.1s cubic-bezier(0.4, 0, 1, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 1, 1);
 }
 
 /* ==========================================================================
@@ -4763,7 +4772,7 @@ html.light-mode {
    Navegación Sticky Inteligente (Ocultar al bajar / Revelar al subir)
    ========================================================================== */
 .navbar {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), background-color 0.35s ease, box-shadow 0.35s ease;
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s ease;
 }
 
 .navbar.nav-hidden {

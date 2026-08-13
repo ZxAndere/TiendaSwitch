@@ -521,7 +521,7 @@ function renderRelatedGames() {
               <span class="original-price">${formatCLP(orig)}</span>
               <span class="current-price"><small style="font-size: 0.75em; font-weight: 600; opacity: 0.85; margin-right: 3px;">Desde</small> ${formatCLP(cur)}</span>
             </div>
-            <button class="btn-card-buy" type="button">Ver Detalle →</button>
+            <button class="buy-card-btn" type="button">Ver Detalle →</button>
           </div>
         </div>
       </article>
