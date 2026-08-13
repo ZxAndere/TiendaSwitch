@@ -1826,7 +1826,7 @@ function renderCatalog(animatePrices = false) {
     const title = (game.titulo || '').toLowerCase();
     const category = (game.categoria || '').toLowerCase();
     const q = (searchQuery || '').toLowerCase();
-    const matchCategory = activeCategory === 'todos' || (activeCategory !== 'favoritos' && game.categoria === activeCategory);
+    const matchCategory = activeCategory === 'todos' || activeCategory === 'favoritos' || game.categoria === activeCategory;
     const matchSearch = title.includes(q) || category.includes(q);
 
     // Vista "Favoritos": solo juegos con el corazón marcado (favoritos no es una categoría real)
