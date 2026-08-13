@@ -375,17 +375,6 @@ function initEventListeners() {
     });
   }
 
-  const mobileSearchInput = document.getElementById('mobile-search-input');
-  if (mobileSearchInput) {
-    mobileSearchInput.addEventListener('input', (e) => {
-      searchQuery = e.target.value.toLowerCase().trim();
-      const desktopSearch = document.getElementById('search-input');
-      if (desktopSearch) desktopSearch.value = e.target.value;
-      renderCatalog();
-      handleSearchAutocomplete(mobileSearchInput, 'mobile-search-autocomplete-dropdown');
-    });
-  }
-
   // Guía de Instalación Modal triggers
   const openGuideBtn = document.getElementById('open-install-guide-btn');
   const mobileOpenGuideBtn = document.getElementById('mobile-open-install-guide-btn');
@@ -519,16 +508,10 @@ function initEventListeners() {
     }
   });
 
-  // Barra inferior móvil: Cuenta abre opciones si hay sesión, si no el login
+  // Barra inferior móvil: Cuenta abre la hoja de acciones rápidas
   const bottomNavAccountBtn = document.getElementById('bottom-nav-account-btn');
   if (bottomNavAccountBtn) {
-    bottomNavAccountBtn.addEventListener('click', () => {
-      if (currentUser) {
-        openUserSettingsModal();
-      } else {
-        openLoginModal();
-      }
-    });
+    bottomNavAccountBtn.addEventListener('click', openAccountSheet);
   }
 
   // Modales de Autenticación
@@ -1090,7 +1073,7 @@ async function handleGameEditSubmit(e) {
     errorMsg.textContent = 'Error de comunicación con el servidor.';
   } finally {
     saveBtn.disabled = false;
-    saveBtn.textContent = '💾 Guardar Cambios en Tiempo Real';
+    saveBtn.textContent = 'Guardar Cambios en Tiempo Real';
   }
 }
 
@@ -1124,6 +1107,81 @@ function closeMobileSearchOverlay() {
   document.body.classList.remove('scroll-locked');
   const input = document.getElementById('mobile-search-overlay-input');
   if (input) input.blur();
+}
+
+// --- HOJA DE CUENTA (BARRA INFERIOR → CUENTA) ---
+function buildAccountSheet() {
+  const sheet = document.createElement('div');
+  sheet.id = 'account-sheet';
+  sheet.className = 'account-sheet-backdrop';
+  sheet.setAttribute('aria-hidden', 'true');
+  sheet.innerHTML = `
+    <div class="account-sheet-card" role="dialog" aria-label="Menú de cuenta">
+      <div class="account-sheet-header">
+        <span class="account-sheet-title" id="account-sheet-title">Cuenta</span>
+        <button type="button" class="account-sheet-close" id="account-sheet-close" aria-label="Cerrar menú de cuenta">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </div>
+      <div class="account-sheet-items" id="account-sheet-items"></div>
+    </div>
+  `;
+  sheet.addEventListener('click', (e) => {
+    if (e.target === sheet) closeAccountSheet();
+  });
+  sheet.querySelector('#account-sheet-close').addEventListener('click', closeAccountSheet);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAccountSheet();
+  });
+  document.body.appendChild(sheet);
+  return sheet;
+}
+
+function renderAccountSheetContent(sheet) {
+  const title = sheet.querySelector('#account-sheet-title');
+  const items = sheet.querySelector('#account-sheet-items');
+  const loggedIn = !!(currentUser && currentUser.username);
+  if (loggedIn) {
+    title.textContent = currentUser.username;
+    items.innerHTML = `
+      <button type="button" class="account-sheet-item" onclick="closeAccountSheet(); openUserOrdersModal();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg> Mis Pedidos
+      </button>
+      <button type="button" class="account-sheet-item" onclick="closeAccountSheet(); openUserSettingsModal();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg> Mi Cuenta
+      </button>
+      <button type="button" class="account-sheet-item account-sheet-item-danger" onclick="closeAccountSheet(); handleLogout();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg> Cerrar sesión
+      </button>
+    `;
+  } else {
+    title.textContent = 'Cuenta';
+    items.innerHTML = `
+      <button type="button" class="account-sheet-item" onclick="closeAccountSheet(); openLoginModal();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" x2="3" y1="12" y2="12"></line></svg> Iniciar Sesión
+      </button>
+      <button type="button" class="account-sheet-item" onclick="closeAccountSheet(); openRegisterModal();">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" x2="19" y1="8" y2="14"></line><line x1="22" x2="16" y1="11" y2="11"></line></svg> Crear Cuenta
+      </button>
+    `;
+  }
+}
+
+function openAccountSheet() {
+  let sheet = document.getElementById('account-sheet');
+  if (!sheet) sheet = buildAccountSheet();
+  renderAccountSheetContent(sheet);
+  sheet.classList.add('active');
+  sheet.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('scroll-locked');
+}
+
+function closeAccountSheet() {
+  const sheet = document.getElementById('account-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('active');
+  sheet.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('scroll-locked');
 }
 
 // --- GESTIÓN DE CONFIGURACIÓN DE CUENTA Y ÓRDENES ---
@@ -1746,8 +1804,6 @@ function resetFilters() {
   searchQuery = '';
   const searchInput = document.getElementById('search-input');
   if (searchInput) searchInput.value = '';
-  const mobileSearchInput = document.getElementById('mobile-search-input');
-  if (mobileSearchInput) mobileSearchInput.value = '';
   activeCategory = 'todos';
   document.querySelectorAll('#category-pills .pill-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.category === 'todos');
@@ -1770,8 +1826,11 @@ function renderCatalog(animatePrices = false) {
     const title = (game.titulo || '').toLowerCase();
     const category = (game.categoria || '').toLowerCase();
     const q = (searchQuery || '').toLowerCase();
-    const matchCategory = activeCategory === 'todos' || game.categoria === activeCategory;
+    const matchCategory = activeCategory === 'todos' || (activeCategory !== 'favoritos' && game.categoria === activeCategory);
     const matchSearch = title.includes(q) || category.includes(q);
+
+    // Vista "Favoritos": solo juegos con el corazón marcado (favoritos no es una categoría real)
+    const matchFav = activeCategory !== 'favoritos' || favoriteGameIds.has(Number(game.id));
 
     // Precios y disponibilidad reales por tipo de cuenta
     const secPrice = Number(game.precioSecundaria) || 0;
@@ -1797,7 +1856,7 @@ function renderCatalog(animatePrices = false) {
     // Ocultar juegos totalmente agotados (ambos stocks en 0)
     const matchInStock = !filterState.inStockOnly || secAvail || primAvail;
 
-    return matchCategory && matchSearch && matchPrice && matchLicense && matchInStock;
+    return matchCategory && matchSearch && matchFav && matchPrice && matchLicense && matchInStock;
   });
 
   // Ordenamiento elegido por el usuario (nunca modifica el catálogo original)
@@ -1816,10 +1875,14 @@ function renderCatalog(animatePrices = false) {
   }
 
   if (filtered.length === 0) {
+    const isFavView = activeCategory === 'favoritos';
     grid.innerHTML = `
       <div class="no-results">
-        <div class="no-results-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
-        <h3>No se encontraron juegos</h3>
+        <div class="no-results-icon">${isFavView
+          ? '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'
+          : '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>'}</div>
+        <h3>${isFavView ? 'Aún no tienes juegos favoritos' : 'No se encontraron juegos'}</h3>
+        ${isFavView ? '<p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Toca el corazón en una tarjeta para guardarlos.</p>' : ''}
       </div>
     `;
     return;
@@ -2075,14 +2138,20 @@ function updateCartBadge() {
 }
 
 function openCartDrawer() {
+  const drawer = document.getElementById('cart-drawer');
+  if (!drawer) return; // páginas sin carrito (ej: faq.html)
   renderCartDrawer();
-  document.getElementById('cart-drawer').classList.add('active');
-  document.getElementById('drawer-overlay').classList.add('active');
+  drawer.classList.add('active');
+  const overlay = document.getElementById('drawer-overlay');
+  if (overlay) overlay.classList.add('active');
 }
 
 function closeCartDrawer() {
-  document.getElementById('cart-drawer').classList.remove('active');
-  document.getElementById('drawer-overlay').classList.remove('active');
+  const drawer = document.getElementById('cart-drawer');
+  if (!drawer) return;
+  drawer.classList.remove('active');
+  const overlay = document.getElementById('drawer-overlay');
+  if (overlay) overlay.classList.remove('active');
 }
 
 function renderCartDrawer() {
@@ -2934,9 +3003,7 @@ function selectAutocompleteResult(gameId, dropdownId) {
   if (dropdown) dropdown.classList.remove('active');
 
   const desktopSearch = document.getElementById('search-input');
-  const mobileSearch = document.getElementById('mobile-search-input');
   if (desktopSearch) desktopSearch.value = '';
-  if (mobileSearch) mobileSearch.value = '';
   searchQuery = '';
   renderCatalog();
 
@@ -3053,6 +3120,24 @@ window.addEventListener('scroll', () => {
 
   lastScrollY = currentScrollY;
 }, { passive: true });
+
+// --- BARRA INFERIOR MÓVIL: SE COMPACTA AL HACER SCROLL (rAF, sin librerías) ---
+(function initBottomNavCompact() {
+  const nav = document.getElementById('mobile-bottom-nav');
+  if (!nav) return;
+  let ticking = false;
+  function update() {
+    nav.classList.toggle('nav-compact', window.scrollY > 120);
+    ticking = false;
+  }
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(update);
+    }
+  }, { passive: true });
+  update();
+})();
 
 // --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS CON SLIDER DE 4 TARJETAS ---
 let customerGalleryStore = [];
