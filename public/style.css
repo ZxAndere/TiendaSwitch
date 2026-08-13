@@ -1271,6 +1271,15 @@ html.light-mode {
 .game-card:nth-child(3) { animation-delay: 0.08s; }
 .game-card:nth-child(4) { animation-delay: 0.12s; }
 .game-card:nth-child(5) { animation-delay: 0.16s; }
+.game-card:nth-child(6) { animation-delay: 0.2s; }
+.game-card:nth-child(7) { animation-delay: 0.24s; }
+.game-card:nth-child(8) { animation-delay: 0.28s; }
+.game-card:nth-child(9) { animation-delay: 0.32s; }
+.game-card:nth-child(10) { animation-delay: 0.36s; }
+.game-card:nth-child(11) { animation-delay: 0.4s; }
+/* Cola del grid: retraso tope fijo (0.44s) para que con 15-30 tarjetas el
+   grid completo se asiente antes de ~0.8s y la cola nunca se sienta lenta */
+.game-card:nth-child(n+12) { animation-delay: 0.44s; }
 
 /* Re-render de filtros: entrada rápida sin stagger (se siente instantánea) */
 .games-grid.grid-rerender .game-card {
