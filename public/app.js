@@ -1621,6 +1621,9 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
 
   isFetchingCatalog = false;
   renderCatalog();
+  // Re-sincronizar el tope del rango de precio con el catálogo real cargado
+  // (initFilters en DOMContentLoaded se ejecuta antes de que llegue la API)
+  try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
 }
 
 // --- SISTEMA DE FILTROS DEL CATÁLOGO (PRECIO, ORDEN, LICENCIA) ---
