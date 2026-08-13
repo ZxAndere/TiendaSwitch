@@ -3380,10 +3380,96 @@ function animateButtonSuccess(btn, successText = '✓ ¡Listo!') {
 
 // --- SCROLL HIDE/SHOW UNIFICADO (navbar + píldora móvil): rAF, umbrales ±4px ---
 // Mismo lenguaje de movimiento que la píldora inferior: arriba expandido,
-// bajando → compacto, subiendo → expandido. El navbar se comprime (morfismo)
-// y su buscador flota centrado; la píldora se compacta a iconos.
+// bajando → compacto, subiendo → expandido. El navbar se desliza fuera y su
+// buscador se desprende con FLIP (glide continuo, sin saltos); la píldora
+// se compacta a iconos.
 let lastScrollY = Math.max(0, window.scrollY);
 let scrollUIRafPending = false;
+
+// --- BÚSQUEDA FLOTANTE: desprendimiento/enganche con FLIP ---
+// El navbar oculto usa transform: translateY(-100%), que lo convierte en
+// containing block de los position: fixed — por eso el box NO puede quedarse
+// dentro del navbar con position: fixed (el top se mediría contra un ancestro
+// que se mueve). La solución es FLIP: mover el box a <body> (fixed contra el
+// viewport), medir ambos rects y animar un transform inline entre ellos.
+// El navbar conserva backdrop-filter, así que aunque vuelva a reposo sigue
+// siendo containing block — el box debe permanecer en <body> mientras flota.
+const FLOAT_SEARCH_CLASS = 'float-active';
+const FLOAT_SEARCH_MQ = window.matchMedia('(min-width: 769px)');
+const FLOAT_SEARCH_CURVE = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+let floatSearchBox = null;
+let floatSearchParent = null;
+let floatSearchNext = null;
+
+function getFloatSearchBox() {
+  if (!floatSearchBox || !document.body.contains(floatSearchBox)) {
+    const input = document.getElementById('search-input');
+    floatSearchBox = input ? input.closest('.header-search-box') : null;
+  }
+  return floatSearchBox;
+}
+
+function initFloatSearchFlip() {
+  const box = getFloatSearchBox();
+  if (!box) return;
+  box.addEventListener('transitionend', (e) => {
+    // Al terminar el glide se limpia el transition inline para que el CSS
+    // (base o .float-active) recupere el control sin interferencias.
+    if (e.propertyName === 'transform') {
+      box.style.transition = '';
+      box.style.transform = '';
+    }
+  });
+}
+
+function detachFloatSearch() {
+  const box = getFloatSearchBox();
+  if (!box || box.classList.contains(FLOAT_SEARCH_CLASS) || !FLOAT_SEARCH_MQ.matches) return;
+
+  floatSearchParent = box.parentNode;
+  floatSearchNext = box.nextSibling;
+
+  const navRect = box.getBoundingClientRect();
+
+  // Sin transición: el cambio de layout (ancho/posición) debe ser instantáneo
+  box.style.transition = 'none';
+  box.classList.add(FLOAT_SEARCH_CLASS);
+  document.body.appendChild(box);
+
+  const floatRect = box.getBoundingClientRect();
+  const dx = (navRect.left + navRect.width / 2) - (floatRect.left + floatRect.width / 2);
+  const dy = (navRect.top + navRect.height / 2) - (floatRect.top + floatRect.height / 2);
+  const sx = navRect.width / floatRect.width;
+
+  // FLIP: renderizar el box en el rect del navbar, forzar reflow y glidar
+  box.style.transform = `translate(${dx}px, ${dy}px) scaleX(${sx})`;
+  void box.offsetWidth;
+  box.style.transition = FLOAT_SEARCH_CURVE;
+  box.style.transform = '';
+}
+
+function reattachFloatSearch() {
+  const box = getFloatSearchBox();
+  if (!box || !box.classList.contains(FLOAT_SEARCH_CLASS)) return;
+
+  const floatRect = box.getBoundingClientRect();
+
+  box.style.transition = 'none';
+  box.classList.remove(FLOAT_SEARCH_CLASS);
+  if (floatSearchParent) {
+    floatSearchParent.insertBefore(box, floatSearchNext || null);
+  }
+
+  const navRect = box.getBoundingClientRect();
+  const dx = (floatRect.left + floatRect.width / 2) - (navRect.left + navRect.width / 2);
+  const dy = (floatRect.top + floatRect.height / 2) - (navRect.top + navRect.height / 2);
+  const sx = floatRect.width / navRect.width;
+
+  box.style.transform = `translate(${dx}px, ${dy}px) scaleX(${sx})`;
+  void box.offsetWidth;
+  box.style.transition = FLOAT_SEARCH_CURVE;
+  box.style.transform = '';
+}
 
 function updateScrollUI() {
   scrollUIRafPending = false;
@@ -3398,13 +3484,15 @@ function updateScrollUI() {
       navbar.classList.remove('nav-scrolled');
     }
     if (pill) pill.classList.remove('nav-compact');
+    reattachFloatSearch();
   } else if (y > lastScrollY + 4) {
-    // Bajando → compactos (navbar comprimido + buscador flotante)
+    // Bajando → compactos (navbar fuera + buscador flotante)
     if (navbar) {
       navbar.classList.add('nav-compact');
       navbar.classList.add('nav-scrolled');
     }
     if (pill) pill.classList.add('nav-compact');
+    detachFloatSearch();
   } else if (y < lastScrollY - 4) {
     // Subiendo → expandidos, pinados con fondo sólido
     if (navbar) {
@@ -3412,10 +3500,13 @@ function updateScrollUI() {
       navbar.classList.add('nav-scrolled');
     }
     if (pill) pill.classList.remove('nav-compact');
+    reattachFloatSearch();
   }
 
   lastScrollY = y;
 }
+
+initFloatSearchFlip();
 
 window.addEventListener('scroll', () => {
   if (!scrollUIRafPending) {

@@ -659,19 +659,16 @@ html.light-mode {
   box-shadow: 0 0 18px rgba(0, 240, 255, 0.35), 0 0 0 2px rgba(0, 240, 255, 0.2);
 }
 
-/* Búsqueda flotante (solo escritorio): cuando el navbar se comprime al bajar
-    (nav-compact), el MISMO buscador del header se desprende y queda centrado
-    arriba (efecto shared-element: el navbar es sticky, así que el box ya está
-    arriba). Nota de arquitectura: .navbar.nav-compact usa
-    transform: translateY(-100%), y un ancestro con transform es el containing
-    block de los position: fixed — por eso top usa calc(100% + 0.9rem): el 100%
-    es el alto del navbar y, con el translate de -100%, el buscador aterriza
-    exactamente a 0.9rem del viewport. z-index 110: inofensivo (el navbar queda
-    fuera de pantalla al ocultarse; el box queda por encima del contenido). */
+/* Búsqueda flotante (solo escritorio): al deslizarse el navbar fuera, el
+   MISMO buscador del header se desprende y queda centrado arriba.
+   El desprendimiento usa FLIP desde JS: el box se mueve a <body> (fixed
+   contra el viewport — el navbar transformado es su containing block y no
+   puede alojarlo) y un transform inline calculado entre ambos rects hace el
+   glide sin saltos. Esta clase define SOLO el estado de reposo flotante. */
 @media (min-width: 769px) {
-  .navbar.nav-compact .header-search-box {
+  .header-search-box.float-active {
     position: fixed;
-    top: calc(100% + 0.9rem);
+    top: 0.9rem;
     left: 50%;
     width: min(420px, calc(100% - 2rem));
     z-index: 110;
@@ -681,13 +678,13 @@ html.light-mode {
   }
 
   /* Vidrio y sombra flotante sobre el contenido */
-  .navbar.nav-compact .header-search-box input {
+  .header-search-box.float-active input {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  html.light-mode .navbar.nav-compact .header-search-box input {
+  html.light-mode .header-search-box.float-active input {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 }
@@ -5082,7 +5079,7 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
 
 .navbar.nav-compact {
   transform: translateY(-100%);
-  transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .navbar.nav-scrolled {
