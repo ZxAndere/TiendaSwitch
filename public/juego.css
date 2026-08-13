@@ -1021,3 +1021,25 @@
   display: inline-block;
   will-change: transform, filter, opacity;
 }
+
+/* ==========================================================================
+   Lenguaje de sombras de controles (compartido con style.css)
+   ========================================================================== */
+/* Secundarios: sin resplandores de color en hover */
+.jd-back-btn:hover {
+  box-shadow: none;
+}
+
+.jd-trailer-btn:hover {
+  box-shadow: none;
+}
+
+/* CTAs de la página de detalle: el rojo usa el token primario fuerte,
+   el cian (ghost) usa la elevación neutra */
+.jd-cta-btn.btn-add-cart:hover {
+  box-shadow: var(--btn-shadow-primary-strong-hover) !important;
+}
+
+.jd-cta-btn.btn-buy-now:hover {
+  box-shadow: var(--btn-shadow-secondary-hover) !important;
+}

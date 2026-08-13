@@ -52,6 +52,17 @@
   --input-pad-x: 0.9rem;
   --input-font-size: 0.875rem;
   --input-focus-ring: 0 0 0 3px rgba(0, 240, 255, 0.15);
+
+  /* Sombras de controles: lenguaje compartido */
+  --btn-shadow-primary: 0 2px 8px rgba(255, 0, 60, 0.16);
+  --btn-shadow-primary-hover: 0 6px 16px rgba(255, 0, 60, 0.2);
+  --btn-shadow-primary-active: 0 1px 4px rgba(255, 0, 60, 0.12);
+  --btn-shadow-primary-strong: 0 4px 14px rgba(255, 0, 60, 0.3);
+  --btn-shadow-primary-strong-hover: 0 6px 18px rgba(255, 0, 60, 0.45);
+  --btn-shadow-secondary-hover: 0 6px 16px rgba(0, 0, 0, 0.25);
+  --btn-shadow-danger: 0 4px 14px rgba(220, 38, 38, 0.3);
+  --btn-shadow-danger-hover: 0 6px 18px rgba(220, 38, 38, 0.45);
+  --input-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* ==========================================================================
@@ -73,6 +84,10 @@ html.light-mode {
   --glow-cyan: 0 0 20px rgba(0, 163, 176, 0.2);
   --shadow-lg: 0 16px 32px -8px rgba(15, 23, 42, 0.18);
   --img-placeholder: linear-gradient(180deg, rgba(226, 232, 240, 0.9), rgba(203, 213, 225, 0.9));
+  --btn-shadow-secondary-hover: 0 6px 16px rgba(15, 23, 42, 0.12);
+  --btn-shadow-danger: 0 4px 14px rgba(220, 38, 38, 0.18);
+  --btn-shadow-danger-hover: 0 6px 18px rgba(220, 38, 38, 0.25);
+  --input-inset: inset 0 1px 0 rgba(15, 23, 42, 0.08);
 }
 
 /* Fondo del body con tintes más suaves */
@@ -6547,7 +6562,7 @@ button:focus-visible {
 .variant-field textarea:focus,
 .coupon-input-group input:focus {
   border-color: var(--joycon-cyan);
-  box-shadow: var(--input-focus-ring);
+  box-shadow: var(--input-focus-ring), var(--input-inset);
   outline: none;
 }
 
@@ -6596,6 +6611,89 @@ button:disabled {
 /* Radio unificado para la acción destructiva de cuenta */
 .delete-account-btn {
   border-radius: var(--btn-radius);
+}
+
+/* ==========================================================================
+   Lenguaje de sombras de controles (rest / hover / active / foco)
+   ========================================================================== */
+
+/* Primarios grandes (nav, hero, modal y full-width): token fuerte en reposo
+   y hover; el buy-card-btn conserva sus valores de referencia (token estándar) */
+.cart-trigger-btn,
+.btn-buy-now,
+.submit-payment-btn,
+.banner-cta-btn,
+.modal-pretty-btn,
+.auth-submit-btn,
+.btn-close-modal {
+  box-shadow: var(--btn-shadow-primary-strong);
+}
+
+.cart-trigger-btn:hover,
+.btn-buy-now:not(:disabled):hover,
+.submit-payment-btn:not(:disabled):hover,
+.banner-cta-btn:hover,
+.modal-pretty-btn:hover,
+.auth-submit-btn:not(:disabled):hover,
+.btn-close-modal:hover {
+  box-shadow: var(--btn-shadow-primary-strong-hover);
+}
+
+.cart-trigger-btn:active,
+.btn-buy-now:active,
+.submit-payment-btn:active,
+.banner-cta-btn:active,
+.modal-pretty-btn:active,
+.auth-submit-btn:active,
+.btn-close-modal:active {
+  box-shadow: var(--btn-shadow-primary-active);
+}
+
+/* Secundarios/ghost: sin sombra en reposo ni resplandores de color;
+   hover = elevación neutra sutil (los cambios de fondo/color se mantienen) */
+.nav-faq-btn:hover,
+.add-variant-btn-pill:hover,
+.slider-arrow:hover,
+.admin-quick-gear-btn:hover,
+.pill-btn.active,
+.tab-btn.active {
+  box-shadow: none;
+}
+
+.footer-btn {
+  box-shadow: none;
+}
+
+.footer-btn:hover {
+  box-shadow: var(--btn-shadow-secondary-hover);
+}
+
+/* Modo claro: el ghost tampoco lleva sombra en reposo */
+html.light-mode .footer-btn {
+  box-shadow: none;
+}
+
+html.light-mode .footer-btn:hover {
+  box-shadow: var(--btn-shadow-secondary-hover);
+}
+
+/* Destructivo: un solo token rojo */
+.delete-account-btn {
+  box-shadow: var(--btn-shadow-danger);
+}
+
+.delete-account-btn:hover {
+  box-shadow: var(--btn-shadow-danger-hover);
+}
+
+/* Inputs estándar: inset superior compartido (mismo lenguaje que el buscador
+   del header); el foco combina anillo cian + inset */
+.form-group input,
+.admin-search-input,
+.variant-field input,
+.variant-field textarea,
+.coupon-input-group input {
+  box-shadow: var(--input-inset);
 }
 
 /* ==========================================================================
