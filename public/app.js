@@ -323,6 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
+  try { initGridViewControls(); } catch (e) { console.error('Error initGridViewControls:', e); }
   try { applyTheme(localStorage.getItem('zonaswitch_theme') === 'light' ? 'light' : 'dark'); } catch (e) {}
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
@@ -1858,6 +1859,83 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
 }
 
+// --- VISTA DEL CATÁLOGO: DENSIDAD DEL MOSAICO (0-4) Y MODO LISTA (persistente) ---
+const GRID_VIEW_STORAGE_KEY = 'zonaswitch_gridview';
+let gridViewDensity = 2;
+let gridViewList = false;
+
+function loadGridViewPref() {
+  try {
+    const raw = localStorage.getItem(GRID_VIEW_STORAGE_KEY);
+    if (!raw) return;
+    const pref = JSON.parse(raw);
+    if (Number.isInteger(pref.density) && pref.density >= 0 && pref.density <= 4) gridViewDensity = pref.density;
+    if (typeof pref.list === 'boolean') gridViewList = pref.list;
+  } catch (e) {}
+}
+
+function saveGridViewPref() {
+  try {
+    localStorage.setItem(GRID_VIEW_STORAGE_KEY, JSON.stringify({ density: gridViewDensity, list: gridViewList }));
+  } catch (e) {}
+}
+
+function applyGridViewClasses() {
+  const grid = document.getElementById('games-grid');
+  if (!grid) return;
+  grid.classList.remove('density-0', 'density-1', 'density-2', 'density-3', 'density-4', 'mode-list');
+  grid.classList.add('density-' + gridViewDensity);
+  grid.classList.toggle('mode-list', gridViewList);
+}
+
+function initGridViewControls() {
+  const slider = document.getElementById('grid-density-slider');
+  const viewToggle = document.getElementById('grid-view-toggle');
+  if (!slider && !viewToggle) return;
+
+  loadGridViewPref();
+  applyGridViewClasses();
+
+  if (slider) {
+    slider.value = String(gridViewDensity);
+    slider.disabled = gridViewList;
+    slider.addEventListener('input', () => {
+      gridViewDensity = Number(slider.value);
+      applyGridViewClasses();
+    });
+    slider.addEventListener('change', saveGridViewPref);
+  }
+
+  if (viewToggle) {
+    const btnGrid = viewToggle.querySelector('[data-view="grid"]');
+    const btnList = viewToggle.querySelector('[data-view="list"]');
+    const syncToggle = () => {
+      if (btnGrid) {
+        btnGrid.classList.toggle('active', !gridViewList);
+        btnGrid.setAttribute('aria-pressed', String(!gridViewList));
+      }
+      if (btnList) {
+        btnList.classList.toggle('active', gridViewList);
+        btnList.setAttribute('aria-pressed', String(gridViewList));
+      }
+      if (slider) slider.disabled = gridViewList;
+    };
+    if (btnGrid) btnGrid.addEventListener('click', () => {
+      gridViewList = false;
+      applyGridViewClasses();
+      saveGridViewPref();
+      syncToggle();
+    });
+    if (btnList) btnList.addEventListener('click', () => {
+      gridViewList = true;
+      applyGridViewClasses();
+      saveGridViewPref();
+      syncToggle();
+    });
+    syncToggle();
+  }
+}
+
 // --- SISTEMA DE FILTROS DEL CATÁLOGO (PRECIO, ORDEN, LICENCIA) ---
 function initFilters() {
   const minEl = document.getElementById('filter-price-min');
@@ -1951,6 +2029,9 @@ function renderCatalog(animatePrices = false, fast = true) {
   const grid = document.getElementById('games-grid');
   const countLabel = document.getElementById('games-count');
   if (!grid) return;
+
+  // Asegurar la vista guardada (densidad/modo lista) en cada render
+  applyGridViewClasses();
 
   if (!Array.isArray(catalog) || catalog.length === 0) {
     catalog = [...DEFAULT_GAMES_FRONTEND];
