@@ -3535,7 +3535,7 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12) !important;
   }
 
-  /* Muesca superior del cartucho Nintendo Switch */
+  /* Muesca superior del cartucho Switch */
   .game-card::before {
     content: "NINTENDO SWITCH" !important;
     display: block !important;
@@ -3851,6 +3851,16 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
     overflow: hidden;
   }
 
+/* Búsqueda flotante móvil (abierta desde la barra inferior) — SOLO móvil:
+   fuera de su media query queda como un bloque estático en el pie, por eso
+   se oculta en escritorio */
+@media (min-width: 769px) {
+  .mobile-search-overlay {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
   /* Búsqueda flotante móvil (abierta desde la barra inferior) */
   .mobile-search-overlay {
     position: fixed;
@@ -5549,7 +5559,7 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
 }
 
 /* ==========================================================================
-   Banner Hero Nintendo Switch "Pedido Completado" Siempre al inicio del recibo
+   Banner Hero Switch "Pedido Completado" Siempre al inicio del recibo
    ========================================================================== */
 .receipt-top-banner {
   position: relative;

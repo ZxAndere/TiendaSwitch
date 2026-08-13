@@ -152,7 +152,7 @@ function renderGameDetailView(animatePrice = false) {
   try {
     // Breadcrumbs
     const crumbCat = document.getElementById('jd-crumb-category');
-    if (crumbCat) crumbCat.textContent = game.categoria || 'Nintendo';
+    if (crumbCat) crumbCat.textContent = game.categoria || 'Switch';
 
     const crumbTitle = document.getElementById('jd-crumb-title');
     if (crumbTitle) crumbTitle.textContent = game.titulo || '';
@@ -202,7 +202,7 @@ function renderGameDetailView(animatePrice = false) {
   try {
     // Encabezado
     const catTag = document.getElementById('jd-category-tag');
-    if (catTag) catTag.textContent = game.categoria || 'Nintendo Switch';
+    if (catTag) catTag.textContent = game.categoria || 'Switch';
 
     const titleEl = document.getElementById('jd-title');
     if (titleEl) titleEl.textContent = game.titulo || '';
@@ -313,7 +313,7 @@ function renderGameDetailView(animatePrice = false) {
     if (descContent) {
       descContent.innerHTML = `
         <p style="margin-bottom: 1rem;">${safeEscapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
-        <p>Disfruta de la máxima calidad de Nintendo Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de Nintendo eShop con garantía de uso permanente ZonaSwitchChile.</p>
+        <p>Disfruta de la máxima calidad de Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de la eShop con garantía de uso permanente ZonaSwitchChile.</p>
       `;
     }
 
@@ -421,7 +421,7 @@ function updateLicenseAccordionContent() {
         <ul style="padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem;">
           <li>🎮 <strong>Tu Perfil Personal:</strong> Juegas con tu perfil personal de siempre, acumulando tus propios trofeos y partidas guardadas.</li>
           <li>✈️ <strong>Modo Offline / Sin Wi-Fi:</strong> Juegas en cualquier lugar sin necesidad de estar conectado a internet.</li>
-          <li>🌐 <strong>Multijugador Online:</strong> Compatible 100% con tu suscripción a Nintendo Switch Online.</li>
+          <li>🌐 <strong>Multijugador Online:</strong> Compatible 100% con tu suscripción a Switch Online.</li>
           <li>🛡️ <strong>Garantía VIP:</strong> Licencia permanente con garantía de por vida ZonaSwitchChile.</li>
         </ul>
       `;
@@ -510,7 +510,7 @@ function renderRelatedGames() {
       <article class="game-card in-view" onclick="window.location.href='/juego?id=${g.id}'">
         <div class="card-media">
           <img src="${escapeHTML(g.imagen || '')}" alt="${escapeHTML(g.titulo || '')}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
-          <span class="card-tag">${escapeHTML(g.categoria || 'Nintendo')}</span>
+          <span class="card-tag">${escapeHTML(g.categoria || 'Switch')}</span>
         </div>
         <div class="card-content">
           <h3 class="card-title">${escapeHTML(g.titulo || '')}</h3>

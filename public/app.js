@@ -42,7 +42,7 @@ const DEFAULT_GAMES_FRONTEND = [
     imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop",
     imagenDetalle: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop",
     descripcion: "Compite con tus personajes favoritos en 48 pistas llenas de emoción y objetos locos.",
-    resumenExtenso: "La versión definitiva del juego de carreras más famoso de Nintendo...",
+    resumenExtenso: "La versión definitiva del juego de carreras más famoso de Switch...",
     visible: true
   },
   {
@@ -2093,7 +2093,7 @@ function renderCatalog(animatePrices = false, fast = true) {
     <a href="${targetUrl}" class="game-card in-view" data-id="${game.id}" onclick="openGameModal(${game.id}); return false;">
       <div class="card-media">
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.remove('loaded')">
-        <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
+        <span class="card-tag">${escapeHTML(game.categoria || 'Switch')}</span>
         <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" data-fav-id="${game.id}" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;">${isGameInFavorites(game.id)
           ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'
           : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>'}</button>
@@ -3329,12 +3329,12 @@ function switchGuideTab(type) {
         <p>Ve a <strong>Configuración de la Consola -> Usuarios -> Agregar usuario -> Crear un nuevo usuario</strong>. Elige cualquier ícono y apodo.</p>
       </div>
       <div class="guide-step-card">
-        <h5>Paso 2: Vincular Cuenta de Nintendo</h5>
-        <p>Selecciona <strong>"Vincular una cuenta de Nintendo"</strong> e ingresa el correo y la contraseña que te enviamos tras tu compra.</p>
+        <h5>Paso 2: Vincular Cuenta de Switch</h5>
+        <p>Selecciona <strong>"Vincular una cuenta de Switch"</strong> e ingresa el correo y la contraseña que te enviamos tras tu compra.</p>
       </div>
       <div class="guide-step-card">
         <h5>Paso 3: Descargar el Juego desde eShop</h5>
-        <p>Abre <strong>Nintendo eShop</strong> usando el nuevo usuario creado. Haz clic en el ícono de perfil arriba a la derecha -> <strong>Volver a descargar</strong> -> Selecciona tu juego y presiona Descargar.</p>
+        <p>Abre <strong>la eShop</strong> usando el nuevo usuario creado. Haz clic en el ícono de perfil arriba a la derecha -> <strong>Volver a descargar</strong> -> Selecciona tu juego y presiona Descargar.</p>
       </div>
       <div class="guide-step-card">
         <h5>Paso 4: Cómo Jugar (Licencia Secundaria)</h5>
@@ -3352,7 +3352,7 @@ function switchGuideTab(type) {
       </div>
       <div class="guide-step-card">
         <h5>Paso 2: Confirmar Consola Principal</h5>
-        <p>Ingresa a Nintendo eShop. La cuenta se registrará automáticamente como <strong>Consola Principal</strong>.</p>
+        <p>Ingresa a la eShop. La cuenta se registrará automáticamente como <strong>Consola Principal</strong>.</p>
       </div>
       <div class="guide-step-card">
         <h5>Paso 3: Descargar el Juego</h5>
@@ -3924,7 +3924,7 @@ function openAboutUsModal() {
           <button type="button" onclick="closeAboutUsModal()" class="about-modal-close-btn">&times;</button>
         </div>
         <div class="about-modal-body">
-          <p><strong>ZonaSwitchChile</strong> es tu tienda de confianza en Chile para la adquisición de juegos digitales de Nintendo Switch al mejor precio del mercado.</p>
+          <p><strong>ZonaSwitchChile</strong> es tu tienda de confianza en Chile para la adquisición de juegos digitales de Switch al mejor precio del mercado.</p>
           <p>Nos especializamos en brindar licencias <strong>100% digitales y originales</strong> (Cuentas Primarias y Secundarias), Directamente descargables desde nintendo eshop con máximo ahorro y soporte permanente.</p>
           <ul>
             <li><strong>Entrega Digital 24/7:</strong> Recibe tu juego de forma inmediata tras completar la compra.</li>
