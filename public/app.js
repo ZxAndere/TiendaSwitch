@@ -194,6 +194,7 @@ const apiFetch = function (resource, init) {
 
 let activeCategory = 'todos';
 let searchQuery = '';
+let filterState = { priceMin: null, priceMax: null, sort: '', license: '' };
 let selectedGameForModal = null;
 let selectedLicenseType = null;
 let currentModalImages = [];
@@ -304,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   try { renderCatalog(); } catch (e) { console.error('Error renderCatalog:', e); }
+  try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
   try { initEventListeners(); } catch (e) { console.error('Error initEventListeners:', e); }
   try { initUserSession(); } catch (e) { console.error('Error initUserSession:', e); }
   try { renderGlobalAdminGear(); } catch (e) { console.error('Error renderGlobalAdminGear:', e); }
@@ -441,6 +443,66 @@ function initEventListeners() {
         e.target.classList.add('active');
         activeCategory = e.target.dataset.category;
         renderCatalog();
+      }
+    });
+  }
+
+  // Filtros del catálogo (Precio, Orden, Licencia)
+  const filterToggleBtn = document.getElementById('filter-toggle-btn');
+  const filterPanel = document.getElementById('filter-panel');
+  if (filterToggleBtn && filterPanel) {
+    filterToggleBtn.addEventListener('click', () => {
+      const open = filterPanel.classList.toggle('open');
+      filterToggleBtn.classList.toggle('open', open);
+      filterToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
+
+  const filterPriceMin = document.getElementById('filter-price-min');
+  const filterPriceMax = document.getElementById('filter-price-max');
+  if (filterPriceMin) {
+    filterPriceMin.addEventListener('input', () => {
+      const valEl = document.getElementById('filter-price-min-val');
+      if (valEl) valEl.textContent = '$' + Number(filterPriceMin.value).toLocaleString('es-CL');
+      applyFilters();
+    });
+  }
+  if (filterPriceMax) {
+    filterPriceMax.addEventListener('input', () => {
+      const valEl = document.getElementById('filter-price-max-val');
+      if (valEl) valEl.textContent = '$' + Number(filterPriceMax.value).toLocaleString('es-CL');
+      applyFilters();
+    });
+  }
+
+  const filterSort = document.getElementById('filter-sort');
+  const filterLicense = document.getElementById('filter-license');
+  if (filterSort) filterSort.addEventListener('change', applyFilters);
+  if (filterLicense) filterLicense.addEventListener('change', applyFilters);
+
+  const filterResetBtn = document.getElementById('filter-reset-btn');
+  if (filterResetBtn) filterResetBtn.addEventListener('click', resetFilters);
+
+  // Barra inferior móvil: Buscar abre el menú lateral y enfoca la búsqueda
+  const bottomNavSearchBtn = document.getElementById('bottom-nav-search-btn');
+  if (bottomNavSearchBtn) {
+    bottomNavSearchBtn.addEventListener('click', () => {
+      openMobileDrawer();
+      setTimeout(() => {
+        const mobileSearch = document.getElementById('mobile-search-input');
+        if (mobileSearch) mobileSearch.focus();
+      }, 400);
+    });
+  }
+
+  // Barra inferior móvil: Cuenta abre opciones si hay sesión, si no el login
+  const bottomNavAccountBtn = document.getElementById('bottom-nav-account-btn');
+  if (bottomNavAccountBtn) {
+    bottomNavAccountBtn.addEventListener('click', () => {
+      if (currentUser) {
+        openUserSettingsModal();
+      } else {
+        openLoginModal();
       }
     });
   }
@@ -1563,6 +1625,82 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   renderCatalog();
 }
 
+// --- SISTEMA DE FILTROS DEL CATÁLOGO (PRECIO, ORDEN, LICENCIA) ---
+function initFilters() {
+  const minEl = document.getElementById('filter-price-min');
+  const maxEl = document.getElementById('filter-price-max');
+  if (!minEl && !maxEl) return;
+  const rangeMax = Math.max(60000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+  if (minEl) {
+    minEl.max = rangeMax;
+    const valEl = document.getElementById('filter-price-min-val');
+    if (valEl) valEl.textContent = '$' + Number(minEl.value).toLocaleString('es-CL');
+  }
+  if (maxEl) {
+    maxEl.max = rangeMax;
+    maxEl.value = rangeMax;
+    const valEl = document.getElementById('filter-price-max-val');
+    if (valEl) valEl.textContent = '$' + rangeMax.toLocaleString('es-CL');
+  }
+}
+
+function applyFilters() {
+  const minEl = document.getElementById('filter-price-min');
+  const maxEl = document.getElementById('filter-price-max');
+  const sortEl = document.getElementById('filter-sort');
+  const licEl = document.getElementById('filter-license');
+
+  // Mantener el tope del rango alineado con el precio máximo real del catálogo
+  if (minEl || maxEl) {
+    const rangeMax = Math.max(60000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0), 0) / 500) * 500);
+    if (minEl) minEl.max = rangeMax;
+    if (maxEl && Number(maxEl.value) >= Number(maxEl.max)) {
+      maxEl.max = rangeMax;
+      maxEl.value = rangeMax;
+      const valEl = document.getElementById('filter-price-max-val');
+      if (valEl) valEl.textContent = '$' + rangeMax.toLocaleString('es-CL');
+    }
+  }
+
+  filterState.priceMin = minEl && Number(minEl.value) > 0 ? Number(minEl.value) : null;
+  filterState.priceMax = maxEl ? Number(maxEl.value) : null;
+  filterState.sort = sortEl ? sortEl.value : '';
+  filterState.license = licEl ? licEl.value : '';
+  renderCatalog();
+}
+
+function resetFilters() {
+  const minEl = document.getElementById('filter-price-min');
+  const maxEl = document.getElementById('filter-price-max');
+  const sortEl = document.getElementById('filter-sort');
+  const licEl = document.getElementById('filter-license');
+  if (minEl) {
+    minEl.value = minEl.min || '0';
+    const valEl = document.getElementById('filter-price-min-val');
+    if (valEl) valEl.textContent = '$' + Number(minEl.value).toLocaleString('es-CL');
+  }
+  if (maxEl) {
+    maxEl.value = maxEl.max;
+    const valEl = document.getElementById('filter-price-max-val');
+    if (valEl) valEl.textContent = '$' + Number(maxEl.value).toLocaleString('es-CL');
+  }
+  if (sortEl) sortEl.value = '';
+  if (licEl) licEl.value = '';
+
+  // Limpiar también búsqueda y categoría para un reinicio completo
+  searchQuery = '';
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
+  const mobileSearchInput = document.getElementById('mobile-search-input');
+  if (mobileSearchInput) mobileSearchInput.value = '';
+  activeCategory = 'todos';
+  document.querySelectorAll('#category-pills .pill-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.category === 'todos');
+  });
+
+  applyFilters();
+}
+
 function renderCatalog(animatePrices = false) {
   const grid = document.getElementById('games-grid');
   const countLabel = document.getElementById('games-count');
@@ -1579,8 +1717,30 @@ function renderCatalog(animatePrices = false) {
     const q = (searchQuery || '').toLowerCase();
     const matchCategory = activeCategory === 'todos' || game.categoria === activeCategory;
     const matchSearch = title.includes(q) || category.includes(q);
-    return matchCategory && matchSearch;
+
+    // Filtro de precio (sobre el precio "Desde" / cuenta secundaria)
+    const price = Number(game.precioSecundaria) || 0;
+    const matchPrice = (filterState.priceMin == null || price >= filterState.priceMin) &&
+                       (filterState.priceMax == null || price <= filterState.priceMax);
+
+    // Filtro por tipo de licencia (usa los campos de stock reales del catálogo)
+    const matchLicense = !filterState.license ||
+      (filterState.license === 'secundaria' && !(Number.isInteger(game.stockSecundaria) && game.stockSecundaria <= 0)) ||
+      (filterState.license === 'primaria' && !(Number.isInteger(game.stockPrimaria) && game.stockPrimaria <= 0));
+
+    return matchCategory && matchSearch && matchPrice && matchLicense;
   });
+
+  // Ordenamiento elegido por el usuario (nunca modifica el catálogo original)
+  if (filterState.sort) {
+    filtered.sort((a, b) => {
+      if (filterState.sort === 'precio-asc') return (Number(a.precioSecundaria) || 0) - (Number(b.precioSecundaria) || 0);
+      if (filterState.sort === 'precio-desc') return (Number(b.precioSecundaria) || 0) - (Number(a.precioSecundaria) || 0);
+      const ta = (a.titulo || '').toLowerCase();
+      const tb = (b.titulo || '').toLowerCase();
+      return filterState.sort === 'nombre-asc' ? ta.localeCompare(tb, 'es') : tb.localeCompare(ta, 'es');
+    });
+  }
 
   if (countLabel) {
     countLabel.textContent = `${filtered.length} juego(s) disponible(s)`;

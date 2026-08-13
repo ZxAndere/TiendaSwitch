@@ -229,6 +229,48 @@
         <span class="section-count" id="games-count">Cargando catálogo...</span>
       </div>
 
+      <!-- Filtros Avanzados (Precio, Orden, Licencia) — colapsables en móvil -->
+      <button type="button" class="filter-toggle-btn mobile-only" id="filter-toggle-btn" aria-expanded="false" aria-controls="filter-panel">
+        <span>⚙️ Filtros</span>
+        <span class="filter-toggle-icon" aria-hidden="true">▾</span>
+      </button>
+
+      <div class="filter-panel" id="filter-panel">
+        <div class="filter-field">
+          <label for="filter-price-min">Precio mínimo</label>
+          <div class="range-row">
+            <input type="range" id="filter-price-min" min="0" max="60000" step="500" value="0">
+            <span class="range-value" id="filter-price-min-val">$0</span>
+          </div>
+        </div>
+        <div class="filter-field">
+          <label for="filter-price-max">Precio máximo</label>
+          <div class="range-row">
+            <input type="range" id="filter-price-max" min="0" max="60000" step="500" value="60000">
+            <span class="range-value" id="filter-price-max-val">$60.000</span>
+          </div>
+        </div>
+        <div class="filter-field">
+          <label for="filter-sort">Ordenar por</label>
+          <select id="filter-sort" class="filter-select">
+            <option value="">Relevancia</option>
+            <option value="precio-asc">Precio ↑</option>
+            <option value="precio-desc">Precio ↓</option>
+            <option value="nombre-asc">Nombre A-Z</option>
+            <option value="nombre-desc">Nombre Z-A</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="filter-license">Tipo de licencia</label>
+          <select id="filter-license" class="filter-select">
+            <option value="">Todas</option>
+            <option value="secundaria">Solo con cuenta Secundaria</option>
+            <option value="primaria">Solo con cuenta Primaria</option>
+          </select>
+        </div>
+        <button type="button" class="filter-reset-btn" id="filter-reset-btn">✕ Limpiar filtros</button>
+      </div>
+
       <!-- Filtros por Categoría (Juntos con el catálogo) -->
       <div class="category-pills" id="category-pills">
         <button class="pill-btn active" data-category="todos">Todos</button>
@@ -1021,6 +1063,26 @@
       </div>
     </div>
   </footer>
+
+  <!-- Barra de Acceso Rápido Móvil (Solo ≤768px, oculta en escritorio) -->
+  <nav class="mobile-bottom-nav mobile-only" id="mobile-bottom-nav" aria-label="Navegación rápida móvil">
+    <button type="button" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Ir al inicio">
+      <span class="bnav-icon" aria-hidden="true">🏠</span>
+      <span>Inicio</span>
+    </button>
+    <button type="button" id="bottom-nav-search-btn" aria-label="Buscar juegos">
+      <span class="bnav-icon" aria-hidden="true">🔍</span>
+      <span>Buscar</span>
+    </button>
+    <button type="button" onclick="openCartDrawer()" aria-label="Abrir carrito de compras">
+      <span class="bnav-icon" aria-hidden="true">🛒</span>
+      <span>Carrito</span>
+    </button>
+    <button type="button" id="bottom-nav-account-btn" aria-label="Mi cuenta">
+      <span class="bnav-icon" aria-hidden="true">👤</span>
+      <span>Cuenta</span>
+    </button>
+  </nav>
 
   <!-- JS Principal -->
   <script src="app.js"></script>

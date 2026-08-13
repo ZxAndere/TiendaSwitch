@@ -590,6 +590,129 @@ body {
   font-size: 0.875rem;
 }
 
+/* ==========================================================================
+   Filtros del Catálogo (Precio, Orden, Licencia)
+   ========================================================================== */
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 1rem;
+  background: rgba(15, 22, 36, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.filter-toggle-btn:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(21, 30, 48, 0.8);
+}
+
+.filter-toggle-btn .filter-toggle-icon {
+  color: var(--joycon-cyan);
+  transition: transform 0.25s ease;
+}
+
+.filter-toggle-btn.open .filter-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.filter-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  padding: 1rem 1.25rem;
+  background: rgba(7, 10, 18, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.filter-field label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--joycon-cyan);
+  cursor: pointer;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.range-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--joycon-cyan);
+  white-space: nowrap;
+}
+
+.filter-select {
+  width: 100%;
+  height: 40px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-select:hover,
+.filter-select:focus {
+  border-color: var(--joycon-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15);
+  outline: none;
+}
+
+.filter-reset-btn {
+  height: 40px;
+  padding: 0 1.1rem;
+  border-radius: var(--radius-full);
+  background: rgba(255, 0, 60, 0.12);
+  border: 1px solid rgba(255, 0, 60, 0.35);
+  color: #ff4d6d;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.filter-reset-btn:hover {
+  background: var(--switch-red);
+  border-color: var(--switch-red);
+  color: #fff;
+}
+
 .games-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -2699,6 +2822,37 @@ body {
     grid-template-columns: 1fr !important;
     gap: 0.75rem !important;
   }
+
+  /* Filtros del catálogo: colapsados por defecto, se abren con el botón */
+  .filter-panel {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    padding: 0.85rem 0.75rem;
+  }
+
+  .filter-panel.open {
+    display: grid;
+  }
+
+  .filter-reset-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .filter-field input[type="range"] {
+    height: 28px;
+  }
+
+  /* Espacio inferior para la barra de acceso rápido (iPhone home indicator incluido) */
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  /* Botones flotantes por encima de la barra inferior */
+  .whatsapp-float-btn,
+  .admin-quick-gear-btn {
+    bottom: calc(24px + 64px + env(safe-area-inset-bottom));
+  }
 }
 
 /* ==========================================================================
@@ -2823,6 +2977,9 @@ body {
 }
 
 .mobile-section-label {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
   font-size: 0.75rem;
   font-weight: 800;
   color: var(--text-muted);
@@ -2845,7 +3002,7 @@ body {
 
 .mobile-search-box .search-input {
   width: 100%;
-  height: 42px;
+  height: 44px;
   background: rgba(7, 10, 18, 0.95);
   border: 1.5px solid rgba(0, 240, 255, 0.3);
   color: var(--text-main);
@@ -2870,19 +3027,32 @@ body {
 
 .mobile-currency-select {
   width: 100%;
+  height: 44px;
   background: var(--bg-dark);
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
-  padding: 0.65rem 0.75rem;
+  padding: 0 0.75rem;
   border-radius: var(--radius-sm);
+  font-family: var(--font-body);
   font-size: 0.85rem;
+  font-weight: 600;
   outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mobile-currency-select:hover,
+.mobile-currency-select:focus {
+  border-color: var(--joycon-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15);
 }
 
 .mobile-drawer-link {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-subtle);
   padding: 0.75rem 0.9rem;
@@ -2899,6 +3069,11 @@ body {
   border-color: rgba(0, 240, 255, 0.3);
 }
 
+.mobile-drawer-link:active {
+  transform: scale(0.99);
+  background: rgba(0, 240, 255, 0.16);
+}
+
 .mobile-user-container {
   display: flex;
   flex-direction: column;
@@ -2907,9 +3082,95 @@ body {
 
 .mobile-user-container .nav-auth-btn {
   width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 0.7rem;
   font-weight: 800;
+}
+
+.mobile-user-container .dropdown-item {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.25rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Anillo de foco visible para todo el menú lateral (accesibilidad) */
+.mobile-nav-drawer :focus-visible {
+  outline: 2px solid var(--joycon-cyan);
+  outline-offset: 2px;
+}
+
+.mobile-drawer-header .drawer-close-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s ease;
+}
+
+.mobile-drawer-header .drawer-close-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ==========================================================================
+   Barra Inferior de Acceso Rápido (Solo Móvil ≤768px)
+   ========================================================================== */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 90;
+  display: flex;
+  background: var(--bg-nav);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border-subtle);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.mobile-bottom-nav button {
+  flex: 1;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-bottom-nav button .bnav-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.mobile-bottom-nav button:active {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+}
+
+.mobile-bottom-nav button:focus-visible {
+  outline: 2px solid var(--joycon-cyan);
+  outline-offset: -2px;
 }
 
 /* ==========================================================================
