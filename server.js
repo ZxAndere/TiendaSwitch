@@ -201,6 +201,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: String,
   role: { type: String, default: 'user' },
   tokenVersion: { type: Number, default: 0 },
+  deletedAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -217,7 +218,11 @@ const gameSchema = new mongoose.Schema({
   imagenDetalle: String,
   descripcion: String,
   resumenExtenso: String,
-  visible: { type: Boolean, default: true }
+  visible: { type: Boolean, default: true },
+  stockPrimaria: { type: Number, default: null },
+  stockSecundaria: { type: Number, default: null },
+  soldPrimaria: { type: Number, default: 0 },
+  soldSecundaria: { type: Number, default: 0 }
 }, { strict: false });
 
 const gallerySchema = new mongoose.Schema({
@@ -427,6 +432,50 @@ app.get('/api/debug/mongo', verifyAdmin, (req, res) => {
   });
 });
 
+
+// Detalle de una orden del usuario autenticado
+app.get('/api/user/orders/:code', verifyToken, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  const sameUser = (normalizeEmail(order.email) && normalizeEmail(order.email) === normalizeEmail(req.user.email)) ||
+                   (isString(order.usuario) && order.usuario.toLowerCase() === req.user.username.toLowerCase());
+  if (!sameUser) return res.status(403).json({ error: 'No tienes acceso a esta orden.' });
+  res.json(sanitizeOrderForUser(order));
+});
+
+// Eliminación de cuenta con confirmación de contraseña
+app.delete('/api/user/account', verifyToken, userApiLimiter, async (req, res) => {
+  const currentPassword = isString(req.body?.currentPassword) ? req.body.currentPassword : '';
+  if (!currentPassword) return res.status(400).json({ error: 'Ingresa tu contraseña actual.' });
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  const ok = await verifyPassword(currentPassword, users[idx]);
+  if (!ok) return res.status(400).json({ error: 'La contraseña actual es incorrecta.' });
+  if (users[idx].role === 'admin') return res.status(400).json({ error: 'Una cuenta administradora no puede eliminarse desde aquí.' });
+  const deletedId = users[idx].id;
+  users.splice(idx, 1);
+  saveUsers(users);
+  if (isMongoConnected) await UserModel.deleteOne({ id: deletedId });
+
+  const anonymize = (o) => {
+    if (!o) return o;
+    if (o.email && normalizeEmail(o.email) === normalizeEmail(req.user.email)) {
+      o.email = `eliminado_${deletedId}@privado.invalid`;
+      o.usuario = 'Cuenta eliminada';
+      o.cliente = 'Cliente eliminado';
+      addOrderEvent(o, 'account_deleted', 'La cuenta del cliente fue eliminada.', 'system');
+    }
+    return o;
+  };
+  const orders = safeReadJsonSync(ORDERS_FILE, []).map(anonymize);
+  safeWriteJsonSync(ORDERS_FILE, orders);
+  if (isMongoConnected) {
+    await OrderModel.updateMany({ email: req.user.email }, { $set: { email: `eliminado_${deletedId}@privado.invalid`, usuario: 'Cuenta eliminada', cliente: 'Cliente eliminado' } });
+  }
+  res.json({ exito: true, mensaje: 'Cuenta eliminada correctamente.' });
+});
+
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
 // IMPORTANTE: Las llaves API DEBEN estar configuradas en variables de entorno (.env)
 // NO se proporcionan fallbacks hardcodeados por seguridad
@@ -547,6 +596,71 @@ async function saveSingleOrder(orderData) {
   }
 }
 
+
+
+function addOrderEvent(order, type, detail = '', actor = 'system') {
+  if (!order) return;
+  if (!Array.isArray(order.history)) order.history = [];
+  order.history.push({
+    type,
+    detail: isString(detail) ? detail.slice(0, 500) : '',
+    actor: isString(actor) ? actor.slice(0, 120) : 'system',
+    at: new Date().toISOString()
+  });
+}
+
+function sanitizeOrderForUser(order) {
+  if (!order) return null;
+  return {
+    codigoOrden: order.codigoOrden,
+    cliente: order.cliente,
+    usuario: order.usuario,
+    email: order.email ? order.email.replace(/(.{2}).+(@.+)/, '$1***$2') : '',
+    carrito: Array.isArray(order.carrito) ? order.carrito.map(item => ({
+      id: item.id,
+      titulo: item.titulo,
+      cantidad: item.cantidad,
+      licencia: item.licencia,
+      precio: item.precio,
+      entregado: !!item.varianteAsignada
+    })) : [],
+    articulos: order.articulos,
+    total: order.total,
+    totalFormatted: order.totalFormatted,
+    fecha: order.fecha,
+    estado: order.estado,
+    metodoPago: order.metodoPago,
+    deliveryStatus: order.deliveryStatus || (order.estado === 'pagada' ? 'pending' : 'not_ready'),
+    history: Array.isArray(order.history) ? order.history : [],
+    retryCount: Number(order.retryCount || 0)
+  };
+}
+
+function getOrderForAdmin(order) {
+  if (!order) return null;
+  return {
+    ...sanitizeOrderForUser(order),
+    clienteCompleto: order.cliente,
+    emailCompleto: order.email,
+    carrito: Array.isArray(order.carrito) ? order.carrito.map(item => ({
+      id: item.id,
+      titulo: item.titulo,
+      cantidad: item.cantidad,
+      licencia: item.licencia,
+      precio: item.precio,
+      varianteAsignada: item.varianteAsignada || null
+    })) : []
+  };
+}
+
+function normalizeEmail(email) {
+  return isString(email) ? email.trim().toLowerCase() : '';
+}
+
+function generateOtpCode() {
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
 let USERS_CACHE = [];
 
 function loadUsersCache() {
@@ -646,32 +760,31 @@ function formatFlowErrorMessage(flowData) {
 // Se ejecuta SOLO cuando el pago está verificado/confirmado, NO al crear la orden
 function assignAccountsToOrder(orderData) {
   if (!orderData || !Array.isArray(orderData.carrito)) return;
-
   let anyAssigned = false;
 
   orderData.carrito = orderData.carrito.map(item => {
-    // Si ya tiene cuenta asignada, no reasignar
     if (item.varianteAsignada) return item;
-
     const gameInStore = GAMES_STORE.find(g => g.id === Number(item.id));
-    let varianteAsignada = '';
+    if (!gameInStore || !Array.isArray(gameInStore.cuentas) || gameInStore.cuentas.length === 0) {
+      return { ...item, varianteAsignada: `Licencia Oficial ${item.licencia} - ZonaSwitchChile` };
+    }
 
-    if (gameInStore && Array.isArray(gameInStore.cuentas) && gameInStore.cuentas.length > 0) {
-      if (typeof gameInStore.siguienteVarianteIndex !== 'number') {
-        gameInStore.siguienteVarianteIndex = 0;
-      }
+    const quantity = Math.max(1, Number(item.cantidad) || 1);
+    if (typeof gameInStore.siguienteVarianteIndex !== 'number') gameInStore.siguienteVarianteIndex = 0;
+    const assigned = [];
+
+    for (let n = 0; n < quantity; n += 1) {
       const varIdx = gameInStore.siguienteVarianteIndex % gameInStore.cuentas.length;
-      const rawVariant = gameInStore.cuentas[varIdx];
+      const rawVariant = String(gameInStore.cuentas[varIdx] || '').trim();
+      if (!rawVariant) continue;
 
-      // Parsear la cadena: "Cuenta / Contraseña / ListaCodigosComa"
       const parts = rawVariant.includes('/') ? rawVariant.split('/') : rawVariant.split('|');
       const cuentaVal = (parts[0] || '').trim();
       const passVal = (parts[1] || '').trim();
       const rawCodigos = (parts[2] || parts.slice(2).join('/')).trim();
-
       let codigoConsumido = '';
       if (rawCodigos) {
-        const codigosList = rawCodigos.split(/[\n,]+/).map(c => c.trim()).filter(c => c.length > 0);
+        const codigosList = rawCodigos.split(/[\n,]+/).map(c => c.trim()).filter(Boolean);
         if (codigosList.length > 0) {
           codigoConsumido = codigosList.shift();
           const codigosRestantes = codigosList.join(', ');
@@ -685,21 +798,32 @@ function assignAccountsToOrder(orderData) {
       let finalAssigned = cuentaVal;
       if (passVal) finalAssigned += ` / ${passVal}`;
       if (codigoConsumido) finalAssigned += ` / Código OTP: ${codigoConsumido}`;
-
-      varianteAsignada = finalAssigned;
+      assigned.push(finalAssigned);
       gameInStore.siguienteVarianteIndex = (gameInStore.siguienteVarianteIndex + 1) % gameInStore.cuentas.length;
       anyAssigned = true;
     }
 
+    const assignedText = assigned.map((value, idx) => quantity > 1 ? `Cuenta ${idx + 1}: ${value}` : value).join('\n');
+    if (item.licencia === 'Primaria' && Number.isInteger(gameInStore.stockPrimaria)) {
+      gameInStore.stockPrimaria = Math.max(0, gameInStore.stockPrimaria - assigned.length);
+      gameInStore.soldPrimaria = Number(gameInStore.soldPrimaria || 0) + assigned.length;
+    }
+    if (item.licencia === 'Secundaria' && Number.isInteger(gameInStore.stockSecundaria)) {
+      gameInStore.stockSecundaria = Math.max(0, gameInStore.stockSecundaria - assigned.length);
+      gameInStore.soldSecundaria = Number(gameInStore.soldSecundaria || 0) + assigned.length;
+    }
+
     return {
       ...item,
-      varianteAsignada: varianteAsignada || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
-      correoTexto: gameInStore ? (gameInStore.correoTexto || '') : (item.correoTexto || ''),
-      correoImagen: gameInStore ? (gameInStore.correoImagen || '') : (item.correoImagen || '')
+      varianteAsignada: assignedText || `Licencia Oficial ${item.licencia} - ZonaSwitchChile`,
+      correoTexto: gameInStore.correoTexto || item.correoTexto || '',
+      correoImagen: gameInStore.correoImagen || item.correoImagen || ''
     };
   });
 
   if (anyAssigned) {
+    orderData.deliveryStatus = 'assigned';
+    addOrderEvent(orderData, 'account_assigned', 'Cuenta(s) asignada(s) automáticamente.', 'system');
     saveGamesLocal(GAMES_STORE);
     saveSingleOrder(orderData).catch(err => console.error('Error guardando orden con cuentas:', err));
     console.log(`🔑 [CUENTAS] Cuentas asignadas para orden ${orderData.codigoOrden}`);
@@ -1293,7 +1417,7 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
     return res.status(400).json({ error: "Este correo electrónico ya está registrado." });
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   const passwordHash = await bcrypt.hash(password, 10);
 
   OTP_STORE.set(`reg_${cleanEmail}`, {
@@ -1404,6 +1528,85 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   });
 });
 
+
+// Recuperación pública de contraseña
+app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Ingresa un correo válido.' });
+  }
+  const users = getUsers();
+  const user = users.find(u => normalizeEmail(u.email) === email);
+  // Respuesta neutra para no revelar si existe la cuenta
+  if (!user) return res.json({ exito: true, mensaje: 'Si el correo está registrado, recibirás un código de recuperación.' });
+  const key = `forgot_${email}`;
+  const existing = OTP_STORE.get(key);
+  if (existing && existing.expiresAt > Date.now() && existing.lastSentAt && Date.now() - existing.lastSentAt < 60000) {
+    return res.status(429).json({ error: 'Espera 60 segundos antes de solicitar otro código.' });
+  }
+  const code = generateOtpCode();
+  OTP_STORE.set(key, { code, email, userId: user.id, attempts: 0, expiresAt: Date.now() + 600000, lastSentAt: Date.now() });
+  const sent = await sendVerificationEmail(email, code, 'Código para Recuperar tu Contraseña');
+  if (!sent) {
+    OTP_STORE.delete(key);
+    return res.status(500).json({ error: 'No se pudo enviar el código de recuperación.' });
+  }
+  res.json({ exito: true, mensaje: 'Si el correo está registrado, recibirás un código de recuperación.', email });
+});
+
+app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const code = isString(req.body?.code) ? req.body.code.trim() : '';
+  const newPassword = isString(req.body?.newPassword) ? req.body.newPassword : '';
+  if (!email || !/^\d{6}$/.test(code) || newPassword.length < 6 || !/\d/.test(newPassword)) {
+    return res.status(400).json({ error: 'Correo, código o nueva contraseña inválidos.' });
+  }
+  const key = `forgot_${email}`;
+  const otp = OTP_STORE.get(key);
+  if (!otp || Date.now() > otp.expiresAt) {
+    OTP_STORE.delete(key);
+    return res.status(400).json({ error: 'Código expirado o no encontrado.' });
+  }
+  otp.attempts = Number(otp.attempts || 0) + 1;
+  if (otp.attempts > 5) {
+    OTP_STORE.delete(key);
+    return res.status(429).json({ error: 'Demasiados intentos. Solicita un nuevo código.' });
+  }
+  if (otp.code !== code) {
+    OTP_STORE.set(key, otp);
+    return res.status(400).json({ error: 'Código incorrecto.' });
+  }
+  const users = getUsers();
+  const userIndex = users.findIndex(u => u.id === otp.userId);
+  if (userIndex === -1) {
+    OTP_STORE.delete(key);
+    return res.status(400).json({ error: 'Cuenta no encontrada.' });
+  }
+  users[userIndex].passwordHash = await bcrypt.hash(newPassword, 12);
+  users[userIndex].tokenVersion = Number(users[userIndex].tokenVersion || 0) + 1;
+  delete users[userIndex].password;
+  saveUsers(users);
+  if (isMongoConnected) {
+    await UserModel.findOneAndUpdate({ id: users[userIndex].id }, {
+      passwordHash: users[userIndex].passwordHash,
+      tokenVersion: users[userIndex].tokenVersion
+    });
+  }
+  OTP_STORE.delete(key);
+  res.json({ exito: true, mensaje: 'Contraseña restablecida. Ahora puedes iniciar sesión.' });
+});
+
+// Logout real: invalida el token actual y todos los anteriores
+app.post('/api/auth/logout', verifyToken, async (req, res) => {
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === req.user.id);
+  if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  users[idx].tokenVersion = Number(users[idx].tokenVersion || 0) + 1;
+  saveUsers(users);
+  if (isMongoConnected) await UserModel.findOneAndUpdate({ id: req.user.id }, { tokenVersion: users[idx].tokenVersion });
+  res.json({ exito: true, mensaje: 'Sesión cerrada correctamente.' });
+});
+
 // --- OPCIONES DE CUENTA Y ÓRDENES DE USUARIOS ---
 
 // Consultar compras del usuario logueado (Protegido por token)
@@ -1482,7 +1685,7 @@ app.post('/api/user/send-email-code', verifyToken, userApiLimiter, async (req, r
     return res.status(400).json({ error: "Este correo ya está registrado por otra cuenta." });
   }
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   OTP_STORE.set(`email_${userId}`, { newEmail: cleanEmail, code, expiresAt: Date.now() + 600000 });
 
   const sent = await sendVerificationEmail(cleanEmail, code, "Código para Cambiar Correo Electrónico");
@@ -1530,7 +1733,7 @@ app.post('/api/user/send-password-code', verifyToken, userApiLimiter, async (req
   const user = users.find(u => u.id === userId);
   if (!user || !user.email) return res.status(400).json({ error: "No se encontró un correo asociado a tu cuenta." });
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const code = crypto.randomInt(100000, 1000000).toString();
   
   // Hash con bcrypt de la nueva contraseña propuesta
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
@@ -1884,7 +2087,9 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
       correoTexto,
       correoImagen,
       cuentas,
-      visible
+      visible,
+      stockPrimaria,
+      stockSecundaria
     } = req.body || {};
 
     if (!isString(titulo) || !titulo.trim()) {
@@ -1907,6 +2112,8 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
     const prim = Number(precioPrimaria);
     const original = precioOriginal === undefined || precioOriginal === '' ? 0 : Number(precioOriginal);
     const gameRating = rating === undefined || rating === '' ? 5 : Number(rating);
+    const stockPrim = stockPrimaria === undefined || stockPrimaria === '' ? null : Number(stockPrimaria);
+    const stockSec = stockSecundaria === undefined || stockSecundaria === '' ? null : Number(stockSecundaria);
 
     if (!Number.isSafeInteger(sec) || sec < 0) {
       return res.status(400).json({ error: 'El precio de licencia secundaria no es válido.' });
@@ -1920,6 +2127,8 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
     if (!Number.isFinite(gameRating) || gameRating < 0 || gameRating > 5) {
       return res.status(400).json({ error: 'La valoración debe estar entre 0 y 5.' });
     }
+    if (stockPrim !== null && (!Number.isSafeInteger(stockPrim) || stockPrim < 0)) return res.status(400).json({ error: 'Stock primaria inválido.' });
+    if (stockSec !== null && (!Number.isSafeInteger(stockSec) || stockSec < 0)) return res.status(400).json({ error: 'Stock secundaria inválido.' });
 
     let nextId = GAMES_STORE.reduce((max, g) => Math.max(max, Number(g.id) || 0), 0) + 1;
 
@@ -1955,6 +2164,10 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
       correoImagen: isString(correoImagen) ? correoImagen.trim() : '',
       cuentas: cleanAccounts,
       siguienteVarianteIndex: 0,
+      stockPrimaria: stockPrim,
+      stockSecundaria: stockSec,
+      soldPrimaria: 0,
+      soldSecundaria: 0,
       visible: visible !== false
     };
 
@@ -1998,9 +2211,23 @@ app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
   res.json({ exito: true, mensaje: `Visibilidad de ${game.titulo} actualizada.`, juegos: GAMES_STORE });
 });
 
+
+// Endpoint Admin: Desactivar/eliminar juego del catálogo
+app.post('/api/admin/juegos/delete', verifyAdmin, (req, res) => {
+  const gameId = Number(req.body?.gameId);
+  const gameIndex = GAMES_STORE.findIndex(g => g.id === gameId);
+  if (gameIndex === -1) return res.status(404).json({ error: 'Juego no encontrado.' });
+  const game = GAMES_STORE[gameIndex];
+  game.visible = false;
+  game.deletedAt = new Date().toISOString();
+  saveGamesLocal(GAMES_STORE);
+  if (isMongoConnected) GameModel.findOneAndUpdate({ id: gameId }, { visible: false, deletedAt: game.deletedAt }).catch(e => console.error('Error desactivando juego en Mongo:', e.message));
+  res.json({ exito: true, mensaje: `Juego "${game.titulo}" desactivado.`, juegos: GAMES_STORE });
+});
+
 // Endpoint Admin: Editar datos del juego (Nombre, Precio, Descripción, Fotos, YouTube URL, etc.) en tiempo real
 app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
-  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, precioOriginal, descripcion, imagen, imagenDetalle, imagenesDetalle, youtubeUrl, videoTrailerUrl, correoTexto, correoImagen, cuentas } = req.body;
+  const { gameId, titulo, categoria, precioSecundaria, precioPrimaria, precioOriginal, descripcion, imagen, imagenDetalle, imagenesDetalle, youtubeUrl, videoTrailerUrl, correoTexto, correoImagen, cuentas, stockPrimaria, stockSecundaria } = req.body;
 
   const gameIndex = GAMES_STORE.findIndex(g => g.id === Number(gameId));
   if (gameIndex === -1) return res.status(404).json({ error: "Juego no encontrado." });
@@ -2011,6 +2238,8 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   if (precioSecundaria !== undefined && precioSecundaria !== '') game.precioSecundaria = Number(precioSecundaria);
   if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
   if (precioOriginal !== undefined && precioOriginal !== '') game.precioOriginal = Number(precioOriginal);
+  if (stockPrimaria !== undefined && stockPrimaria !== '') { const n = Number(stockPrimaria); if (!Number.isSafeInteger(n) || n < 0) return res.status(400).json({ error: 'Stock primaria inválido.' }); game.stockPrimaria = n; }
+  if (stockSecundaria !== undefined && stockSecundaria !== '') { const n = Number(stockSecundaria); if (!Number.isSafeInteger(n) || n < 0) return res.status(400).json({ error: 'Stock secundaria inválido.' }); game.stockSecundaria = n; }
   if (isString(descripcion)) game.descripcion = descripcion.trim();
   if (isString(imagen)) game.imagen = imagen.trim();
   if (isString(imagenDetalle)) game.imagenDetalle = imagenDetalle.trim();
@@ -2400,6 +2629,11 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
       return res.status(400).json({ error: `El juego con ID ${item.id} no existe en el catálogo.` });
     }
 
+    const configuredStock = item.licencia === 'Primaria' ? gameInStore.stockPrimaria : gameInStore.stockSecundaria;
+    if (Number.isInteger(configuredStock) && configuredStock < cantidad) {
+      return res.status(409).json({ error: `La licencia ${item.licencia} de "${gameInStore.titulo}" no tiene stock suficiente. Disponibles: ${configuredStock}.` });
+    }
+
     // Validación de stock de cuentas disponibles
     if (!gameInStore.cuentas || !Array.isArray(gameInStore.cuentas) || gameInStore.cuentas.length === 0) {
       return res.status(400).json({
@@ -2462,8 +2696,16 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
     };
   });
 
+  let checkoutUserId = null;
+  try {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (token) checkoutUserId = jwt.verify(token, JWT_SECRET)?.id || null;
+  } catch (e) {}
+
   const orderData = {
     codigoOrden,
+    userId: checkoutUserId,
     cliente: `${nombre.trim()} ${apellido.trim()}`,
     usuario: isString(username) && username.trim() ? username.trim() : 'Invitado',
     email: cleanEmail,
@@ -2473,8 +2715,11 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
     totalFormatted: `$${total.toLocaleString('es-CL')} CLP`,
     fecha: new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
     estado: total === 0 ? 'pagada' : 'pendiente',
-    metodoPago: isString(metodoPago) ? metodoPago : 'flow'
+    metodoPago: isString(metodoPago) ? metodoPago : 'flow',
+    deliveryStatus: total === 0 ? 'pending' : 'not_ready',
+    history: []
   };
+  addOrderEvent(orderData, 'created', 'Orden creada.', checkoutUserId || 'guest');
 
   // Guardar orden de forma segura en Mongo / Local sin agotar RAM (Problema 3)
   await saveSingleOrder(orderData);
@@ -2648,6 +2893,9 @@ app.all('/api/flow/return', async (req, res) => {
   // Validar firma del callback recibida de Flow usando tiempo constante (Anti Timing Attack)
   const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
   const incomingSign = incomingParams.s;
+  if (!incomingSign) {
+    return res.status(403).send('Firma requerida.');
+  }
   if (incomingSign) {
     delete incomingParams.s;
     const computedSign = signFlowParams(incomingParams);
@@ -2682,13 +2930,14 @@ app.all('/api/flow/return', async (req, res) => {
       const oldStatus = order.estado;
       order.flowStatus = status;
       order.estado = status === 2 ? 'pagada' : (status === 3 ? 'rechazada' : 'cancelada');
+      if (order.estado === 'pagada' && !order.deliveryStatus) order.deliveryStatus = 'pending';
       await saveSingleOrder(order);
       orderCode = order.codigoOrden;
 
       // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
         assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
+        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
       }
     }
 
@@ -2707,6 +2956,9 @@ app.post('/api/flow/confirm', async (req, res) => {
   // Validar firma del callback recibida de Flow usando tiempo constante (Problema 1: Anti Timing Attack)
   const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
   const incomingSign = incomingParams.s;
+  if (!incomingSign) {
+    return res.status(403).send('Firma requerida.');
+  }
   if (incomingSign) {
     delete incomingParams.s;
     const computedSign = signFlowParams(incomingParams);
@@ -2737,12 +2989,13 @@ app.post('/api/flow/confirm', async (req, res) => {
       const oldStatus = order.estado;
       order.flowStatus = statusData.status;
       order.estado = statusData.status === 2 ? 'pagada' : 'rechazada';
+      if (order.estado === 'pagada' && !order.deliveryStatus) order.deliveryStatus = 'pending';
       await saveSingleOrder(order);
 
       // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
         assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
+        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
       }
     }
 
@@ -2767,7 +3020,11 @@ app.all('/api/mp/return', async (req, res) => {
       });
       if (mpVerifyRes.ok) {
         const mpPayment = await mpVerifyRes.json();
-        verifiedStatus = mpPayment.status; // 'approved', 'rejected', 'pending', etc.
+        const orderToCheck = externalRef && isString(externalRef) ? await getOrderByCode(externalRef) : null;
+        const amountMatches = !!orderToCheck && Number(mpPayment.transaction_amount) === Number(orderToCheck.total);
+        const currencyMatches = !mpPayment.currency_id || mpPayment.currency_id === 'CLP';
+        const referenceMatches = !!orderToCheck && mpPayment.external_reference === orderToCheck.codigoOrden;
+        verifiedStatus = (mpPayment.status === 'approved' && amountMatches && currencyMatches && referenceMatches) ? 'approved' : (mpPayment.status || 'pending');
         console.log(`✅ [MP] Pago ${paymentId} verificado server-to-server. Estado: ${verifiedStatus}`);
       } else {
         console.warn(`⚠️ [MP] No se pudo verificar pago ${paymentId}: HTTP ${mpVerifyRes.status}`);
@@ -2792,7 +3049,7 @@ app.all('/api/mp/return', async (req, res) => {
       // Asignar cuentas y enviar correo SOLO si el pago fue verificado como aprobado
       if (order.estado === 'pagada' && oldStatus !== 'pagada') {
         assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
+        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
       }
     }
   }
@@ -2828,7 +3085,7 @@ app.post('/api/mp/confirm', async (req, res) => {
 
             if (order.estado === 'pagada' && oldStatus !== 'pagada') {
               assignAccountsToOrder(order);
-              sendOrderConfirmationEmail(order).catch(err => console.error('Error enviando correo:', err));
+              sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
             }
           }
         }
@@ -2839,6 +3096,121 @@ app.post('/api/mp/confirm', async (req, res) => {
   }
 
   res.send('OK');
+});
+
+
+// --- ADMINISTRACIÓN DE ÓRDENES ---
+app.get('/api/admin/orders', verifyAdmin, async (req, res) => {
+  let orders = [];
+  if (isMongoConnected) {
+    try { orders = await OrderModel.find({}).sort({ _id: -1 }).lean(); } catch (e) { console.error('Error cargando órdenes admin:', e.message); }
+  }
+  if (!orders.length) orders = safeReadJsonSync(ORDERS_FILE, []);
+  const q = isString(req.query.q) ? req.query.q.trim().toLowerCase() : '';
+  const status = isString(req.query.status) ? req.query.status.trim().toLowerCase() : '';
+  orders = orders.filter(o => (!q || [o.codigoOrden, o.email, o.usuario, o.cliente].some(v => isString(v) && v.toLowerCase().includes(q))) && (!status || String(o.estado || '').toLowerCase() === status));
+  res.json(orders.map(getOrderForAdmin));
+});
+
+app.get('/api/admin/orders/:code', verifyAdmin, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  res.json(getOrderForAdmin(order));
+});
+
+app.post('/api/admin/orders/:code/cancel', verifyAdmin, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  if (order.estado === 'pagada' && order.deliveryStatus === 'delivered') return res.status(400).json({ error: 'La orden ya fue entregada. Gestiona el reembolso por separado.' });
+  const reason = isString(req.body?.reason) ? req.body.reason.trim() : 'Cancelada por administración';
+  order.estado = 'cancelada';
+  order.deliveryStatus = 'cancelled';
+  order.cancelReason = reason;
+  addOrderEvent(order, 'cancelled', reason, req.user.username);
+  await saveSingleOrder(order);
+  res.json({ exito: true, order: getOrderForAdmin(order) });
+});
+
+app.post('/api/admin/orders/:code/refund', verifyAdmin, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  const reason = isString(req.body?.reason) ? req.body.reason.trim() : 'Reembolso registrado por administración';
+  order.estado = 'reembolsada';
+  order.deliveryStatus = order.deliveryStatus === 'delivered' ? 'refunded' : (order.deliveryStatus || 'refunded');
+  order.refundReason = reason;
+  addOrderEvent(order, 'refunded', reason, req.user.username);
+  await saveSingleOrder(order);
+  res.json({ exito: true, order: getOrderForAdmin(order), aviso: 'El reembolso monetario debe ejecutarse también en la pasarela si corresponde.' });
+});
+
+app.post('/api/admin/orders/:code/resend-delivery', verifyAdmin, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  if (!Array.isArray(order.carrito) || !order.carrito.some(i => i.varianteAsignada)) return res.status(400).json({ error: 'La orden todavía no tiene credenciales asignadas.' });
+  if (order.estado !== 'pagada') return res.status(400).json({ error: 'Solo se puede reenviar una entrega pagada.' });
+  await sendOrderConfirmationEmail(order);
+  order.deliveryStatus = 'sent';
+  addOrderEvent(order, 'delivery_email_resent', 'Correo de entrega reenviado por administración.', req.user.username);
+  await saveSingleOrder(order);
+  res.json({ exito: true, order: getOrderForAdmin(order) });
+});
+
+app.post('/api/admin/orders/:code/status', verifyAdmin, async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  const nextStatus = isString(req.body?.status) ? req.body.status.trim().toLowerCase() : '';
+  const allowed = ['pendiente', 'pagada', 'rechazada', 'cancelada', 'reembolsada'];
+  if (!allowed.includes(nextStatus)) return res.status(400).json({ error: 'Estado no válido.' });
+  const old = order.estado;
+  order.estado = nextStatus;
+  addOrderEvent(order, 'status_changed', `${old} → ${nextStatus}`, req.user.username);
+  await saveSingleOrder(order);
+  res.json({ exito: true, order: getOrderForAdmin(order) });
+});
+
+app.post('/api/orders/:code/retry-payment', async (req, res) => {
+  const order = await getOrderByCode(req.params.code);
+  if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
+  if (!['pendiente', 'rechazada', 'cancelada'].includes(order.estado)) return res.status(400).json({ error: 'Esta orden no puede reintentarse.' });
+  if (!Array.isArray(order.carrito) || !order.carrito.length) return res.status(400).json({ error: 'La orden no tiene productos.' });
+
+  const baseUrl = getValidatedBaseUrl(req);
+  order.retryCount = Number(order.retryCount || 0) + 1;
+  order.estado = 'pendiente';
+  addOrderEvent(order, 'payment_retry', `Reintento de pago #${order.retryCount}`, 'customer');
+
+  try {
+    if (order.metodoPago === 'mercadopago') {
+      if (!MP_ACCESS_TOKEN) return res.status(503).json({ error: 'Mercado Pago no está configurado.' });
+      const mpBody = {
+        items: order.carrito.map(item => ({ title: item.titulo, quantity: item.cantidad, currency_id: 'CLP', unit_price: item.precio })),
+        payer: { email: order.email },
+        back_urls: { success: `${baseUrl}/api/mp/return`, failure: `${baseUrl}/api/mp/return`, pending: `${baseUrl}/api/mp/return` },
+        auto_return: 'approved',
+        external_reference: order.codigoOrden
+      };
+      const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', { method: 'POST', headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify(mpBody) });
+      const mpData = await mpRes.json();
+      if (!mpRes.ok || !mpData.init_point) return res.status(400).json({ error: mpData.message || 'No se pudo crear un nuevo pago.' });
+      order.mpPreferenceId = mpData.id;
+      await saveSingleOrder(order);
+      return res.json({ exito: true, redirectUrl: mpData.init_point, order: sanitizeOrderForUser(order) });
+    }
+
+    const FLOW_DEFAULT_EMAIL = process.env.FLOW_DEFAULT_EMAIL || order.email;
+    const params = { apiKey: FLOW_API_KEY, commerceOrder: order.codigoOrden, subject: `Reintento ${order.codigoOrden}`, currency: 'CLP', amount: order.total, email: order.email || FLOW_DEFAULT_EMAIL, urlConfirmation: `${baseUrl}/api/flow/confirm`, urlReturn: `${baseUrl}/api/flow/return` };
+    params.s = signFlowParams(params);
+    const flowRes = await fetch(`${FLOW_API_URL}/payment/create`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(params).toString() });
+    const flowData = await flowRes.json();
+    if (!flowRes.ok || !flowData.url || !flowData.token) return res.status(400).json({ error: formatFlowErrorMessage(flowData) });
+    order.flowOrder = flowData.flowOrder;
+    order.token = flowData.token;
+    await saveSingleOrder(order);
+    res.json({ exito: true, redirectUrl: `${flowData.url}?token=${flowData.token}`, order: sanitizeOrderForUser(order) });
+  } catch (err) {
+    console.error('Error reintentando pago:', err);
+    res.status(500).json({ error: 'No se pudo reintentar el pago.' });
+  }
 });
 
 // Consultar orden por código (datos sensibles sanitizados para seguridad)

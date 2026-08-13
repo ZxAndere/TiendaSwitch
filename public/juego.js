@@ -274,6 +274,22 @@ function renderGameDetailView(animatePrice = false) {
     const cardPrim = document.getElementById('jd-card-primaria');
     const radioSec = document.getElementById('jd-radio-secundaria');
     const radioPrim = document.getElementById('jd-radio-primaria');
+    const stockSec = Number.isInteger(game.stockSecundaria) ? game.stockSecundaria : null;
+    const stockPrim = Number.isInteger(game.stockPrimaria) ? game.stockPrimaria : null;
+    [
+      {card: cardSec, radio: radioSec, stock: stockSec, type: 'secundaria'},
+      {card: cardPrim, radio: radioPrim, stock: stockPrim, type: 'primaria'}
+    ].forEach(x => {
+      if (!x.card) return;
+      let badge=x.card.querySelector('.jd-stock-status');
+      if(!badge){ badge=document.createElement('span'); badge.className='jd-stock-status'; badge.style.cssText='display:block;margin-top:.5rem;font-weight:800;font-size:.8rem;'; x.card.appendChild(badge); }
+      const out = x.stock !== null && x.stock <= 0;
+      badge.textContent = out ? '⛔ Fuera de Stock' : (x.stock === null ? '✅ Disponible' : (x.stock <= 3 ? `⚠️ Últimas ${x.stock}` : `✅ ${x.stock} disponibles`));
+      badge.style.color = out ? '#f87171' : (x.stock !== null && x.stock <= 3 ? '#fbbf24' : '#34d399');
+      x.card.style.opacity = out ? '0.55' : '1'; x.card.style.pointerEvents = out ? 'none' : 'auto';
+      if(x.radio) x.radio.disabled = out;
+    });
+    if ((currentSelectedLicense === 'primaria' && stockPrim === 0) || (currentSelectedLicense === 'secundaria' && stockSec === 0)) currentSelectedLicense = null;
 
     if (currentSelectedLicense === 'secundaria') {
       if (cardSec) cardSec.classList.add('active');
@@ -354,6 +370,12 @@ function selectDetailThumbnail(index) {
 }
 
 function selectDetailLicense(type) {
+  if (!currentDetailGame) return;
+  const stock = type === 'primaria' ? currentDetailGame.stockPrimaria : currentDetailGame.stockSecundaria;
+  if (Number.isInteger(stock) && stock <= 0) {
+    if (typeof showToast === 'function') showToast('⚠️ Esta licencia está Fuera de Stock.');
+    return;
+  }
   currentSelectedLicense = type;
 
   const cardSec = document.getElementById('jd-card-secundaria');
@@ -437,6 +459,8 @@ function handleAddDetailToCart() {
     promptSelectLicense();
     return;
   }
+  const selectedStock = currentSelectedLicense === 'primaria' ? currentDetailGame.stockPrimaria : currentDetailGame.stockSecundaria;
+  if (Number.isInteger(selectedStock) && selectedStock <= 0) { if (typeof showToast === 'function') showToast('⚠️ Fuera de Stock.'); return; }
   addGameWithLicenseToCart(currentDetailGame, currentSelectedLicense);
   openCartDrawer();
 }
@@ -678,6 +702,8 @@ function openAdminQuickGameModal() {
 
   const origInp = document.getElementById('admin-qg-precio-original');
   if (origInp) origInp.value = currentDetailGame.precioOriginal || (Number(currentDetailGame.precioSecundaria) * 1.5) || '';
+  const stockSecInp=document.getElementById('admin-qg-stock-secundaria'); if(stockSecInp) stockSecInp.value=currentDetailGame.stockSecundaria ?? '';
+  const stockPrimInp=document.getElementById('admin-qg-stock-primaria'); if(stockPrimInp) stockPrimInp.value=currentDetailGame.stockPrimaria ?? '';
 
   document.getElementById('admin-qg-imagen').value = currentDetailGame.imagen || '';
   document.getElementById('admin-qg-imagen-detalle').value = currentDetailGame.imagenDetalle || '';
@@ -757,6 +783,8 @@ async function handleAdminQuickGameSubmit(e) {
   const precioSecundaria = secInp && secInp.value !== '' ? Number(secInp.value) : currentDetailGame.precioSecundaria;
   const precioPrimaria = primInp && primInp.value !== '' ? Number(primInp.value) : currentDetailGame.precioPrimaria;
   const precioOriginal = origInp && origInp.value !== '' ? Number(origInp.value) : currentDetailGame.precioOriginal;
+  const stockSecundaria = document.getElementById('admin-qg-stock-secundaria')?.value ?? '';
+  const stockPrimaria = document.getElementById('admin-qg-stock-primaria')?.value ?? '';
 
   const imagen = document.getElementById('admin-qg-imagen').value.trim();
   const imagenDetalle = document.getElementById('admin-qg-imagen-detalle').value.trim();
@@ -793,6 +821,8 @@ async function handleAdminQuickGameSubmit(e) {
         precioSecundaria,
         precioPrimaria,
         precioOriginal,
+        stockSecundaria,
+        stockPrimaria,
         imagen,
         imagenDetalle,
         imagenesDetalle,
@@ -818,6 +848,8 @@ async function handleAdminQuickGameSubmit(e) {
       currentDetailGame.precioSecundaria = precioSecundaria;
       currentDetailGame.precioPrimaria = precioPrimaria;
       currentDetailGame.precioOriginal = precioOriginal;
+      currentDetailGame.stockSecundaria = stockSecundaria === '' ? currentDetailGame.stockSecundaria : Number(stockSecundaria);
+      currentDetailGame.stockPrimaria = stockPrimaria === '' ? currentDetailGame.stockPrimaria : Number(stockPrimaria);
       currentDetailGame.imagen = imagen;
       currentDetailGame.imagenDetalle = imagenDetalle;
       currentDetailGame.imagenesDetalle = imagenesDetalle;

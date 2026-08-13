@@ -125,6 +125,7 @@ const DEFAULT_GAMES_FRONTEND = [
 let catalog = [...DEFAULT_GAMES_FRONTEND];
 let cart = JSON.parse(localStorage.getItem('zonaswitch_cart_v4')) || [];
 let currentUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || null;
+let favoriteGameIds = new Set(JSON.parse(localStorage.getItem('zonaswitch_favorites') || '[]').map(Number));
 
 // Interceptor global de fetch para inyectar automáticamente el token JWT y cabeceras Anti-Caché
 const originalFetch = window.fetch;
@@ -490,6 +491,10 @@ function initEventListeners() {
   const loginForm = document.getElementById('login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
+  ensureRecoveryUi();
+  ensureAccountDeleteUi();
+  ensureAdminOrdersUi();
+
   // Settings Forms
   const usernameForm = document.getElementById('tab-username');
   if (usernameForm) usernameForm.addEventListener('submit', handleUsernameChangeSubmit);
@@ -664,6 +669,7 @@ function openUserSettingsModal() {
   const modalCard = backdrop.querySelector('.user-modal-card');
   const adminTabBtn = document.getElementById('admin-tab-btn');
   const isAdmin = currentUser && currentUser.role === 'admin';
+  ensureAdminOrdersUi();
 
   if (adminTabBtn) {
     if (isAdmin) {
@@ -737,7 +743,7 @@ function renderAdminGamesList(gamesList) {
           <div class="admin-game-details">
             <span class="admin-game-title">${escapeHTML(game.titulo)}</span>
             <span class="admin-game-sub">
-              ${escapeHTML(game.categoria)} | Sec: ${formatCLP(game.precioSecundaria)} - Prim: ${formatCLP(game.precioPrimaria)}
+              ${escapeHTML(game.categoria)} | Sec: ${formatCLP(game.precioSecundaria)} - Prim: ${formatCLP(game.precioPrimaria)} | Stock S: ${game.stockSecundaria == null ? '∞' : game.stockSecundaria} / P: ${game.stockPrimaria == null ? '∞' : game.stockPrimaria}
             </span>
           </div>
         </div>
@@ -755,6 +761,8 @@ function renderAdminGamesList(gamesList) {
     `;
   }).join('');
 }
+
+async function deactivateGame(gameId){ if(!verifyAdminSecurity())return; if(!confirm('¿Desactivar este juego de la tienda?'))return; const r=await apiFetch('/api/admin/juegos/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameId})});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo desactivar.');adminCatalog=d.juegos||adminCatalog;renderAdminGamesList(adminCatalog);await fetchCatalog();showToast('Juego desactivado.');}
 
 async function toggleGameVisibility(gameId, isVisible) {
   if (!currentUser) return;
@@ -788,6 +796,8 @@ function openGameEditModal(gameId) {
   document.getElementById('edit-game-categoria').value = game.categoria || '';
   document.getElementById('edit-game-secundaria').value = game.precioSecundaria || '';
   document.getElementById('edit-game-primaria').value = game.precioPrimaria || '';
+  if (document.getElementById('edit-game-stock-primaria')) document.getElementById('edit-game-stock-primaria').value = game.stockPrimaria ?? '';
+  if (document.getElementById('edit-game-stock-secundaria')) document.getElementById('edit-game-stock-secundaria').value = game.stockSecundaria ?? '';
   document.getElementById('edit-game-imagen').value = game.imagen || '';
   const imgDet = document.getElementById('edit-game-imagen-detalle');
   if (imgDet) imgDet.value = game.imagenDetalle || game.imagen || '';
@@ -849,7 +859,9 @@ async function handleGameCreateSubmit(e) {
     correoTexto: get('create-game-correo-texto')?.value.trim() || '',
     correoImagen: get('create-game-correo-imagen')?.value.trim() || '',
     cuentas: get('create-game-cuentas')?.value || '',
-    visible: !!get('create-game-visible')?.checked
+    visible: !!get('create-game-visible')?.checked,
+    stockPrimaria: get('create-game-stock-primaria')?.value ?? '',
+    stockSecundaria: get('create-game-stock-secundaria')?.value ?? ''
   };
 
   if (!payload.titulo || !payload.categoria || payload.precioSecundaria === '' || payload.precioPrimaria === '' || !payload.imagen || !payload.imagenDetalle || !payload.descripcion) {
@@ -957,7 +969,9 @@ async function handleGameEditSubmit(e) {
         descripcion,
         correoTexto,
         correoImagen,
-        cuentas: cuentasArray
+        cuentas: cuentasArray,
+        stockPrimaria: document.getElementById('edit-game-stock-primaria')?.value ?? '',
+        stockSecundaria: document.getElementById('edit-game-stock-secundaria')?.value ?? ''
       })
     });
 
@@ -995,51 +1009,57 @@ function closeMobileDrawer() {
 async function fetchAndRenderUserOrders() {
   const container = document.getElementById('user-orders-container');
   if (!currentUser) return;
-
-  container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Cargando tus órdenes...</p>';
-
+  container.innerHTML = '<p style=\"text-align:center;color:var(--text-muted)\">Cargando tus órdenes...</p>';
   try {
     const res = await apiFetch('/api/user/orders');
     const orders = await res.json();
-
-    if (!Array.isArray(orders) || orders.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📦</div>
-          <p>Aún no has realizado ninguna compra en la tienda.</p>
-        </div>
-      `;
+    if (!res.ok) throw new Error(orders.error || 'Error');
+    if (!Array.isArray(orders) || !orders.length) {
+      container.innerHTML = '<div style=\"text-align:center;padding:2rem;color:var(--text-muted)\"><div style=\"font-size:2.5rem\">📦</div><p>Aún no has realizado ninguna compra.</p></div>';
       return;
     }
-
     container.innerHTML = orders.map(order => {
-      const isPaid = order.estado === 'pagada';
-      const itemsHtml = Array.isArray(order.carrito)
-        ? order.carrito.map(i => `<div class="oh-item"><span>• ${escapeHTML(i.titulo)} (${i.licencia})</span><strong>${formatCLP(i.precio * i.cantidad)}</strong></div>`).join('')
-        : '';
-
-      return `
-        <div class="order-history-card">
-          <div class="oh-header">
-            <div>
-              <span class="oh-code">${escapeHTML(order.codigoOrden)}</span>
-              <div class="oh-date">${escapeHTML(order.fecha)}</div>
-            </div>
-            <span class="oh-badge ${isPaid ? 'pagada' : 'pendiente'}">${isPaid ? '🟢 Pagada' : '🟡 Pendiente'}</span>
-          </div>
-          <div class="oh-body">
-            ${itemsHtml}
-          </div>
-          <div class="oh-footer">
-            <span>Total Cancelado (${order.metodoPago === 'mercadopago' ? 'Mercado Pago' : 'Flow'}):</span>
-            <span class="highlight-green">${order.totalFormatted || formatCLP(order.total)}</span>
-          </div>
+      const paid = order.estado === 'pagada';
+      const retryable = ['pendiente','rechazada','cancelada'].includes(order.estado);
+      return `<div class=\"order-history-card\">
+        <div class=\"oh-header\"><div><span class=\"oh-code\">${escapeHTML(order.codigoOrden)}</span><div class=\"oh-date\">${escapeHTML(order.fecha || '')}</div></div><span class=\"oh-badge ${paid?'pagada':'pendiente'}\">${paid?'🟢 Pagada':'🟡 '+escapeHTML(order.estado||'Pendiente')}</span></div>
+        <div class=\"oh-body\">${Array.isArray(order.carrito)?order.carrito.map(i=>`<div class=\"oh-item\"><span>• ${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}</span><strong>${formatCLP((Number(i.precio)||0)*(Number(i.cantidad)||1))}</strong></div>`).join(''):''}</div>
+        <div class=\"oh-footer\"><span>Total:</span><span class=\"highlight-green\">${escapeHTML(order.totalFormatted || formatCLP(order.total))}</span></div>
+        <div style=\"display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.75rem\">
+          <button type=\"button\" class=\"tab-btn\" onclick=\"showUserOrderDetail('${escapeHTML(order.codigoOrden)}')\">🔎 Ver detalle</button>
+          ${retryable?`<button type=\"button\" class=\"tab-btn\" onclick=\"retryOrderPayment('${escapeHTML(order.codigoOrden)}')\">🔄 Reintentar pago</button>`:''}
         </div>
-      `;
+      </div>`;
     }).join('');
   } catch (err) {
-    container.innerHTML = '<p style="text-align: center; color: #ff4d6d;">No se pudieron cargar tus órdenes.</p>';
+    container.innerHTML = '<p style=\"text-align:center;color:#ff4d6d\">No se pudieron cargar tus órdenes.</p>';
   }
+}
+
+async function showUserOrderDetail(code) {
+  try {
+    const res = await apiFetch(`/api/user/orders/${encodeURIComponent(code)}`);
+    const data = await res.json();
+    if (!res.ok) return showToast(data.error || 'No se pudo cargar la orden.');
+    const history = Array.isArray(data.history) ? data.history.map(h=>`<li><strong>${escapeHTML(h.type)}</strong> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join('') : '';
+    const items = Array.isArray(data.carrito) ? data.carrito.map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}</li>`).join('') : '';
+    showSimpleModal(`📦 Orden ${escapeHTML(data.codigoOrden)}`, `<p><strong>Estado:</strong> ${escapeHTML(data.estado)}</p><p><strong>Entrega:</strong> ${escapeHTML(data.deliveryStatus||'')}</p><p><strong>Total:</strong> ${escapeHTML(data.totalFormatted||formatCLP(data.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${history || '<li>Sin eventos</li>'}</ul>`);
+  } catch (e) { showToast('No se pudo cargar el detalle.'); }
+}
+
+async function retryOrderPayment(code) {
+  try {
+    const res = await apiFetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`, { method:'POST' });
+    const data = await res.json();
+    if (!res.ok || !data.exito) return showToast(data.error || 'No se pudo reintentar el pago.');
+    if (data.redirectUrl) window.location.href = data.redirectUrl;
+  } catch (e) { showToast('Error de conexión.'); }
+}
+
+function showSimpleModal(title, html) {
+  let backdrop=document.getElementById('simple-info-modal');
+  if(!backdrop){ backdrop=document.createElement('div'); backdrop.id='simple-info-modal'; backdrop.className='modal-backdrop active'; document.body.appendChild(backdrop); }
+  backdrop.innerHTML=`<div class=\"user-modal-card wide\"><button class=\"modal-close-x\" onclick=\"document.getElementById('simple-info-modal').remove()\">&times;</button><div class=\"user-modal-header\"><h3>${title}</h3></div><div style=\"padding:1rem;max-height:65vh;overflow:auto\">${html}</div></div>`;
 }
 
 async function handleUsernameChangeSubmit(e) {
@@ -1244,7 +1264,12 @@ function initUserSession() {
   renderGlobalAdminGear();
 }
 
-function handleLogout() {
+async function handleLogout() {
+  try {
+    if (localStorage.getItem('userToken')) {
+      await originalFetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('userToken')}` } });
+    }
+  } catch (e) {}
   currentUser = null;
   localStorage.removeItem('zonaswitch_user');
   localStorage.removeItem('userToken');
@@ -1252,6 +1277,51 @@ function handleLogout() {
   showToast('Has cerrado sesión correctamente.');
 }
 
+function toggleFavoriteGame(gameId, event) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  const id = Number(gameId);
+  if (favoriteGameIds.has(id)) favoriteGameIds.delete(id); else favoriteGameIds.add(id);
+  localStorage.setItem('zonaswitch_favorites', JSON.stringify([...favoriteGameIds]));
+  renderCatalog();
+  showToast(favoriteGameIds.has(id) ? '❤️ Agregado a favoritos' : '🤍 Eliminado de favoritos');
+}
+
+function isGameInFavorites(gameId) { return favoriteGameIds.has(Number(gameId)); }
+
+
+
+function ensureRecoveryUi() {
+  const loginForm=document.getElementById('login-form'); if(!loginForm || document.getElementById('forgot-password-link')) return;
+  const link=document.createElement('button'); link.type='button'; link.id='forgot-password-link'; link.textContent='¿Olvidaste tu contraseña?'; link.style.cssText='display:block;margin:.6rem auto 0;background:none;border:0;color:var(--joycon-cyan,#00f0ff);cursor:pointer;font-weight:700;';
+  loginForm.appendChild(link); link.addEventListener('click', openRecoveryModal);
+}
+function openRecoveryModal() {
+  let m=document.getElementById('recovery-modal'); if(!m){ m=document.createElement('div'); m.id='recovery-modal'; m.className='modal-backdrop active'; document.body.appendChild(m); }
+  m.innerHTML=`<div class=\"auth-modal-card\"><button class=\"modal-close-x\" onclick=\"document.getElementById('recovery-modal').remove()\">&times;</button><div class=\"auth-modal-header\"><h3>🔐 Recuperar contraseña</h3><p>Te enviaremos un código de 6 dígitos.</p></div><form id=\"recovery-form\" class=\"auth-form\"><div class=\"form-group\"><label>Correo</label><input id=\"recovery-email\" type=\"email\" required></div><div class=\"auth-error-msg\" id=\"recovery-error\"></div><button class=\"auth-submit-btn\" type=\"submit\">Enviar código</button></form></div>`;
+  document.getElementById('recovery-form').onsubmit=async e=>{e.preventDefault(); const email=document.getElementById('recovery-email').value.trim(); const err=document.getElementById('recovery-error'); const r=await originalFetch('/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); const d=await r.json(); if(!r.ok){err.textContent=d.error||'No se pudo enviar.';return;} document.getElementById('recovery-modal').remove(); openResetPasswordModal(email);};
+}
+function openResetPasswordModal(email) {
+  const m=document.createElement('div'); m.id='reset-modal'; m.className='modal-backdrop active'; document.body.appendChild(m);
+  m.innerHTML=`<div class=\"auth-modal-card\"><button class=\"modal-close-x\" onclick=\"document.getElementById('reset-modal').remove()\">&times;</button><div class=\"auth-modal-header\"><h3>🔑 Restablecer contraseña</h3><p>Ingresa el código recibido y una nueva contraseña.</p></div><form id=\"reset-form\" class=\"auth-form\"><div class=\"form-group\"><label>Código</label><input id=\"reset-code\" maxlength=\"6\" required></div><div class=\"form-group\"><label>Nueva contraseña</label><input id=\"reset-password\" type=\"password\" minlength=\"6\" required></div><div class=\"auth-error-msg\" id=\"reset-error\"></div><button class=\"auth-submit-btn\">Cambiar contraseña</button></form></div>`;
+  document.getElementById('reset-form').onsubmit=async e=>{e.preventDefault(); const code=document.getElementById('reset-code').value.trim(); const newPassword=document.getElementById('reset-password').value; const r=await originalFetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})}); const d=await r.json(); if(!r.ok){document.getElementById('reset-error').textContent=d.error||'No se pudo restablecer.';return;} m.remove(); openLoginModal(); showToast('Contraseña restablecida correctamente.');};
+}
+function ensureAccountDeleteUi(){
+  const form=document.getElementById('tab-password'); if(!form || document.getElementById('delete-account-zone')) return;
+  const box=document.createElement('div'); box.id='delete-account-zone'; box.style.cssText='margin-top:1.5rem;padding:1rem;border:1px solid rgba(239,68,68,.35);border-radius:12px;background:rgba(239,68,68,.06)'; box.innerHTML=`<strong style=\"color:#f87171\">Eliminar mi cuenta</strong><p style=\"color:#94a3b8;font-size:.85rem\">Esta acción es permanente.</p><button type=\"button\" class=\"auth-submit-btn\" style=\"background:#7f1d1d\" onclick=\"deleteMyAccount()\">Eliminar cuenta</button>`; form.parentElement.appendChild(box);
+}
+async function deleteMyAccount(){ if(!confirm('¿Seguro que quieres eliminar tu cuenta?')) return; const password=prompt('Escribe tu contraseña actual para confirmar:'); if(!password) return; try{const r=await apiFetch('/api/user/account',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:password})}); const d=await r.json(); if(!r.ok){showToast(d.error||'No se pudo eliminar la cuenta.');return;} localStorage.removeItem('userToken');localStorage.removeItem('zonaswitch_user');currentUser=null;initUserSession();closeUserSettingsModal();showToast('Cuenta eliminada correctamente.');}catch(e){showToast('Error de conexión.');}}
+function ensureAdminOrdersUi(){
+  if(!verifyAdminSecurity()) return;
+  const tabs=document.querySelector('.admin-subtabs'); const games=document.getElementById('admin-view-games'); if(!tabs||!games||document.getElementById('btn-subtab-orders')) return;
+  const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-orders'; b.textContent='📦 Pedidos'; b.onclick=()=>switchAdminSubtab('orders'); tabs.appendChild(b);
+  const view=document.createElement('div'); view.id='admin-view-orders'; view.style.display='none'; view.innerHTML=`<div style=\"display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem\"><input id=\"admin-order-search\" class=\"admin-search-input\" placeholder=\"🔎 Código, email o usuario\" style=\"flex:1\"><select id=\"admin-order-status\" style=\"min-width:160px;background:var(--bg-dark);color:#fff;border:1px solid var(--border-subtle);padding:.6rem;border-radius:8px\"><option value=\"\">Todos los estados</option><option>pendiente</option><option>pagada</option><option>rechazada</option><option>cancelada</option><option>reembolsada</option></select><button type=\"button\" class=\"auth-submit-btn\" style=\"width:auto\" onclick=\"fetchAdminOrders()\">Actualizar</button></div><div id=\"admin-orders-container\" class=\"admin-games-container\"></div>`; games.parentElement.insertBefore(view, games.nextSibling); document.getElementById('admin-order-search').addEventListener('input', fetchAdminOrders); document.getElementById('admin-order-status').addEventListener('change', fetchAdminOrders);
+}
+async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await apiFetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\">🔎</button><button type=\"button\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\">📩</button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}')\">💳</button>`:''}<button type=\"button\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\">✖️</button><button type=\"button\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\">↩️</button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
+async function showAdminOrderDetail(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`📦 ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
+async function resendAdminDelivery(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/resend-delivery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();showToast(r.ok?'📩 Entrega reenviada.':(d.error||'No se pudo reenviar.')); if(r.ok)fetchAdminOrders(); }
+async function retryAdminPayment(code){ const r=await apiFetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`,{method:'POST'});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo reintentar.');if(d.redirectUrl)window.location.href=d.redirectUrl; }
+async function cancelAdminOrder(code){ const reason=prompt('Motivo de la cancelación:','Cancelada por administración');if(reason===null)return;const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/cancel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'✖️ Orden cancelada.':(d.error||'No se pudo cancelar.'));if(r.ok)fetchAdminOrders();}
+async function refundAdminOrder(code){ const reason=prompt('Motivo del reembolso/cancelación:','Gestionado por administración');if(reason===null)return;const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/refund`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'↩️ Reembolso registrado.':(d.error||'No se pudo registrar.'));if(r.ok)fetchAdminOrders(); }
 function validateRegisterPasswordForm() {
   const pwd = document.getElementById('register-password').value;
   const email = document.getElementById('register-email').value.trim();
@@ -1519,6 +1589,7 @@ function renderCatalog(animatePrices = false) {
         <img src="${escapeHTML(game.imagen || '')}" alt="${escapeHTML(game.titulo || '')}" loading="lazy">
         <span class="card-tag">${escapeHTML(game.categoria || 'Nintendo')}</span>
         <span class="card-size-tag">📦 ${escapeHTML(game.peso || 'N/A')}</span>
+        <button type="button" class="favorite-game-btn" onclick="toggleFavoriteGame(${game.id}, event)" title="${isGameInFavorites(game.id) ? 'Quitar de favoritos' : 'Agregar a favoritos'}" style="position:absolute;right:.7rem;top:.7rem;z-index:4;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:999px;width:36px;height:36px;cursor:pointer;font-size:1.1rem;">${isGameInFavorites(game.id) ? '❤️' : '🤍'}</button>
         ${isAdmin ? `<button type="button" class="card-admin-gear" onclick="event.preventDefault(); event.stopPropagation(); openGameEditModal(${game.id});" title="Editar juego en tiempo real (Admin ⚙️)">⚙️</button>` : ''}
       </div>
       <div class="card-content">
@@ -1526,6 +1597,8 @@ function renderCatalog(animatePrices = false) {
         <p class="card-desc">${escapeHTML(game.descripcion || '')}</p>
         <div class="card-license-hint">
           🎮 Secundaria: ${formatCLP(game.precioSecundaria)} | Primaria: ${formatCLP(game.precioPrimaria)}
+          <br><span style="font-size:.78rem;color:${Number.isInteger(game.stockSecundaria)&&game.stockSecundaria<=0?'#f87171':'#34d399'}">${Number.isInteger(game.stockSecundaria)?(game.stockSecundaria<=0?'⛔ Secundaria: Fuera de Stock':`✅ Secundaria: ${game.stockSecundaria}`):'✅ Secundaria: Disponible'}</span>
+          <span style="font-size:.78rem;margin-left:.5rem;color:${Number.isInteger(game.stockPrimaria)&&game.stockPrimaria<=0?'#f87171':'#34d399'}">${Number.isInteger(game.stockPrimaria)?(game.stockPrimaria<=0?'⛔ Primaria: Fuera de Stock':`✅ Primaria: ${game.stockPrimaria}`):'✅ Primaria: Disponible'}</span>
         </div>
         <div class="card-footer">
           <div class="price-container">
@@ -2469,6 +2542,7 @@ function switchAdminSubtab(subtab) {
   const viewGames = document.getElementById('admin-view-games');
   const viewCoupons = document.getElementById('admin-view-coupons');
   const viewGallery = document.getElementById('admin-view-gallery');
+  const viewOrders = document.getElementById('admin-view-orders');
 
   if (btnGames) btnGames.classList.remove('active');
   if (btnCoupons) btnCoupons.classList.remove('active');
@@ -2476,6 +2550,7 @@ function switchAdminSubtab(subtab) {
   if (viewGames) viewGames.style.display = 'none';
   if (viewCoupons) viewCoupons.style.display = 'none';
   if (viewGallery) viewGallery.style.display = 'none';
+  if (viewOrders) viewOrders.style.display = 'none';
 
   if (subtab === 'games') {
     if (btnGames) btnGames.classList.add('active');
@@ -2484,6 +2559,8 @@ function switchAdminSubtab(subtab) {
     if (btnCoupons) btnCoupons.classList.add('active');
     if (viewCoupons) viewCoupons.style.display = 'block';
     fetchAndRenderAdminCoupons();
+  } else if (subtab === 'orders') {
+    const btnOrders=document.getElementById('btn-subtab-orders'); if(btnOrders) btnOrders.classList.add('active'); if(viewOrders) viewOrders.style.display='block'; fetchAdminOrders();
   } else if (subtab === 'gallery') {
     if (btnGallery) btnGallery.classList.add('active');
     if (viewGallery) viewGallery.style.display = 'block';
