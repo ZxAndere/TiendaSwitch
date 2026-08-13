@@ -1581,22 +1581,27 @@ html.light-mode {
   display: none;
 }
 
-/* Escritorio: fila de lista en 3 zonas — miniatura, contenido y la unidad
-   precio+botón anclada a la derecha (fila estilo Apple, nada estirado) */
+/* Escritorio: el contenido se divide en 2 zonas — columna de info
+   (título + licencias apiladas) y columna derecha con precio + botón
+   (la tarjeta en sí sigue siendo fila: miniatura | contenido).
+   El footer vive DENTRO de .card-content, así que la cuadrícula de 2
+   zonas se aplica aquí, no en la tarjeta. */
 @media (min-width: 769px) {
-  .mode-list .game-card {
+  .mode-list .card-content {
     display: grid;
-    grid-template-columns: 140px minmax(0, 1fr) auto;
-    grid-template-areas: "media content footer";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    grid-template-areas: "title footer" "hint footer";
+    column-gap: 1.5rem;
     align-items: center;
   }
 
-  .mode-list .card-media {
-    grid-area: media;
+  .mode-list .card-title {
+    grid-area: title;
   }
 
-  .mode-list .card-content {
-    grid-area: content;
+  .mode-list .card-license-hint {
+    grid-area: hint;
   }
 
   .mode-list .card-footer {
