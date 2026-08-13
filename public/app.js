@@ -1859,82 +1859,47 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
 }
 
-// --- VISTA DEL CATÁLOGO: DENSIDAD DEL MOSAICO (0-4) Y MODO LISTA (persistente) ---
+// --- VISTA DEL CATÁLOGO: DENSIDAD DEL MOSAICO (persistente) ---
 const GRID_VIEW_STORAGE_KEY = 'zonaswitch_gridview';
 let gridViewDensity = 2;
-let gridViewList = false;
 
 function loadGridViewPref() {
   try {
     const raw = localStorage.getItem(GRID_VIEW_STORAGE_KEY);
     if (!raw) return;
     const pref = JSON.parse(raw);
-    // Migración: rango nuevo 1-4 (la antigua densidad 0 se sube a 1)
+    // Solo densidad (1-4). Un eventual `list` guardado se ignora: el
+    // catálogo es siempre mosaico.
     if (Number.isInteger(pref.density)) gridViewDensity = Math.min(4, Math.max(1, pref.density));
-    if (typeof pref.list === 'boolean') gridViewList = pref.list;
   } catch (e) {}
 }
 
 function saveGridViewPref() {
   try {
-    localStorage.setItem(GRID_VIEW_STORAGE_KEY, JSON.stringify({ density: gridViewDensity, list: gridViewList }));
+    localStorage.setItem(GRID_VIEW_STORAGE_KEY, JSON.stringify({ density: gridViewDensity }));
   } catch (e) {}
 }
 
 function applyGridViewClasses() {
   const grid = document.getElementById('games-grid');
   if (!grid) return;
-  grid.classList.remove('density-1', 'density-2', 'density-3', 'density-4', 'mode-list');
+  grid.classList.remove('density-1', 'density-2', 'density-3', 'density-4');
   grid.classList.add('density-' + gridViewDensity);
-  grid.classList.toggle('mode-list', gridViewList);
 }
 
 function initGridViewControls() {
   const slider = document.getElementById('grid-density-slider');
-  const viewToggle = document.getElementById('grid-view-toggle');
-  if (!slider && !viewToggle) return;
+  if (!slider) return;
 
   loadGridViewPref();
   applyGridViewClasses();
 
-  if (slider) {
-    slider.value = String(gridViewDensity);
-    slider.disabled = gridViewList;
-    slider.addEventListener('input', () => {
-      gridViewDensity = Number(slider.value);
-      applyGridViewClasses();
-    });
-    slider.addEventListener('change', saveGridViewPref);
-  }
-
-  if (viewToggle) {
-    const btnGrid = viewToggle.querySelector('[data-view="grid"]');
-    const btnList = viewToggle.querySelector('[data-view="list"]');
-    const syncToggle = () => {
-      if (btnGrid) {
-        btnGrid.classList.toggle('active', !gridViewList);
-        btnGrid.setAttribute('aria-pressed', String(!gridViewList));
-      }
-      if (btnList) {
-        btnList.classList.toggle('active', gridViewList);
-        btnList.setAttribute('aria-pressed', String(gridViewList));
-      }
-      if (slider) slider.disabled = gridViewList;
-    };
-    if (btnGrid) btnGrid.addEventListener('click', () => {
-      gridViewList = false;
-      applyGridViewClasses();
-      saveGridViewPref();
-      syncToggle();
-    });
-    if (btnList) btnList.addEventListener('click', () => {
-      gridViewList = true;
-      applyGridViewClasses();
-      saveGridViewPref();
-      syncToggle();
-    });
-    syncToggle();
-  }
+  slider.value = String(gridViewDensity);
+  slider.addEventListener('input', () => {
+    gridViewDensity = Number(slider.value);
+    applyGridViewClasses();
+  });
+  slider.addEventListener('change', saveGridViewPref);
 }
 
 // --- SISTEMA DE FILTROS DEL CATÁLOGO (PRECIO, ORDEN, LICENCIA) ---
