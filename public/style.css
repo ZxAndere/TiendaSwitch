@@ -4053,6 +4053,12 @@ body {
   flex-direction: column;
 }
 
+/* Los hijos flex de body no deben ensancharse más allá del viewport
+   (los flex items no se encogen por debajo de su min-width por defecto) */
+body > * {
+  max-width: 100%;
+}
+
 .faq-hero {
   text-align: center;
   padding: 4rem 1.5rem 2.5rem 1.5rem;
