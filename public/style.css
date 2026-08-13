@@ -1020,6 +1020,13 @@ html.light-mode {
   padding: 0 1.5rem;
 }
 
+/* El catálogo (filtros + grid) siempre ocupa el ancho completo del viewport:
+   en modo lista el contenido es estrecho y sin width explícito el contenedor
+   (flex item de body, alineado por contenido) se encogía al ancho del contenido */
+#catalog-section {
+  width: 100%;
+}
+
 .section-header {
   display: flex;
   flex-direction: column;
