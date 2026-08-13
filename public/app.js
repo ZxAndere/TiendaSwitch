@@ -1306,8 +1306,13 @@ function openResetPasswordModal(email) {
   document.getElementById('reset-form').onsubmit=async e=>{e.preventDefault(); const code=document.getElementById('reset-code').value.trim(); const newPassword=document.getElementById('reset-password').value; const r=await originalFetch('/api/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code,newPassword})}); const d=await r.json(); if(!r.ok){document.getElementById('reset-error').textContent=d.error||'No se pudo restablecer.';return;} m.remove(); openLoginModal(); showToast('Contraseña restablecida correctamente.');};
 }
 function ensureAccountDeleteUi(){
-  const form=document.getElementById('tab-password'); if(!form || document.getElementById('delete-account-zone')) return;
-  const box=document.createElement('div'); box.id='delete-account-zone'; box.style.cssText='margin-top:1.5rem;padding:1rem;border:1px solid rgba(239,68,68,.35);border-radius:12px;background:rgba(239,68,68,.06)'; box.innerHTML=`<strong style=\"color:#f87171\">Eliminar mi cuenta</strong><p style=\"color:#94a3b8;font-size:.85rem\">Esta acción es permanente.</p><button type=\"button\" class=\"auth-submit-btn\" style=\"background:#7f1d1d\" onclick=\"deleteMyAccount()\">Eliminar cuenta</button>`; form.parentElement.appendChild(box);
+  const form=document.getElementById('tab-password');
+  if(!form || document.getElementById('delete-account-zone')) return;
+  const box=document.createElement('div');
+  box.id='delete-account-zone';
+  box.className='delete-account-zone';
+  box.innerHTML=`<div class=\"delete-account-title\">Eliminar mi cuenta</div><p>Esta acción es permanente.</p><button type=\"button\" class=\"delete-account-btn\" onclick=\"deleteMyAccount()\">Eliminar cuenta</button>`;
+  form.appendChild(box);
 }
 async function deleteMyAccount(){ if(!confirm('¿Seguro que quieres eliminar tu cuenta?')) return; const password=prompt('Escribe tu contraseña actual para confirmar:'); if(!password) return; try{const r=await apiFetch('/api/user/account',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:password})}); const d=await r.json(); if(!r.ok){showToast(d.error||'No se pudo eliminar la cuenta.');return;} localStorage.removeItem('userToken');localStorage.removeItem('zonaswitch_user');currentUser=null;initUserSession();closeUserSettingsModal();showToast('Cuenta eliminada correctamente.');}catch(e){showToast('Error de conexión.');}}
 function ensureAdminOrdersUi(){
@@ -1596,9 +1601,16 @@ function renderCatalog(animatePrices = false) {
         <h3 class="card-title">${escapeHTML(game.titulo || '')}</h3>
         <p class="card-desc">${escapeHTML(game.descripcion || '')}</p>
         <div class="card-license-hint">
-          🎮 Secundaria: ${formatCLP(game.precioSecundaria)} | Primaria: ${formatCLP(game.precioPrimaria)}
-          <br><span style="font-size:.78rem;color:${Number.isInteger(game.stockSecundaria)&&game.stockSecundaria<=0?'#f87171':'#34d399'}">${Number.isInteger(game.stockSecundaria)?(game.stockSecundaria<=0?'⛔ Secundaria: Fuera de Stock':`✅ Secundaria: ${game.stockSecundaria}`):'✅ Secundaria: Disponible'}</span>
-          <span style="font-size:.78rem;margin-left:.5rem;color:${Number.isInteger(game.stockPrimaria)&&game.stockPrimaria<=0?'#f87171':'#34d399'}">${Number.isInteger(game.stockPrimaria)?(game.stockPrimaria<=0?'⛔ Primaria: Fuera de Stock':`✅ Primaria: ${game.stockPrimaria}`):'✅ Primaria: Disponible'}</span>
+          <div class="card-license-option ${Number.isInteger(game.stockSecundaria) && game.stockSecundaria <= 0 ? 'out-of-stock' : 'in-stock'}">
+            <span class="license-name">🎮 Secundaria</span>
+            <span class="license-price">${formatCLP(game.precioSecundaria)}</span>
+            <span class="license-stock">${Number.isInteger(game.stockSecundaria) ? (game.stockSecundaria <= 0 ? '⛔ Fuera de Stock' : `✅ ${game.stockSecundaria} disponibles`) : '✅ Disponible'}</span>
+          </div>
+          <div class="card-license-option ${Number.isInteger(game.stockPrimaria) && game.stockPrimaria <= 0 ? 'out-of-stock' : 'in-stock'}">
+            <span class="license-name">🎮 Primaria</span>
+            <span class="license-price">${formatCLP(game.precioPrimaria)}</span>
+            <span class="license-stock">${Number.isInteger(game.stockPrimaria) ? (game.stockPrimaria <= 0 ? '⛔ Fuera de Stock' : `✅ ${game.stockPrimaria} disponibles`) : '✅ Disponible'}</span>
+          </div>
         </div>
         <div class="card-footer">
           <div class="price-container">
