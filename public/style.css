@@ -884,13 +884,14 @@ html.light-mode {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradient-shift 4s ease-in-out infinite alternate;
+  animation: gradient-shift 4s linear infinite;
 }
 
-/* Barrido suave del degradado (solo background-position, sin reflow) */
+/* Barrido continuo del degradado: recorre un período completo (0%→200% de un
+   fondo al 200% de ancho) y vuelve al inicio sin salto visible */
 @keyframes gradient-shift {
   from { background-position: 0% 50%; }
-  to { background-position: 100% 50%; }
+  to { background-position: 200% 50%; }
 }
 
 /* ==========================================================================
