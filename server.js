@@ -49,7 +49,22 @@ OPTIONAL_ENV_VARS.forEach(v => {
 
 // Configurar cabeceras seguras (Helmet) y Sanitizar MongoDB con replaceWith (Problema 6 y 7)
 app.use(helmet({
-  contentSecurityPolicy: false // Deshabilitado para no romper recursos externos de imágenes/estilos
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // 'unsafe-inline' requerido por los onclick= inline de la app; bloquea scripts externos
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
+      objectSrc: ["'none'"],
+      formAction: ["'self'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  }
 }));
 app.use(mongoSanitize({ replaceWith: '_' }));
 
@@ -293,6 +308,67 @@ function safeReadJsonSync(filePath, fallback = []) {
     console.error(`❌ Error parseando JSON en ${filePath}:`, err.message);
     return fallback;
   }
+}
+
+// ============================================================
+// Helpers de seguridad (audit 2026)
+// ============================================================
+
+// --- Campo público de juegos: NUNCA exponer stock de cuentas ni contadores internos ---
+const PUBLIC_GAME_STRIPPED_FIELDS = [
+  'cuentas',               // credenciales reales (cuenta / password / OTP)
+  'siguienteVarianteIndex', // puntero round-robin interno
+  'soldPrimaria',
+  'soldSecundaria',
+  'stockPrimaria',
+  'stockSecundaria',
+  'deletedAt'
+];
+
+function sanitizeGameForPublic(game) {
+  if (!game || typeof game !== 'object') return game;
+  const g = { ...game };
+  PUBLIC_GAME_STRIPPED_FIELDS.forEach(f => delete g[f]);
+  return g;
+}
+
+// --- Comparación de OTP en tiempo constante (anti timing attack) ---
+function verifyOtpCode(storedCode, providedCode) {
+  if (typeof storedCode !== 'string' || typeof providedCode !== 'string') return false;
+  const a = Buffer.from(storedCode, 'utf8');
+  const b = Buffer.from(providedCode, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+// --- Escape para contenido HTML (emails y respuestas) ---
+function escapeHtmlEmail(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// --- Validación de URLs de imágenes/videos: solo http(s), sin comillas ni espacios ---
+function isSafeHttpUrl(url) {
+  return isString(url) && /^https?:\/\/[^\s"'<>]+$/i.test(url.trim());
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// --- Bloqueo de fuerza bruta por identidad de login (5 fallos → 15 min) ---
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+const loginAttempts = new Map();
+
+function recordLoginFailure(key) {
+  const cur = loginAttempts.get(key) || { count: 0, lockedUntil: 0 };
+  cur.count += 1;
+  cur.lockedUntil = cur.count >= 5 ? Date.now() + LOGIN_LOCKOUT_MS : cur.lockedUntil;
+  loginAttempts.set(key, cur);
+}
+
+function loginLockedUntil(key) {
+  const cur = loginAttempts.get(key);
+  return cur && cur.lockedUntil && Date.now() < cur.lockedUntil ? cur.lockedUntil : 0;
 }
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -1220,18 +1296,18 @@ async function sendOrderConfirmationEmail(order) {
     ? order.carrito.map(item => {
         let content = `
           <div style="background-color: #0f1624; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; margin-bottom: 16px; color: #f8fafc;">
-            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">🎮 ${item.titulo} (${item.licencia})</div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">🎮 ${escapeHtmlEmail(item.titulo)} (${escapeHtmlEmail(item.licencia)})</div>
         `;
         if (item.correoTexto) {
-          content += `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0 12px 0; line-height: 1.5;">${item.correoTexto}</p>`;
+          content += `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0 12px 0; line-height: 1.5;">${escapeHtmlEmail(item.correoTexto)}</p>`;
         }
         content += `
             <div style="background-color: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.3); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; color: #00f0ff; word-break: break-all; margin-top: 8px;">
-              🔑 ${item.varianteAsignada || 'Asignación de cuenta en proceso'}
+              🔑 ${escapeHtmlEmail(item.varianteAsignada || 'Asignación de cuenta en proceso')}
             </div>
         `;
-        if (item.correoImagen) {
-          content += `<img src="${item.correoImagen}" alt="Banner del juego" style="width: 100%; max-width: 440px; height: auto; border-radius: 6px; margin-top: 12px; display: block;">`;
+        if (item.correoImagen && isSafeHttpUrl(item.correoImagen)) {
+          content += `<img src="${escapeHtmlEmail(item.correoImagen)}" alt="Banner del juego" style="width: 100%; max-width: 440px; height: auto; border-radius: 6px; margin-top: 12px; display: block;">`;
         }
         content += `</div>`;
         return content;
@@ -1241,7 +1317,7 @@ async function sendOrderConfirmationEmail(order) {
   console.log(`✉️ Intentando enviar correo de confirmación de orden ${order.codigoOrden} a ${order.email}...`);
 
   const clienteName = (order.cliente && typeof order.cliente === 'string')
-    ? order.cliente.split(' ')[0]
+    ? escapeHtmlEmail(order.cliente.split(' ')[0])
     : 'Cliente';
 
   const htmlContent = `
@@ -1260,7 +1336,7 @@ async function sendOrderConfirmationEmail(order) {
 
         <div style="background-color: #0f1624; border-left: 4px solid #ff003c; padding: 12px 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
           <div style="font-size: 13px; color: #94a3b8;">Código de Orden:</div>
-          <div style="font-size: 18px; font-weight: 800; color: #ffffff; font-family: monospace; letter-spacing: 0.5px;">${order.codigoOrden}</div>
+          <div style="font-size: 18px; font-weight: 800; color: #ffffff; font-family: monospace; letter-spacing: 0.5px;">${escapeHtmlEmail(order.codigoOrden)}</div>
         </div>
 
         ${itemsHtml}
@@ -1396,6 +1472,9 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
   if (!email.includes('@')) {
     return res.status(400).json({ error: "Por favor ingresa un correo electrónico válido." });
   }
+  if (!EMAIL_RE.test(email.trim())) {
+    return res.status(400).json({ error: "Por favor ingresa un correo electrónico válido." });
+  }
   if (password.length < 6 || !/\d/.test(password)) {
     return res.status(400).json({ error: "La contraseña debe tener mínimo 6 caracteres y al menos 1 número." });
   }
@@ -1407,14 +1486,21 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
   if (lastRequestTime && (Date.now() - lastRequestTime < 60000)) {
     return res.status(429).json({ error: "Por favor espera 60 segundos antes de solicitar otro código de verificación." });
   }
+  // Poda del mapa anti-spam (evita crecimiento ilimitado en memoria)
+  if (emailOtpLimiter.size > 5000) {
+    const cutoff = Date.now() - 60000;
+    for (const [k, t] of emailOtpLimiter) {
+      if (t < cutoff) emailOtpLimiter.delete(k);
+    }
+  }
   emailOtpLimiter.set(cleanEmail, Date.now());
 
   const users = getUsers();
   if (users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
-    return res.status(400).json({ error: "Este nombre de usuario ya está registrado." });
+    return res.status(400).json({ error: "Ya existe una cuenta con ese usuario o correo." });
   }
   if (users.some(u => u.email && u.email.toLowerCase() === cleanEmail)) {
-    return res.status(400).json({ error: "Este correo electrónico ya está registrado." });
+    return res.status(400).json({ error: "Ya existe una cuenta con ese usuario o correo." });
   }
 
   const code = crypto.randomInt(100000, 1000000).toString();
@@ -1425,6 +1511,7 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
     username: cleanUsername,
     email: cleanEmail,
     passwordHash,
+    attempts: 0,
     expiresAt: Date.now() + 600000
   });
 
@@ -1453,7 +1540,13 @@ app.post('/api/auth/verify-register-code', authLimiter, async (req, res) => {
     OTP_STORE.delete(`reg_${cleanEmail}`);
     return res.status(400).json({ error: "El código ha expirado. Por favor solicita uno nuevo." });
   }
-  if (otpData.code !== code.trim()) {
+  otpData.attempts = Number(otpData.attempts || 0) + 1;
+  if (otpData.attempts > 5) {
+    OTP_STORE.delete(`reg_${cleanEmail}`);
+    return res.status(429).json({ error: "Demasiados intentos. Por favor solicita un nuevo código." });
+  }
+  if (!verifyOtpCode(otpData.code, code.trim())) {
+    OTP_STORE.set(`reg_${cleanEmail}`, otpData);
     return res.status(400).json({ error: "El código de 6 dígitos es incorrecto." });
   }
 
@@ -1478,7 +1571,7 @@ app.post('/api/auth/verify-register-code', authLimiter, async (req, res) => {
   const token = jwt.sign(
     { id: newUser.id, username: newUser.username, role: newUser.role, tokenVersion: newUser.tokenVersion },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '1d' }
   );
 
   res.json({
@@ -1496,20 +1589,31 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     return res.status(400).json({ error: "Por favor ingresa tu usuario y contraseña en formato de texto." });
   }
 
+  // Bloqueo por identidad (anti fuerza bruta distribuida)
+  const loginKey = 'login_' + username.trim().toLowerCase();
+  const lockedUntil = loginLockedUntil(loginKey);
+  if (lockedUntil) {
+    return res.status(429).json({ error: 'Demasiados intentos fallidos. Espera 15 minutos antes de intentar de nuevo.' });
+  }
+
   const users = getUsers();
   const user = users.find(u =>
     u.username && (u.username.toLowerCase() === username.trim().toLowerCase() || (u.email && u.email.toLowerCase() === username.trim().toLowerCase()))
   );
 
   if (!user) {
+    recordLoginFailure(loginKey);
     return res.status(401).json({ error: "Usuario/correo o contraseña incorrectos." });
   }
 
   // Verificar contraseña de forma segura usando bcrypt y auto-migración
   const isMatch = await verifyPassword(password, user);
   if (!isMatch) {
+    recordLoginFailure(loginKey);
     return res.status(401).json({ error: "Usuario/correo o contraseña incorrectos." });
   }
+
+  loginAttempts.delete(loginKey);
 
   const role = user.role || 'user';
 
@@ -1517,7 +1621,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   const token = jwt.sign(
     { id: user.id, username: user.username, role: role, tokenVersion: user.tokenVersion || 0 },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '1d' }
   );
 
   res.json({
@@ -1572,7 +1676,7 @@ app.post('/api/auth/reset-password', authLimiter, async (req, res) => {
     OTP_STORE.delete(key);
     return res.status(429).json({ error: 'Demasiados intentos. Solicita un nuevo código.' });
   }
-  if (otp.code !== code) {
+  if (!verifyOtpCode(otp.code, code)) {
     OTP_STORE.set(key, otp);
     return res.status(400).json({ error: 'Código incorrecto.' });
   }
@@ -1628,6 +1732,9 @@ app.post('/api/user/update-username', verifyToken, async (req, res) => {
   if (cleanUser.length < 3) {
     return res.status(400).json({ error: "El nuevo usuario debe tener al menos 3 caracteres." });
   }
+  if (!/^[a-zA-Z0-9_]+$/.test(cleanUser)) {
+    return res.status(400).json({ error: "El usuario solo puede contener caracteres alfanuméricos y guiones bajos." });
+  }
 
   const users = getUsers();
   const userIndex = users.findIndex(u => u.id === userId);
@@ -1651,7 +1758,7 @@ app.post('/api/user/update-username', verifyToken, async (req, res) => {
   const token = jwt.sign(
     { id: user.id, username: cleanUser, role: user.role || 'user', tokenVersion: user.tokenVersion || 0 },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '1d' }
   );
 
   res.json({
@@ -1667,7 +1774,7 @@ app.post('/api/user/send-email-code', verifyToken, userApiLimiter, async (req, r
   const { newEmail, currentPassword } = req.body;
   const userId = req.user.id;
 
-  if (!isString(newEmail) || !isString(currentPassword) || !newEmail.includes('@')) {
+  if (!isString(newEmail) || !isString(currentPassword) || !EMAIL_RE.test(newEmail.trim())) {
     return res.status(400).json({ error: "Ingresa el nuevo correo y tu contraseña actual." });
   }
 
@@ -1705,7 +1812,15 @@ app.post('/api/user/confirm-email-update', verifyToken, userApiLimiter, (req, re
   
   const otpData = OTP_STORE.get(`email_${userId}`);
   if (!otpData) return res.status(400).json({ error: "Código no encontrado o expirado." });
-  if (otpData.code !== code.trim()) return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
+  otpData.attempts = Number(otpData.attempts || 0) + 1;
+  if (otpData.attempts > 5) {
+    OTP_STORE.delete(`email_${userId}`);
+    return res.status(429).json({ error: "Demasiados intentos. Por favor solicita un nuevo código." });
+  }
+  if (!verifyOtpCode(otpData.code, code.trim())) {
+    OTP_STORE.set(`email_${userId}`, otpData);
+    return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
+  }
 
   const users = getUsers();
   const userIndex = users.findIndex(u => u.id === userId);
@@ -1737,7 +1852,7 @@ app.post('/api/user/send-password-code', verifyToken, userApiLimiter, async (req
   
   // Hash con bcrypt de la nueva contraseña propuesta
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
-  OTP_STORE.set(`pwd_${userId}`, { newPasswordHash, code, expiresAt: Date.now() + 600000 });
+  OTP_STORE.set(`pwd_${userId}`, { newPasswordHash, code, attempts: 0, expiresAt: Date.now() + 600000 });
 
   const sent = await sendVerificationEmail(user.email, code, "Código para Cambiar Contraseña");
   if (sent) {
@@ -1756,7 +1871,15 @@ app.post('/api/user/confirm-password-update', verifyToken, userApiLimiter, (req,
   
   const otpData = OTP_STORE.get(`pwd_${userId}`);
   if (!otpData) return res.status(400).json({ error: "Código no encontrado o expirado." });
-  if (otpData.code !== code.trim()) return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
+  otpData.attempts = Number(otpData.attempts || 0) + 1;
+  if (otpData.attempts > 5) {
+    OTP_STORE.delete(`pwd_${userId}`);
+    return res.status(429).json({ error: "Demasiados intentos. Por favor solicita un nuevo código." });
+  }
+  if (!verifyOtpCode(otpData.code, code.trim())) {
+    OTP_STORE.set(`pwd_${userId}`, otpData);
+    return res.status(400).json({ error: "Código de 6 dígitos incorrecto." });
+  }
 
   const users = getUsers();
   const userIndex = users.findIndex(u => u.id === userId);
@@ -1928,7 +2051,11 @@ function saveGamesLocal(games) {
 // Server-Sent Events (SSE) para sincronización a tiempo real sin refrescar página
 const sseClients = new Set();
 
-app.get('/api/juegos/stream', (req, res) => {
+app.get('/api/juegos/stream', generalApiLimiter, (req, res) => {
+  // Límite de clientes SSE conectados (anti DoS)
+  if (sseClients.size >= 200) {
+    return res.status(503).end();
+  }
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -1967,7 +2094,7 @@ function broadcastCatalogUpdate() {
     GAMES_STORE = JUEGOS.map(g => ({ ...g, visible: true }));
     visibleGames = GAMES_STORE;
   }
-  const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames })}\n\n`;
+  const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames.map(sanitizeGameForPublic) })}\n\n`;
   sseClients.forEach(client => {
     try {
       client.write(payload);
@@ -2012,7 +2139,8 @@ app.get('/api/juegos', generalApiLimiter, (req, res) => {
     saveGamesLocal(GAMES_STORE);
     visibleGames = GAMES_STORE;
   }
-  res.json(visibleGames);
+  // NUNCA exponer cuentas/stock interno al público
+  res.json(visibleGames.map(sanitizeGameForPublic));
 });
 
 // Endpoint Público: Retorna un juego específico por ID o por Slug (título normalizado)
@@ -2059,7 +2187,7 @@ app.get('/api/juegos/:identifier', (req, res) => {
     game = GAMES_STORE.find(g => g.visible !== false) || GAMES_STORE[0];
   }
 
-  res.json(game);
+  res.json(sanitizeGameForPublic(game));
 });
 
 // Endpoint Admin: Retorna TODOS los juegos (visibles y ocultos) para el panel de administración
@@ -2103,6 +2231,9 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
     }
     if (!isString(imagenDetalle) || !imagenDetalle.trim()) {
       return res.status(400).json({ error: 'La URL de la imagen de detalle es obligatoria.' });
+    }
+    if (!isSafeHttpUrl(imagen.trim()) || !isSafeHttpUrl(imagenDetalle.trim())) {
+      return res.status(400).json({ error: 'Las URLs de imagen deben ser http(s).' });
     }
     if (!isString(descripcion) || !descripcion.trim()) {
       return res.status(400).json({ error: 'La descripción corta es obligatoria.' });
@@ -2235,13 +2366,27 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   const game = GAMES_STORE[gameIndex];
   if (isString(titulo) && titulo.trim()) game.titulo = titulo.trim();
   if (isString(categoria) && categoria.trim()) game.categoria = categoria.trim();
-  if (precioSecundaria !== undefined && precioSecundaria !== '') game.precioSecundaria = Number(precioSecundaria);
-  if (precioPrimaria !== undefined && precioPrimaria !== '') game.precioPrimaria = Number(precioPrimaria);
-  if (precioOriginal !== undefined && precioOriginal !== '') game.precioOriginal = Number(precioOriginal);
+  if (precioSecundaria !== undefined && precioSecundaria !== '') {
+    const n = Number(precioSecundaria);
+    if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'Precio secundaria inválido.' });
+    game.precioSecundaria = n;
+  }
+  if (precioPrimaria !== undefined && precioPrimaria !== '') {
+    const n = Number(precioPrimaria);
+    if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'Precio primaria inválido.' });
+    game.precioPrimaria = n;
+  }
+  if (precioOriginal !== undefined && precioOriginal !== '') {
+    const n = Number(precioOriginal);
+    if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: 'Precio original inválido.' });
+    game.precioOriginal = n;
+  }
   if (stockPrimaria !== undefined && stockPrimaria !== '') { const n = Number(stockPrimaria); if (!Number.isSafeInteger(n) || n < 0) return res.status(400).json({ error: 'Stock primaria inválido.' }); game.stockPrimaria = n; }
   if (stockSecundaria !== undefined && stockSecundaria !== '') { const n = Number(stockSecundaria); if (!Number.isSafeInteger(n) || n < 0) return res.status(400).json({ error: 'Stock secundaria inválido.' }); game.stockSecundaria = n; }
   if (isString(descripcion)) game.descripcion = descripcion.trim();
+  if (isString(imagen) && imagen.trim() && !isSafeHttpUrl(imagen)) return res.status(400).json({ error: 'URL de imagen inválida. Solo se permiten http/https.' });
   if (isString(imagen)) game.imagen = imagen.trim();
+  if (isString(imagenDetalle) && imagenDetalle.trim() && !isSafeHttpUrl(imagenDetalle)) return res.status(400).json({ error: 'URL de imagen inválida. Solo se permiten http/https.' });
   if (isString(imagenDetalle)) game.imagenDetalle = imagenDetalle.trim();
 
   // Guardar arreglo de imágenes adicionales (ej: para packs o galerías)
@@ -2253,9 +2398,11 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
 
   // Guardar link del video de youtube
   const ytLink = youtubeUrl || videoTrailerUrl;
+  if (isString(ytLink) && ytLink.trim() && !isSafeHttpUrl(ytLink)) return res.status(400).json({ error: 'URL de YouTube inválida. Solo se permiten http/https.' });
   if (isString(ytLink)) game.youtubeUrl = ytLink.trim();
 
   if (correoTexto !== undefined && isString(correoTexto)) game.correoTexto = correoTexto.trim();
+  if (correoImagen !== undefined && isString(correoImagen) && correoImagen.trim() && !isSafeHttpUrl(correoImagen)) return res.status(400).json({ error: 'URL de imagen inválida. Solo se permiten http/https.' });
   if (correoImagen !== undefined && isString(correoImagen)) game.correoImagen = correoImagen.trim();
 
   if (typeof cuentas === 'string') {
@@ -2336,18 +2483,18 @@ const COUPONS_FILE = path.join(__dirname, 'data', 'coupons.json');
 let COUPONS_STORE = [];
 
 const DEFAULT_COUPONS = [
-  { code: 'PRUEBAXD', type: 'percent', value: 100, desc: '100% de descuento (Modo Prueba)' },
-  { code: 'ZONA10', type: 'percent', value: 10, desc: '10% de descuento' },
-  { code: 'SWITCH2026', type: 'percent', value: 15, desc: '15% de descuento' },
-  { code: 'NINTENDO5', type: 'fixed', value: 5000, desc: '$5.000 CLP de descuento' },
-  { code: 'DESCUENTO', type: 'percent', value: 10, desc: '10% de descuento' }
+  // Sin cupones hardcodeados: los códigos en el código fuente son públicos (repo público).
+  // Crear cupones reales desde el panel de administración.
 ];
 
 function loadCoupons() {
   COUPONS_STORE = safeReadJsonSync(COUPONS_FILE, []);
   if (!Array.isArray(COUPONS_STORE) || COUPONS_STORE.length === 0) {
-    COUPONS_STORE = [...DEFAULT_COUPONS];
-    saveCouponsLocal(COUPONS_STORE);
+    if (DEFAULT_COUPONS.length > 0) {
+      COUPONS_STORE = [...DEFAULT_COUPONS];
+      saveCouponsLocal(COUPONS_STORE);
+    }
+    console.warn('⚠️ [CUPONES] Sin cupones configurados. Créalos desde el panel de administración.');
   }
 }
 
@@ -2402,6 +2549,11 @@ app.post('/api/admin/coupons/create', verifyAdmin, (req, res) => {
   const cleanCode = code.trim().toUpperCase();
   const numValue = Number(value);
   const couponType = type === 'fixed' ? 'fixed' : 'percent';
+
+  // Validar valor del descuento (anti cupones que regalan stock o inflan montos)
+  if (!Number.isSafeInteger(numValue) || numValue < 1 || (couponType === 'percent' && numValue > 100)) {
+    return res.status(400).json({ error: 'Valor de descuento inválido. Porcentaje: 1–100 · Monto fijo: ≥ 1.' });
+  }
 
   const existingIdx = COUPONS_STORE.findIndex(c => c.code === cleanCode);
   const newCoupon = {
@@ -2560,6 +2712,10 @@ app.post('/api/admin/gallery/add', verifyAdmin, (req, res) => {
   const cleanUser = sanitizeHtml(user.trim());
   const cleanComment = sanitizeHtml(comment.trim());
 
+  if (!isSafeHttpUrl(imagen)) {
+    return res.status(400).json({ error: "La URL de la foto debe ser http(s)." });
+  }
+
   const newItem = {
     id: Date.now(),
     user: cleanUser,
@@ -2591,6 +2747,14 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   // Validación de tipos de datos en body
   if (!isString(nombre) || !isString(apellido) || !isString(email) || !Array.isArray(carrito) || carrito.length === 0) {
     return res.status(400).json({ error: "Datos incompletos o en formato incorrecto para procesar la orden." });
+  }
+
+  // Límites de longitud (anti abuso de campos, anti inyección HTML en correos)
+  if (nombre.trim().length > 80 || apellido.trim().length > 80 || email.trim().length > 200 || (isString(username) && username.length > 60)) {
+    return res.status(400).json({ error: "Alguno de tus datos excede el largo máximo permitido." });
+  }
+  if (!EMAIL_RE.test(email.trim())) {
+    return res.status(400).json({ error: "Por favor ingresa un correo electrónico válido." });
   }
 
   // Validación de tamaño del carrito
@@ -2680,7 +2844,7 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   }
 
   const total = Math.max(0, calculatedSubtotal - discountAmount);
-  const codigoOrden = `ZSC-${Math.floor(100000 + Math.random() * 900000)}`;
+  const codigoOrden = `ZSC-${crypto.randomInt(100000000, 1000000000)}`;
 
   // Preparar carrito con precios del SERVIDOR (sin asignar cuentas aún — se asignan al confirmar pago)
   const carritoConPreciosServidor = carrito.map(item => {
@@ -3168,11 +3332,25 @@ app.post('/api/admin/orders/:code/status', verifyAdmin, async (req, res) => {
   res.json({ exito: true, order: getOrderForAdmin(order) });
 });
 
-app.post('/api/orders/:code/retry-payment', async (req, res) => {
+app.post('/api/orders/:code/retry-payment', checkoutLimiter, async (req, res) => {
   const order = await getOrderByCode(req.params.code);
   if (!order) return res.status(404).json({ error: 'Orden no encontrada.' });
   if (!['pendiente', 'rechazada', 'cancelada'].includes(order.estado)) return res.status(400).json({ error: 'Esta orden no puede reintentarse.' });
   if (!Array.isArray(order.carrito) || !order.carrito.length) return res.status(400).json({ error: 'La orden no tiene productos.' });
+
+  // Validar que quien reintenta es el dueño: token JWT del usuario O correo de la orden
+  let ownerId = null;
+  try {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (token) ownerId = jwt.verify(token, JWT_SECRET)?.id || null;
+  } catch (e) {}
+  const providedEmail = normalizeEmail(req.body?.email);
+  const isOwner = (order.userId && ownerId && String(order.userId) === String(ownerId)) ||
+                  (providedEmail && normalizeEmail(order.email) === providedEmail);
+  if (!isOwner) {
+    return res.status(403).json({ error: 'Solo el titular de la orden puede reintentar el pago.' });
+  }
 
   const baseUrl = getValidatedBaseUrl(req);
   order.retryCount = Number(order.retryCount || 0) + 1;
@@ -3220,11 +3398,14 @@ app.get('/api/orders/:code', generalApiLimiter, async (req, res) => {
   if (!order) return res.status(404).json({ error: "Orden no encontrada." });
 
   // Sanitizar datos sensibles: no exponer credenciales de cuentas asignadas
+  const emailMasked = order.email && order.email.includes('@')
+    ? order.email.replace(/^(.)[^@]*@/, '$1***@')
+    : '***';
   const sanitizedOrder = {
     codigoOrden: order.codigoOrden,
     cliente: order.cliente,
     usuario: order.usuario,
-    email: order.email ? order.email.replace(/(.{2}).+(@.+)/, '$1***$2') : '',
+    email: emailMasked,
     carrito: Array.isArray(order.carrito) ? order.carrito.map(item => ({
       titulo: item.titulo,
       cantidad: item.cantidad,

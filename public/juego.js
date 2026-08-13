@@ -534,21 +534,26 @@ function parseYouTubeVideoId(url) {
   const str = String(url).trim();
   if (!str) return null;
 
-  if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+  // Todo ID extraído DEBE pasar la validación estricta de 11 caracteres
+  // (evita inyección de atributos en el <iframe src> con URLs maliciosas)
+  const validId = (id) => (typeof id === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(id)) ? id : null;
+
+  const direct = validId(str);
+  if (direct) return direct;
 
   try {
     if (str.includes('youtu.be/')) {
-      return str.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
+      return validId(str.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0]);
     }
     if (str.includes('youtube.com/watch')) {
       const u = new URL(str);
-      return u.searchParams.get('v');
+      return validId(u.searchParams.get('v'));
     }
     if (str.includes('youtube.com/embed/')) {
-      return str.split('youtube.com/embed/')[1].split('?')[0].split('#')[0];
+      return validId(str.split('youtube.com/embed/')[1].split('?')[0].split('#')[0]);
     }
     if (str.includes('youtube.com/shorts/')) {
-      return str.split('youtube.com/shorts/')[1].split('?')[0].split('#')[0];
+      return validId(str.split('youtube.com/shorts/')[1].split('?')[0].split('#')[0]);
     }
   } catch (e) {}
   return null;
