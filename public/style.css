@@ -878,9 +878,19 @@ html.light-mode {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--switch-red) 30%, var(--joycon-cyan) 100%);
+  background-image: linear-gradient(135deg, var(--switch-red) 30%, var(--joycon-cyan) 100%);
+  background-size: 200% auto;
+  background-position: 0% 50%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 4s ease-in-out infinite alternate;
+}
+
+/* Barrido suave del degradado (solo background-position, sin reflow) */
+@keyframes gradient-shift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
 }
 
 /* ==========================================================================
