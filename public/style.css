@@ -612,6 +612,8 @@ html.light-mode {
 .header-search-box {
   position: relative;
   width: 220px;
+  /* Retorno desde el estado flotante (0.15s micro) */
+  transition: width 0.15s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (min-width: 992px) {
@@ -655,6 +657,37 @@ html.light-mode {
   background: rgba(15, 22, 36, 0.95);
   border-color: var(--joycon-cyan);
   box-shadow: 0 0 18px rgba(0, 240, 255, 0.35), 0 0 0 2px rgba(0, 240, 255, 0.2);
+}
+
+/* Búsqueda flotante (solo escritorio): al ocultarse el navbar con el scroll,
+   el MISMO buscador del header se desprende y queda centrado arriba (efecto
+   shared-element: el navbar es sticky, así que el box ya está arriba).
+   Nota de arquitectura: .navbar.nav-hidden usa transform: translateY(-100%),
+   y un ancestro con transform es el containing block de los position: fixed —
+   por eso top usa calc(100% + 0.9rem): el 100% es el alto del navbar y, con el
+   translate de -100%, el buscador aterriza exactamente a 0.9rem del viewport. */
+@media (min-width: 769px) {
+  .navbar.nav-hidden .header-search-box {
+    position: fixed;
+    top: calc(100% + 0.9rem);
+    left: 50%;
+    width: min(420px, calc(100% - 2rem));
+    z-index: 90;
+    transform: translateX(-50%) translateY(-6px);
+    opacity: 0.98;
+    transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1), transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Vidrio y sombra flotante sobre el contenido */
+  .navbar.nav-hidden .header-search-box input {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  html.light-mode .navbar.nav-hidden .header-search-box input {
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
 }
 
 /* User Auth Area */
@@ -6452,69 +6485,6 @@ footer.footer {
   .user-modal-card.wide-admin .admin-game-actions {
     flex-wrap: wrap;
   }
-}
-
-/* ==========================================================================
-   Barra de búsqueda flotante: aparece cuando el navbar se oculta al bajar
-   ========================================================================== */
-.float-search {
-  position: fixed;
-  top: 0.9rem;
-  left: 50%;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: min(420px, calc(100% - 2rem));
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  background: rgba(10, 15, 25, 0.92);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  color: var(--text-muted);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(-50%) translateY(-8px);
-  pointer-events: none;
-  transition: opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1), transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s 0.15s;
-}
-
-.float-search.show {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-  transition: opacity 0.25s cubic-bezier(0.32, 0.72, 0, 1), transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
-}
-
-.float-search input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-main);
-  font-family: var(--font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.float-search input::placeholder {
-  color: var(--text-dim);
-  font-weight: 500;
-}
-
-.float-search .search-autocomplete-dropdown {
-  min-width: 0;
-  width: 100%;
-}
-
-/* Modo claro */
-html.light-mode .float-search {
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
 }
 
 /* ==========================================================================
