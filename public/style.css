@@ -659,33 +659,33 @@ html.light-mode {
   box-shadow: 0 0 18px rgba(0, 240, 255, 0.35), 0 0 0 2px rgba(0, 240, 255, 0.2);
 }
 
-/* Búsqueda flotante (solo escritorio): al ocultarse el navbar con el scroll,
-   el MISMO buscador del header se desprende y queda centrado arriba (efecto
-   shared-element: el navbar es sticky, así que el box ya está arriba).
-   Nota de arquitectura: .navbar.nav-hidden usa transform: translateY(-100%),
-   y un ancestro con transform es el containing block de los position: fixed —
-   por eso top usa calc(100% + 0.9rem): el 100% es el alto del navbar y, con el
-   translate de -100%, el buscador aterriza exactamente a 0.9rem del viewport. */
+/* Búsqueda flotante (solo escritorio): cuando el navbar se comprime al bajar
+   (nav-compact), el MISMO buscador del header se desprende y queda centrado
+   arriba (efecto shared-element: el navbar es sticky, así que el box ya está
+   arriba). Nota de arquitectura: el navbar mantiene backdrop-filter, que lo
+   convierte en containing block de los position: fixed — como el navbar está
+   pinado en top:0, `top: 0.9rem` aterriza exactamente a 0.9rem del viewport.
+   z-index 110: por encima del navbar compacto (100), que sigue en pantalla. */
 @media (min-width: 769px) {
-  .navbar.nav-hidden .header-search-box {
+  .navbar.nav-compact .header-search-box {
     position: fixed;
-    top: calc(100% + 0.9rem);
+    top: 0.9rem;
     left: 50%;
     width: min(420px, calc(100% - 2rem));
-    z-index: 90;
+    z-index: 110;
     transform: translateX(-50%) translateY(-6px);
     opacity: 0.98;
-    transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1), transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1);
+    transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   /* Vidrio y sombra flotante sobre el contenido */
-  .navbar.nav-hidden .header-search-box input {
+  .navbar.nav-compact .header-search-box input {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  html.light-mode .navbar.nav-hidden .header-search-box input {
+  html.light-mode .navbar.nav-compact .header-search-box input {
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 }
@@ -5069,20 +5069,44 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
 }
 
 /* ==========================================================================
-   Navegación Sticky Inteligente (Ocultar al bajar / Revelar al subir)
+   Navegación Sticky Inteligente: morfismo compacto al bajar (estilo píldora)
+   Mostrar = overshoot 0.3s (cubic-bezier(0.34, 1.56, 0.64, 1)); comprimir =
+   salida rápida Apple 0.18s (cubic-bezier(0.4, 0, 1, 1)).
    ========================================================================== */
 .navbar {
-  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s ease;
+  transition: padding 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.navbar.nav-hidden {
-  transform: translateY(-100%);
+.navbar.nav-compact {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  transition: padding 0.18s cubic-bezier(0.4, 0, 1, 1), background-color 0.18s cubic-bezier(0.4, 0, 1, 1), box-shadow 0.18s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .navbar.nav-scrolled {
-  transform: translateY(0);
   background: rgba(7, 10, 18, 0.96);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
+}
+
+/* Morfismo interior: logo compacto y etiquetas colapsadas (como la píldora) */
+.brand-logo-img {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.navbar.nav-compact .brand-logo-img {
+  transform: scale(0.82);
+}
+
+.logo-text {
+  max-height: 26px;
+  opacity: 1;
+  overflow: hidden;
+  transition: opacity 0.2s cubic-bezier(0.32, 0.72, 0, 1), max-height 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.navbar.nav-compact .logo-text {
+  max-height: 0;
+  opacity: 0;
 }
 
 /* ==========================================================================

@@ -3378,65 +3378,52 @@ function animateButtonSuccess(btn, successText = '✓ ¡Listo!') {
   }, 1200);
 }
 
-// --- SMART STICKY NAVBAR SCROLL HANDLER ---
+// --- SCROLL HIDE/SHOW UNIFICADO (navbar + píldora móvil): rAF, umbrales ±4px ---
+// Mismo lenguaje de movimiento que la píldora inferior: arriba expandido,
+// bajando → compacto, subiendo → expandido. El navbar se comprime (morfismo)
+// y su buscador flota centrado; la píldora se compacta a iconos.
 let lastScrollY = Math.max(0, window.scrollY);
-let isNavHidden = false;
+let scrollUIRafPending = false;
+
+function updateScrollUI() {
+  scrollUIRafPending = false;
+  const y = Math.max(0, window.scrollY);
+  const navbar = document.querySelector('.navbar');
+  const pill = document.getElementById('mobile-bottom-nav');
+
+  if (y < 15) {
+    // Arriba del todo: expandidos y sin fondo sólido
+    if (navbar) {
+      navbar.classList.remove('nav-compact');
+      navbar.classList.remove('nav-scrolled');
+    }
+    if (pill) pill.classList.remove('nav-compact');
+  } else if (y > lastScrollY + 4) {
+    // Bajando → compactos (navbar comprimido + buscador flotante)
+    if (navbar) {
+      navbar.classList.add('nav-compact');
+      navbar.classList.add('nav-scrolled');
+    }
+    if (pill) pill.classList.add('nav-compact');
+  } else if (y < lastScrollY - 4) {
+    // Subiendo → expandidos, pinados con fondo sólido
+    if (navbar) {
+      navbar.classList.remove('nav-compact');
+      navbar.classList.add('nav-scrolled');
+    }
+    if (pill) pill.classList.remove('nav-compact');
+  }
+
+  lastScrollY = y;
+}
 
 window.addEventListener('scroll', () => {
-  const navbar = document.querySelector('.navbar');
-  if (!navbar) return;
-  const currentScrollY = Math.max(0, window.scrollY);
-  const delta = currentScrollY - lastScrollY;
-
-  if (currentScrollY <= 15) {
-    navbar.classList.remove('nav-hidden');
-    navbar.classList.remove('nav-scrolled');
-    isNavHidden = false;
-  } else if (delta > 4 && currentScrollY > 60) {
-    if (!isNavHidden) {
-      navbar.classList.add('nav-hidden');
-      isNavHidden = true;
-    }
-  } else if (delta < -2) {
-    if (isNavHidden) {
-      navbar.classList.remove('nav-hidden');
-      navbar.classList.add('nav-scrolled');
-      isNavHidden = false;
-    }
+  if (!scrollUIRafPending) {
+    scrollUIRafPending = true;
+    requestAnimationFrame(updateScrollUI);
   }
-
-  lastScrollY = currentScrollY;
 }, { passive: true });
-
-// --- BARRA INFERIOR MÓVIL: SE COMPACTA AL BAJAR Y SE EXPANDE AL SUBIR (rAF) ---
-(function initBottomNavCompact() {
-  const nav = document.getElementById('mobile-bottom-nav');
-  if (!nav) return;
-  let ticking = false;
-  let lastScrollY = window.scrollY;
-  function update() {
-    const y = window.scrollY;
-    if (y < 10) {
-      // En la parte superior siempre expandida
-      nav.classList.remove('nav-compact');
-    } else if (y > lastScrollY + 4) {
-      // Bajando → píldora compacta
-      nav.classList.add('nav-compact');
-    } else if (y < lastScrollY - 4) {
-      // Subiendo → píldora expandida
-      nav.classList.remove('nav-compact');
-    }
-    lastScrollY = y;
-    ticking = false;
-  }
-  window.addEventListener('scroll', () => {
-    if (!ticking) {
-      ticking = true;
-      requestAnimationFrame(update);
-    }
-  }, { passive: true });
-  update();
-})();
+updateScrollUI();
 
 // --- SISTEMA DE GALERÍA DE CLIENTES Y RESEÑAS CON SLIDER DE 4 TARJETAS ---
 let customerGalleryStore = [];
