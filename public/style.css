@@ -3577,7 +3577,7 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
 
   /* Muesca superior del cartucho Switch */
   .game-card::before {
-    content: "NINTENDO SWITCH" !important;
+    content: "SWITCH" !important;
     display: block !important;
     background: linear-gradient(90deg, #ff003c 0%, #cc0030 100%) !important;
     color: #ffffff !important;
