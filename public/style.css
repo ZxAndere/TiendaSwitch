@@ -1550,17 +1550,19 @@ html.light-mode {
   padding: 0.35rem;
   gap: 0.4rem;
   margin-bottom: 0.5rem;
+  max-width: 620px;
 }
 
 .mode-list .card-license-option {
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 0.3rem 0.5rem;
 }
 
 .mode-list .license-stock {
+  margin-left: auto;
   text-align: right;
 }
 
@@ -1577,6 +1579,40 @@ html.light-mode {
 
 .mode-list .card-size-tag {
   display: none;
+}
+
+/* Escritorio: fila de lista en 3 zonas — miniatura, contenido y la unidad
+   precio+botón anclada a la derecha (fila estilo Apple, nada estirado) */
+@media (min-width: 769px) {
+  .mode-list .game-card {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr) auto;
+    grid-template-areas: "media content footer";
+    align-items: center;
+  }
+
+  .mode-list .card-media {
+    grid-area: media;
+  }
+
+  .mode-list .card-content {
+    grid-area: content;
+  }
+
+  .mode-list .card-footer {
+    grid-area: footer;
+    margin: 0;
+    padding: 0 1.25rem 0 0.75rem;
+    border-top: none;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .mode-list .price-container {
+    align-items: flex-end;
+  }
 }
 
 /* Modo claro: controles de vista */
@@ -1854,6 +1890,10 @@ html.light-mode .view-toggle button.active {
 }
 
 .buy-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   background: linear-gradient(135deg, var(--switch-red), #d60033);
   color: white;
   border: none;
@@ -1865,6 +1905,31 @@ html.light-mode .view-toggle button.active {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(255, 0, 60, 0.16);
   transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.buy-card-btn svg {
+  flex-shrink: 0;
+}
+
+/* Tarjetas angostas (grid densidad 1 / columnas estrechas): el botón
+   colapsa a solo ícono — el texto queda visible siempre que quepa */
+@media (min-width: 769px) {
+  .game-card {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 300px) {
+    .buy-card-btn {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      gap: 0;
+    }
+
+    .buy-btn-text {
+      display: none;
+    }
+  }
 }
 
 @media (hover: hover) {
@@ -3618,10 +3683,17 @@ html.light-mode .view-toggle button.active {
     gap: 0.5rem !important;
   }
 
+  /* Fila compacta: botón solo-ícono (el texto no cabe junto al precio) */
   .mode-list .buy-card-btn {
-    width: auto !important;
-    padding: 0.45rem 0.8rem !important;
-    font-size: 0.75rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    flex-shrink: 0;
+  }
+
+  .mode-list .buy-btn-text {
+    display: none !important;
   }
 
   .game-card {

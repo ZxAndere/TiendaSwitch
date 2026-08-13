@@ -2154,8 +2154,9 @@ function renderCatalog(animatePrices = false, fast = true) {
             <span class="original-price">${formatCLP(origPrice)}</span>
             <span class="current-price"><small style="font-size: 0.75em; font-weight: 600; opacity: 0.85; margin-right: 3px;">Desde</small> ${formatCLP(game.precioSecundaria)}</span>
           </div>
-          <span class="buy-card-btn" onclick="openGameModal(${game.id}); event.stopPropagation();">
-            Ver Detalles
+          <span class="buy-card-btn" onclick="openGameModal(${game.id}); event.stopPropagation();" title="Ver Detalles" aria-label="Ver Detalles">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+            <span class="buy-btn-text">Ver Detalles</span>
           </span>
         </div>
       </div>
