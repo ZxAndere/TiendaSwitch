@@ -113,7 +113,8 @@ async function main() {
             id: userId,
             username,
             email,
-            passwordHash
+            passwordHash,
+            role: 'admin'
           });
 
           fs.writeFileSync(USERS_FILE, JSON.stringify(localUsers, null, 2));

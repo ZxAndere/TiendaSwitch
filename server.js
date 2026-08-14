@@ -518,6 +518,31 @@ app.get('/api/debug/mongo', verifyAdmin, (req, res) => {
 });
 
 
+// Gestión de usuarios (PROTEGIDO — solo administradores)
+app.get('/api/admin/users', verifyAdmin, (req, res) => {
+  res.json(getUsers().map(u => ({
+    id: u.id,
+    username: u.username,
+    email: u.email,
+    role: u.role || 'user',
+    createdAt: u.createdAt
+  })));
+});
+
+app.post('/api/admin/users/:id/role', verifyAdmin, async (req, res) => {
+  const role = isString(req.body?.role) ? req.body.role.trim().toLowerCase() : '';
+  if (role !== 'admin' && role !== 'user') {
+    return res.status(400).json({ error: 'Rol inválido. Solo se permite "admin" o "user".' });
+  }
+  const users = getUsers();
+  const user = users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  if (user.id === req.user.id) return res.status(400).json({ error: 'No puedes cambiar tu propio rol.' });
+  user.role = role;
+  saveUsers(users);
+  res.json({ exito: true, usuario: { id: user.id, username: user.username, role: user.role } });
+});
+
 // Detalle de una orden del usuario autenticado
 app.get('/api/user/orders/:code', verifyToken, async (req, res) => {
   const order = await getOrderByCode(req.params.code);

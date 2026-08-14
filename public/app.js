@@ -623,6 +623,7 @@ function initEventListeners() {
   ensureRecoveryUi();
   ensureAccountDeleteUi();
   ensureAdminOrdersUi();
+  ensureAdminUsersUi();
 
   // Settings Forms
   const usernameForm = document.getElementById('tab-username');
@@ -808,6 +809,7 @@ function openUserSettingsModal() {
   const adminTabBtn = document.getElementById('admin-tab-btn');
   const isAdmin = currentUser && currentUser.role === 'admin';
   ensureAdminOrdersUi();
+  ensureAdminUsersUi();
 
   if (adminTabBtn) {
     if (isAdmin) {
@@ -1571,6 +1573,14 @@ function ensureAdminOrdersUi(){
   const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-orders'; b.textContent='Pedidos'; b.onclick=()=>switchAdminSubtab('orders'); tabs.appendChild(b);
   const view=document.createElement('div'); view.id='admin-view-orders'; view.style.display='none'; view.innerHTML=`<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem"><input id="admin-order-search" class="admin-search-input" placeholder="Código, email o usuario" style="flex:1"><select id="admin-order-status" style="min-width:160px;background:var(--bg-dark);color:#fff;border:1px solid var(--border-subtle);padding:.6rem;border-radius:8px"><option value="">Todos los estados</option><option>pendiente</option><option>pagada</option><option>rechazada</option><option>cancelada</option><option>reembolsada</option></select><button type="button" class="auth-submit-btn" style="width:auto" onclick="fetchAdminOrders()">Actualizar</button></div><div id="admin-orders-container" class="admin-games-container"></div>`; games.parentElement.insertBefore(view, games.nextSibling); document.getElementById('admin-order-search').addEventListener('input', fetchAdminOrders); document.getElementById('admin-order-status').addEventListener('change', fetchAdminOrders);
 }
+function ensureAdminUsersUi(){
+  if (!currentUser || currentUser.role !== 'admin') return;
+  const tabs=document.querySelector('.admin-subtabs'); const games=document.getElementById('admin-view-games'); if(!tabs||!games||document.getElementById('btn-subtab-users')) return;
+  const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-users'; b.textContent='Usuarios'; b.onclick=()=>switchAdminSubtab('users'); tabs.appendChild(b);
+  const view=document.createElement('div'); view.id='admin-view-users'; view.style.display='none'; view.innerHTML='<div id="admin-users-container" class="admin-games-container"></div>'; games.parentElement.insertBefore(view, games.nextSibling);
+}
+async function fetchAdminUsers(){ if(!verifyAdminSecurity()) return; const c=document.getElementById('admin-users-container'); if(!c)return; c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Cargando...</p>'; try{const r=await apiFetch('/api/admin/users'); const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(u=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(u.username)}${u.id===currentUser.id?' <em style="color:var(--text-muted);font-weight:400;font-style:normal">(tú)</em>':''}</strong><span class=\"admin-game-sub\">${escapeHTML(u.email||'')}</span></div></div><div class=\"admin-game-actions\"><span class=\"admin-game-sub\" style=\"margin-right:.5rem\">${u.role==='admin'?'Administrador':'Usuario'}</span>${u.id===currentUser.id?'':`<button type=\"button\" class=\"auth-submit-btn\" style=\"width:auto;padding:.35rem .8rem\" onclick=\"toggleUserRole('${escapeHTML(u.id)}','${escapeHTML(u.role||'user')}')\">${u.role==='admin'?'Quitar admin':'Hacer admin'}</button>`}</div></div>`).join('');}catch(e){c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Error al cargar usuarios.</p>';}}
+async function toggleUserRole(id, role){ if(!verifyAdminSecurity()) return; const newRole=role==='admin'?'user':'admin'; if(!confirm(newRole==='admin'?'¿Hacer administrador a este usuario?':'¿Quitar permisos de administrador a este usuario?'))return; try{const r=await apiFetch(`/api/admin/users/${encodeURIComponent(id)}/role`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo cambiar el rol.');showToast(`Rol actualizado: ahora es ${newRole==='admin'?'administrador':'usuario'}.`);fetchAdminUsers();}catch(e){showToast('Error de conexión.');}}
 async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await apiFetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" class=\"admin-icon-btn\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\" title=\"Ver detalle\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\" title=\"Reenviar entrega\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m22 2-7 20-4-9-9-4Z\"></path><path d=\"M22 2 11 13\"></path></svg></button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" class=\"admin-icon-btn\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}','${escapeHTML(o.emailCompleto||'')}')\" title=\"Reintentar pago\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg></button>`:''}<button type=\"button\" class=\"admin-icon-btn\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Cancelar orden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Reembolsar\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 14 4 9l5-5\"></path><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11\"></path></svg></button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
 async function showAdminOrderDetail(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`Orden ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
 async function resendAdminDelivery(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/resend-delivery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();showToast(r.ok?'📩 Entrega reenviada.':(d.error||'No se pudo reenviar.')); if(r.ok)fetchAdminOrders(); }
@@ -3210,6 +3220,8 @@ function switchAdminSubtab(subtab) {
   const viewCoupons = document.getElementById('admin-view-coupons');
   const viewGallery = document.getElementById('admin-view-gallery');
   const viewOrders = document.getElementById('admin-view-orders');
+  const btnUsers = document.getElementById('btn-subtab-users');
+  const viewUsers = document.getElementById('admin-view-users');
 
   if (btnGames) btnGames.classList.remove('active');
   if (btnCoupons) btnCoupons.classList.remove('active');
@@ -3218,6 +3230,8 @@ function switchAdminSubtab(subtab) {
   if (viewCoupons) viewCoupons.style.display = 'none';
   if (viewGallery) viewGallery.style.display = 'none';
   if (viewOrders) viewOrders.style.display = 'none';
+  if (btnUsers) btnUsers.classList.remove('active');
+  if (viewUsers) viewUsers.style.display = 'none';
 
   if (subtab === 'games') {
     if (btnGames) btnGames.classList.add('active');
@@ -3231,6 +3245,10 @@ function switchAdminSubtab(subtab) {
   } else if (subtab === 'gallery') {
     if (btnGallery) btnGallery.classList.add('active');
     if (viewGallery) viewGallery.style.display = 'block';
+  } else if (subtab === 'users') {
+    if (btnUsers) btnUsers.classList.add('active');
+    if (viewUsers) viewUsers.style.display = 'block';
+    fetchAdminUsers();
   }
 }
 
