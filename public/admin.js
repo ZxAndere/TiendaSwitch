@@ -2407,7 +2407,7 @@ function confirmYesDisabled() {
 }
 
 function openConfirm({ title, message, textareaLabel = null, required = false, confirmLabel = 'Confirmar', danger = false, confirmText = null, checkboxLabel = null, onConfirm = null }) {
-  confirmOptions = { confirmText, checkboxLabel, confirmLabel, required };
+  confirmOptions = { confirmText, checkboxLabel, confirmLabel, required, onConfirm };
   confirmBusy = false;
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent = message;
