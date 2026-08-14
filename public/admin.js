@@ -58,6 +58,7 @@ const ICONS = {
   chevronsLeft: '<path d="m11 17-5-5 5-5"></path><path d="m18 17-5-5 5-5"></path>',
   chevronsRight: '<path d="m6 17 5-5-5-5"></path><path d="m13 17 5-5-5-5"></path>',
   wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>',
+  star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line>',
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line>'
 };
@@ -128,7 +129,7 @@ const state = {
   ordersTimer: null,
   editingGameId: null,
   detailOrder: null,
-  dash: { orders: [], games: [], users: [], coupons: [], audit: [], loaded: false },
+  dash: { orders: [], games: [], users: [], coupons: [], audit: [], analytics: null, loaded: false },
   coupons: [],
   couponsLoaded: false,
   gallery: [],
@@ -333,7 +334,7 @@ function statusChip(st) {
 function stockCell(s) {
   if (s === null || s === undefined || s === '') return '<span class="stock-unlimited">∞</span>';
   const n = Number(s);
-  if (!Number.isInteger(n) || n <= 0) return '<span class="chip chip-agotado">⛔ agotado</span>';
+  if (!Number.isInteger(n) || n <= 0) return `<span class="chip chip-agotado">${icon('alert', 12)} agotado</span>`;
   return escapeHTML(String(n));
 }
 
@@ -343,12 +344,12 @@ function stockCell(s) {
 async function fetchGames() {
   const tb = document.getElementById('games-tbody');
   document.getElementById('games-count').textContent = '';
-  tb.innerHTML = skeletonRows(5, 8);
+  tb.innerHTML = skeletonRows(5, 9);
   try {
     const res = await apiFetch('/api/admin/juegos');
     if (!res.ok) {
       showToast(await readError(res), 'error');
-      tb.innerHTML = tableEmpty(8, 'No se pudieron cargar los juegos.', 'Usa el botón Actualizar para reintentar.');
+      tb.innerHTML = tableEmpty(9, 'No se pudieron cargar los juegos.', 'Usa el botón Actualizar para reintentar.');
       return;
     }
     state.games = await res.json();
@@ -356,7 +357,7 @@ async function fetchGames() {
     renderGames();
   } catch (err) {
     if (String(err.message) !== 'Sesión expirada') {
-      tb.innerHTML = tableEmpty(8, 'No se pudieron cargar los juegos.', 'Error de comunicación con el servidor.');
+      tb.innerHTML = tableEmpty(9, 'No se pudieron cargar los juegos.', 'Error de comunicación con el servidor.');
     }
   }
 }
@@ -377,6 +378,15 @@ function sortGames(list) {
     if (key === 'titulo' || key === 'categoria') {
       return String(a[key] || '').toLowerCase().localeCompare(String(b[key] || '').toLowerCase(), 'es') * dir;
     }
+    if (key === 'createdAt') {
+      /* Sin fecha: siempre al final, en ambos sentidos */
+      const ha = !!(a[key] && !isNaN(new Date(a[key]).getTime()));
+      const hb = !!(b[key] && !isNaN(new Date(b[key]).getTime()));
+      if (ha && hb) return (new Date(a[key]).getTime() - new Date(b[key]).getTime()) * dir;
+      if (ha) return -1;
+      if (hb) return 1;
+      return 0;
+    }
     const va = (a[key] === null || a[key] === undefined || a[key] === '') ? Infinity : Number(a[key]);
     const vb = (b[key] === null || b[key] === undefined || b[key] === '') ? Infinity : Number(b[key]);
     return (va - vb) * dir;
@@ -396,6 +406,7 @@ function gamesThead() {
   return `<tr>
     ${sortHeader('titulo', 'Juego')}
     ${sortHeader('categoria', 'Categoría')}
+    ${sortHeader('createdAt', 'Creado')}
     ${sortHeader('precioSecundaria', 'Sec', 'num')}
     <th scope="col" class="num">Prim</th>
     ${sortHeader('stockSecundaria', 'Stock S', 'num')}
@@ -419,6 +430,7 @@ function gamesRow(g) {
       </div>
     </div></td>
     <td data-label="Categoría">${escapeHTML(g.categoria || '—')}</td>
+    <td data-label="Creado">${g.createdAt ? formatFecha(g.createdAt) : '—'}</td>
     <td data-label="Sec" class="num">${formatCLP(g.precioSecundaria)}</td>
     <td data-label="Prim" class="num">${formatCLP(g.precioPrimaria)}</td>
     <td data-label="Stock S" class="num">${stockCell(g.stockSecundaria)}</td>
@@ -446,7 +458,7 @@ function renderGames() {
   document.getElementById('games-thead').innerHTML = gamesThead();
   const tb = document.getElementById('games-tbody');
   if (!pageList.length) {
-    tb.innerHTML = tableEmpty(8, 'No se encontraron juegos.',
+    tb.innerHTML = tableEmpty(9, 'No se encontraron juegos.',
       list.length ? 'Prueba con otro término de búsqueda.' : 'Crea tu primer juego con el botón "Crear Juego".');
   } else {
     tb.innerHTML = pageList.map(gamesRow).join('');
@@ -526,7 +538,40 @@ function gameKebabItems(g) {
       }).then(r => { if (r.ok) deactivateGame(g.id); })
     });
   }
+  items.push({
+    label: 'Eliminar definitivamente', icon: 'trash', danger: true,
+    action: () => permanentlyDeleteGame(g)
+  });
   return items;
+}
+
+/* Eliminación permanente: pide escribir el título exacto y mantiene el diálogo
+   abierto con el error del servidor si la petición falla. */
+function permanentlyDeleteGame(g) {
+  return openConfirm({
+    title: 'Eliminar definitivamente',
+    message: 'Esto elimina el juego y sus cuentas de forma permanente. Esta acción no se puede deshacer.',
+    confirmText: String(g.titulo || ''),
+    confirmLabel: 'Eliminar definitivamente',
+    danger: true,
+    onConfirm: async () => {
+      try {
+        const res = await apiFetch('/api/admin/juegos/delete', {
+          method: 'POST',
+          body: JSON.stringify({ gameId: g.id, permanent: true })
+        });
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, error: d.error || 'No se pudo eliminar el juego.' };
+        if (Array.isArray(d.juegos)) state.games = d.juegos;
+        renderGames();
+        showToast('Juego eliminado definitivamente.');
+        return { ok: true };
+      } catch (err) {
+        if (String(err.message) === 'Sesión expirada') return { ok: true };
+        return { ok: false, error: 'Error de comunicación con el servidor.' };
+      }
+    }
+  });
 }
 
 /* ==========================================================================
@@ -1030,7 +1075,7 @@ function kpiCard(label, value, ic, tint, clickable, view) {
 function dashSkeleton() {
   document.getElementById('dash-kpis').innerHTML =
     '<div class="kpi-card"><div class="kpi-text"><span class="skeleton-line"></span><span class="skeleton-line" style="width:65%"></span></div></div>'.repeat(4);
-  ['dash-recent', 'dash-stock', 'dash-audit', 'dash-top'].forEach(id => {
+  ['dash-recent', 'dash-stock', 'dash-audit', 'dash-top', 'dash-viewed', 'dash-cart', 'dash-repeat', 'dash-searches'].forEach(id => {
     document.getElementById(id).innerHTML =
       '<div class="panel-list">' + '<span class="skeleton-line" style="margin:10px 20px;width:82%"></span>'.repeat(4) + '</div>';
   });
@@ -1039,12 +1084,13 @@ function dashSkeleton() {
 async function fetchDash() {
   dashSkeleton();
   try {
-    const [oR, gR, uR, cR, aR] = await Promise.all([
+    const [oR, gR, uR, cR, aR, anR] = await Promise.all([
       apiFetch('/api/admin/orders'),
       apiFetch('/api/admin/juegos'),
       apiFetch('/api/admin/users'),
       apiFetch('/api/coupons'),
-      apiFetch('/api/admin/audit?limit=8')
+      apiFetch('/api/admin/audit?limit=8'),
+      apiFetch('/api/admin/analytics?days=30')
     ]);
     const grab = async (r, fallback) => (r.ok ? (await r.json().catch(() => fallback)) : fallback);
     state.dash.orders = await grab(oR, []);
@@ -1052,6 +1098,7 @@ async function fetchDash() {
     state.dash.users = await grab(uR, []);
     state.dash.coupons = await grab(cR, []);
     state.dash.audit = await grab(aR, []);
+    state.dash.analytics = await grab(anR, null);
     state.dash.loaded = true;
     renderDash();
   } catch (err) {
@@ -1060,7 +1107,7 @@ async function fetchDash() {
 }
 
 function renderDash() {
-  const { orders, games, coupons, audit } = state.dash;
+  const { orders, games, coupons, audit, analytics } = state.dash;
   const ventas = orders.reduce((acc, o) => {
     if (['cancelada', 'reembolsada'].includes(o.estado)) return acc;
     return acc + (Number(o.total != null ? o.total : o.monto) || 0);
@@ -1078,6 +1125,7 @@ function renderDash() {
   renderDashStock(games);
   renderDashAudit(audit);
   renderDashTop(games);
+  renderDashAnalytics(analytics);
 }
 
 function renderDashRecent(orders) {
@@ -1128,7 +1176,7 @@ function renderDashStock(games) {
         <span class="stock-title">${escapeHTML(g.titulo || 'Sin título')}</span>
         <span class="stock-sub">Sec: ${sec} · Prim: ${prim}</span>
       </span>
-      ${isAgotado(g) ? '<span class="stock-tag">⛔ agotado</span>' : ''}
+      ${isAgotado(g) ? `<span class="stock-tag">${icon('alert', 12)} agotado</span>` : ''}
     </button>`;
   }).join('');
 }
@@ -1177,6 +1225,86 @@ function renderDashTop(games) {
       </span>
       <span class="top-count">${x.sold} vendidos</span>
     </div>`).join('')}</div>`;
+}
+
+/* ==========================================================================
+   DASHBOARD — analytics (GET /api/admin/analytics?days=30)
+   ========================================================================== */
+function renderDashAnalytics(a) {
+  const empty = '<p class="panel-empty">Sin datos suficientes todavía</p>';
+
+  /* Top vistos */
+  const elV = document.getElementById('dash-viewed');
+  const viewed = (a && Array.isArray(a.topViewed) ? a.topViewed : []).slice(0, 5);
+  if (!viewed.length) {
+    elV.innerHTML = empty;
+  } else {
+    elV.innerHTML = `<div class="panel-list">${viewed.map(v => {
+      const g = state.dash.games.find(x => Number(x.id) === Number(v.gameId));
+      const title = g ? (g.titulo || 'Sin título') : 'Juego #' + escapeHTML(String(v.gameId));
+      return `<button type="button" class="stock-row" data-action="nav" data-view="juegos" title="Ver juegos">
+        <span class="mini-icon" aria-hidden="true">${icon('eye', 14)}</span>
+        <span class="stock-info">
+          <span class="stock-title">${escapeHTML(title)}</span>
+        </span>
+        <span class="top-count">${escapeHTML(String(v.count ?? 0))} vistas</span>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  /* Carritos abandonados */
+  const elC = document.getElementById('dash-cart');
+  const ca = a && a.cartAbandonment ? a.cartAbandonment : null;
+  if (!ca || (!Number(ca.started) && !Number(ca.purchased))) {
+    elC.innerHTML = empty;
+  } else {
+    const started = Number(ca.started) || 0;
+    const purchased = Number(ca.purchased) || 0;
+    let rate = Number(ca.rate) || 0;
+    /* Acepta fracción (0-1) o porcentaje directo */
+    rate = rate <= 1 ? Math.round(rate * 100) : Math.round(rate);
+    const pct = Math.min(100, Math.max(0, rate));
+    elC.innerHTML = `
+      <div class="panel-list">
+        <p class="cart-line">${started} carritos iniciados · ${purchased} compras · <strong>${pct}% abandono</strong></p>
+        <div class="progress-track" role="img" aria-label="${pct}% de abandono de carrito"><div class="progress-fill${pct >= 70 ? ' high' : ''}" style="width:${pct}%"></div></div>
+      </div>`;
+  }
+
+  /* Clientes recurrentes (cálculo cliente-side sobre los pedidos) */
+  const elR = document.getElementById('dash-repeat');
+  const ordersArr = Array.isArray(state.dash.orders) ? state.dash.orders : [];
+  const byEmail = new Map();
+  ordersArr.forEach(o => {
+    const email = String(o.emailCompleto || o.email || '').trim().toLowerCase();
+    if (!email) return;
+    byEmail.set(email, (byEmail.get(email) || 0) + 1);
+  });
+  const recurrent = [...byEmail.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+  if (!recurrent.length) {
+    elR.innerHTML = empty;
+  } else {
+    const repOrders = recurrent.reduce((acc, [, n]) => acc + n, 0);
+    elR.innerHTML = `
+      <div class="panel-list">
+        <p class="cart-line"><strong>${recurrent.length}</strong> clientes recurrentes (${repOrders} de ${ordersArr.length} pedidos)</p>
+        ${recurrent.slice(0, 3).map(([email, n]) => `
+          <div class="top-row">
+            <span class="top-info"><span class="top-title">${escapeHTML(email)}</span></span>
+            <span class="top-count">${n} pedidos</span>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  /* Búsquedas frecuentes */
+  const elS = document.getElementById('dash-searches');
+  const searches = (a && Array.isArray(a.searches) ? a.searches : []).slice(0, 5);
+  if (!searches.length) {
+    elS.innerHTML = empty;
+  } else {
+    elS.innerHTML = `<div class="search-chips">${searches.map(s => `
+      <span class="chip chip-search">${icon('search', 12)} ${escapeHTML(String(s.search || ''))} · ${escapeHTML(String(s.count ?? 0))}</span>`).join('')}</div>`;
+  }
 }
 
 /* ==========================================================================
@@ -1330,10 +1458,24 @@ function renderGalleryGrid() {
       <button type="button" class="gallery-del" data-action="delete-gallery" data-id="${escapeHTML(String(item.id ?? ''))}" aria-label="Eliminar foto de ${escapeHTML(item.user || '')}">${icon('trash', 15)}</button>
       <figcaption class="gallery-cap">
         <strong>${escapeHTML(item.user || '—')}</strong>
-        <span class="stars">${escapeHTML(item.stars || '')}</span>
+        ${starRow(item.stars)}
         ${item.comment ? `<p>${escapeHTML(item.comment)}</p>` : ''}
       </figcaption>
     </figure>`).join('');
+}
+
+/* Estrellas de la galería: los datos guardan cadenas con el carácter U+2B50;
+   se muestran como iconos SVG, nunca como texto. */
+function starsData(n) {
+  return Array.from({ length: n }, () => String.fromCodePoint(0x2B50)).join(' ');
+}
+
+function starRow(stars) {
+  const count = (String(stars || '').match(new RegExp(String.fromCodePoint(0x2B50), 'g')) || []).length;
+  if (!count) return '';
+  let out = '';
+  for (let i = 0; i < Math.min(count, 5); i++) out += icon('star', 12);
+  return `<span class="stars">${out}</span>`;
 }
 
 async function toggleGallery(enabled) {
@@ -1505,7 +1647,7 @@ async function toggleUserRole(id) {
 /* ==========================================================================
    IMPORTAR / EXPORTAR JUEGOS
    ========================================================================== */
-const CSV_COLUMNS = ['id', 'titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'precioOriginal', 'rating', 'peso', 'imagen', 'imagenDetalle', 'descripcion', 'resumenExtenso', 'youtubeUrl', 'visible', 'stockPrimaria', 'stockSecundaria'];
+const CSV_COLUMNS = ['id', 'titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'precioOriginal', 'rating', 'peso', 'imagen', 'imagenDetalle', 'descripcion', 'resumenExtenso', 'youtubeUrl', 'visible', 'stockPrimaria', 'stockSecundaria', 'createdAt'];
 
 function openImportModal() {
   state.importPayload = null;
@@ -1751,10 +1893,18 @@ function closeModal(id) {
 
 /* ==========================================================================
    CONFIRM DIALOG (reemplaza confirm()/prompt())
+   Opciones: title, message, textareaLabel (motivo opcional), required,
+   confirmLabel, danger, confirmText (el usuario debe tipear el texto exacto
+   para habilitar Confirmar), onConfirm (async; si devuelve {ok:false,error}
+   el diálogo se mantiene abierto mostrando el error).
    ========================================================================== */
 let confirmResolver = null;
+let confirmOptions = null;
+let confirmBusy = false;
 
-function openConfirm({ title, message, textareaLabel = null, required = false, confirmLabel = 'Confirmar', danger = false }) {
+function openConfirm({ title, message, textareaLabel = null, required = false, confirmLabel = 'Confirmar', danger = false, confirmText = null, onConfirm = null }) {
+  confirmOptions = { confirmText, confirmLabel, required };
+  confirmBusy = false;
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent = message;
   const wrap = document.getElementById('confirm-reason-wrap');
@@ -1764,30 +1914,74 @@ function openConfirm({ title, message, textareaLabel = null, required = false, c
   ta.value = '';
   document.getElementById('confirm-reason-err').textContent = '';
   ta.required = !!required;
+
+  const txtWrap = document.getElementById('confirm-text-wrap');
+  const txt = document.getElementById('confirm-text');
+  txtWrap.hidden = confirmText === null || confirmText === undefined;
+  document.getElementById('confirm-text-label').textContent = 'Escribí el título para confirmar';
+  txt.value = '';
+  document.getElementById('confirm-text-err').textContent = '';
+
+  document.getElementById('confirm-api-error').hidden = true;
+
   const yes = document.getElementById('confirm-yes');
   yes.textContent = confirmLabel;
   yes.classList.toggle('btn-danger', !!danger);
   yes.classList.toggle('btn-primary', !danger);
+  yes.disabled = confirmText !== null && confirmText !== undefined && txt.value !== confirmText;
   openModal('confirm-modal');
   if (textareaLabel) ta.focus();
+  else if (confirmText !== null && confirmText !== undefined) txt.focus();
+  else yes.focus();
   return new Promise(res => {
     confirmResolver = res;
   });
 }
 
+function finishConfirm(result) {
+  const resolve = confirmResolver;
+  confirmResolver = null;
+  confirmOptions = null;
+  closeModal('confirm-modal');
+  resolve(result);
+}
+
 function resolveConfirm(ok) {
-  if (!confirmResolver) return;
+  if (!confirmResolver || confirmBusy) return;
+  const opts = confirmOptions || {};
   const ta = document.getElementById('confirm-reason');
+  const txt = document.getElementById('confirm-text');
   const reason = ta.value.trim();
   if (ok && ta.required && !reason) {
     document.getElementById('confirm-reason-err').textContent = 'El motivo es obligatorio.';
     ta.focus();
     return;
   }
-  const resolve = confirmResolver;
-  confirmResolver = null;
-  closeModal('confirm-modal');
-  resolve({ ok, reason });
+  if (ok && opts.confirmText !== null && opts.confirmText !== undefined && txt.value !== opts.confirmText) {
+    document.getElementById('confirm-text-err').textContent = 'El texto no coincide con el título del juego.';
+    txt.focus();
+    return;
+  }
+  if (ok && opts.onConfirm) {
+    confirmBusy = true;
+    const yes = document.getElementById('confirm-yes');
+    yes.disabled = true;
+    yes.textContent = 'Procesando…';
+    Promise.resolve(opts.onConfirm(reason, txt.value)).then(result => {
+      if (result && result.ok) {
+        finishConfirm({ ok: true, reason });
+        return;
+      }
+      confirmBusy = false;
+      yes.disabled = opts.confirmText !== null && opts.confirmText !== undefined && txt.value !== opts.confirmText;
+      yes.textContent = opts.confirmLabel;
+      const errEl = document.getElementById('confirm-api-error');
+      errEl.textContent = (result && result.error) || 'No se pudo completar la acción.';
+      errEl.hidden = false;
+    });
+    return;
+  }
+  finishConfirm({ ok, reason });
 }
 
 /* ==========================================================================
@@ -1883,6 +2077,10 @@ document.addEventListener('input', (e) => {
     renderPreview('f-imagen-detalle', 'preview-imagen-detalle');
   } else if (t.id === 'import-json') {
     handleImportJsonInput();
+  } else if (t.id === 'confirm-text') {
+    const expected = confirmOptions ? confirmOptions.confirmText : null;
+    document.getElementById('confirm-yes').disabled = expected === null || expected === undefined || t.value !== expected;
+    document.getElementById('confirm-api-error').hidden = true;
   }
   /* Limpiar error de campo al escribir */
   const field = t.closest('.field');
@@ -1951,6 +2149,8 @@ function init() {
   document.getElementById('gate-loader').hidden = true;
   bindRail();
   renderNav();
+  document.getElementById('g-stars').innerHTML =
+    `<option value="${starsData(5)}">5 estrellas</option><option value="${starsData(4)}">4 estrellas</option>`;
   document.getElementById('game-form').addEventListener('submit', handleGameSubmit);
   document.getElementById('coupon-form').addEventListener('submit', handleCouponSubmit);
   document.getElementById('gallery-form').addEventListener('submit', handleGallerySubmit);

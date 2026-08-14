@@ -135,6 +135,38 @@ localStorage.setItem('zonaswitch_cart_v4', JSON.stringify(cart));
 let currentUser = JSON.parse(localStorage.getItem('zonaswitch_user')) || null;
 let favoriteGameIds = new Set(JSON.parse(localStorage.getItem('zonaswitch_favorites') || '[]').map(Number));
 
+// --- ANALYTICS ANÓNIMO + PRIVACIDAD ---
+// El seguimiento es anónimo: solo tipo de evento, ids y sesión. Nunca emails, usuarios ni URLs.
+const analyticsSessionId = (() => {
+  let sid = localStorage.getItem('zonaswitch_session');
+  if (!sid) {
+    sid = 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem('zonaswitch_session', sid);
+  }
+  return sid;
+})();
+
+function trackAnalytics(evt) {
+  if (localStorage.getItem('zonaswitch_no_track') === '1') return;
+  if (currentUser && currentUser.trackingOptOut === true) return;
+  const payload = {
+    type: evt.type,
+    sessionId: analyticsSessionId,
+    ...(evt.gameId != null ? { gameId: Number(evt.gameId) } : {}),
+    ...(evt.search ? { search: String(evt.search).slice(0, 100) } : {}),
+    ...(evt.itemCount != null ? { itemCount: Number(evt.itemCount) } : {})
+  };
+  fetch('/api/analytics/event', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(localStorage.getItem('userToken') ? { 'Authorization': 'Bearer ' + localStorage.getItem('userToken') } : {})
+    },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+}
+window.trackAnalytics = trackAnalytics;
+
 // Interceptor global de fetch para inyectar automáticamente el token JWT y cabeceras Anti-Caché
 const originalFetch = window.fetch;
 window.fetch = async function (resource, init) {
@@ -194,6 +226,7 @@ const apiFetch = function (resource, init) {
 
 let activeCategory = 'todos';
 let searchQuery = '';
+let searchAnalyticsTimer = null;
 let filterState = { priceMin: null, priceMax: null, sort: '', license: '', inStockOnly: false };
 let selectedGameForModal = null;
 let selectedLicenseType = null;
@@ -392,6 +425,7 @@ function initEventListeners() {
       searchQuery = e.target.value.toLowerCase().trim();
       renderCatalog();
       handleSearchAutocomplete(searchInput, 'search-autocomplete-dropdown');
+      clearTimeout(searchAnalyticsTimer); searchAnalyticsTimer = setTimeout(() => trackAnalytics({ type: 'search', search: e.target.value.trim() }), 500);
     });
   }
 
@@ -544,6 +578,7 @@ function initEventListeners() {
       if (desktopSearch) desktopSearch.value = e.target.value;
       renderCatalog();
       handleSearchAutocomplete(mobileSearchOverlayInput, 'mobile-search-overlay-suggestions');
+      clearTimeout(searchAnalyticsTimer); searchAnalyticsTimer = setTimeout(() => trackAnalytics({ type: 'search', search: e.target.value.trim() }), 500);
     });
   }
   if (mobileSearchOverlay && mobileSearchOverlayClose) {
@@ -637,6 +672,12 @@ function initEventListeners() {
 
   const updateOtpForm = document.getElementById('update-otp-form');
   if (updateOtpForm) updateOtpForm.addEventListener('submit', handleUpdateOtpSubmit);
+
+  const savePrivacyBtn = document.getElementById('save-privacy-btn');
+  if (savePrivacyBtn) savePrivacyBtn.addEventListener('click', handlePrivacySave);
+
+  const footerPrivacyToggle = document.getElementById('footer-privacy-toggle');
+  if (footerPrivacyToggle) footerPrivacyToggle.addEventListener('click', toggleFooterTracking);
 
   // Control del Menú Lateral Móvil (3 Rayas ☰)
   const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -832,12 +873,50 @@ function openUserSettingsModal() {
   const adminMode = !!(activeTab && activeTab.getAttribute('data-tab') === 'tab-admin' && isAdmin);
   if (modalCard) modalCard.classList.toggle('wide-admin', adminMode);
   backdrop.classList.toggle('admin-mode', adminMode);
+
+  // Checkbox de privacidad: marcado = seguimiento permitido, desmarcado = opt-out
+  const privacyCheckbox = document.getElementById('privacy-tracking-checkbox');
+  if (privacyCheckbox) privacyCheckbox.checked = !(currentUser && currentUser.trackingOptOut === true);
+
   backdrop.classList.add('active');
 }
 
 function closeUserSettingsModal() { const b=document.getElementById('user-settings-modal-backdrop'); if(b){ b.classList.remove('active','admin-mode'); const card=b.querySelector('.user-modal-card'); if(card) card.classList.remove('wide-admin'); } }
 function openUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.add('active'); }
 function closeUpdateOtpModal() { document.getElementById('update-otp-modal-backdrop').classList.remove('active'); }
+
+async function handlePrivacySave() {
+  if (!currentUser) return;
+  const checkbox = document.getElementById('privacy-tracking-checkbox');
+  if (!checkbox) return;
+  try {
+    const res = await apiFetch('/api/user/tracking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ optOut: !checkbox.checked })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.exito) {
+      showToast(data.error || 'No se pudo guardar la preferencia.');
+      return;
+    }
+    currentUser.trackingOptOut = data.trackingOptOut;
+    localStorage.setItem('zonaswitch_user', JSON.stringify(currentUser));
+    showToast('Preferencia guardada.');
+  } catch (err) {
+    showToast('Error de conexión.');
+  }
+}
+
+function toggleFooterTracking() {
+  if (localStorage.getItem('zonaswitch_no_track') === '1') {
+    localStorage.removeItem('zonaswitch_no_track');
+    showToast('Seguimiento de actividad activado.');
+  } else {
+    localStorage.setItem('zonaswitch_no_track', '1');
+    showToast('Seguimiento de actividad desactivado en este navegador.');
+  }
+}
 
 // --- FUNCIONES DEL PANEL DE ADMINISTRADOR (PROTEGIDO POR ROL) ---
 
@@ -1524,6 +1603,7 @@ function toggleFavoriteGame(gameId, event) {
   const id = Number(gameId);
   if (favoriteGameIds.has(id)) favoriteGameIds.delete(id); else favoriteGameIds.add(id);
   localStorage.setItem('zonaswitch_favorites', JSON.stringify([...favoriteGameIds]));
+  trackAnalytics({ type: favoriteGameIds.has(id) ? 'favorite_add' : 'favorite_remove', gameId: id });
   renderCatalog();
   // Micro-pop del corazón (Apple: escala con overshoot al tocar)
   const heartBtn = document.querySelector(`.favorite-game-btn[data-fav-id="${id}"]`);
@@ -2362,6 +2442,7 @@ function addGameWithLicenseToCart(game, licenseType) {
 
   saveCart();
   updateCartBadge();
+  trackAnalytics({ type: 'add_to_cart', gameId: game.id });
   showToast(`¡"${game.titulo}" (Cuenta ${accountTitle}) añadido al carrito!`);
 }
 
@@ -2654,6 +2735,7 @@ async function handlePaymentSubmit(e) {
   btn.innerHTML = `<span>Procesando pedido...</span>`;
 
   try {
+    trackAnalytics({ type: 'checkout_start', itemCount: directCheckoutItem ? 1 : cart.reduce((n, i) => n + i.cantidad, 0) });
     const res = await apiFetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2662,6 +2744,7 @@ async function handlePaymentSubmit(e) {
 
     const data = await res.json();
     if (data.exito) {
+      trackAnalytics({ type: 'purchase', itemCount: directCheckoutItem ? 1 : cart.reduce((n, i) => n + i.cantidad, 0) });
       // Si el total es $0 CLP (Cupón PRUEBAXD), finalizar de inmediato sin salir del sitio
       if (montoTotal === 0) {
         const wasDirect = !!directCheckoutItem;

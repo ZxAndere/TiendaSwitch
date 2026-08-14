@@ -457,6 +457,7 @@
         <button type="button" class="tab-btn active" data-tab="tab-username">Usuario</button>
         <button type="button" class="tab-btn" data-tab="tab-email">Correo</button>
         <button type="button" class="tab-btn" data-tab="tab-password">Contraseña</button>
+        <button type="button" class="tab-btn" data-tab="tab-privacy">Privacidad</button>
         <button type="button" class="tab-btn admin-only-tab" id="admin-tab-btn" data-tab="tab-admin" style="display: none;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg> Opciones de Administrador</button>
       </div>
 
@@ -498,6 +499,17 @@
           <div class="auth-error-msg" id="change-password-error"></div>
           <button type="submit" class="auth-submit-btn">Enviar Código de Verificación a Mi Correo</button>
         </form>
+
+        <!-- Tab Privacidad -->
+        <div id="tab-privacy" class="settings-form tab-pane">
+          <h5 style="color: var(--joycon-cyan); font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 0.45rem;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Privacidad</h5>
+          <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.55; margin: 0.4rem 0 1rem;">El seguimiento anónimo nos ayuda a entender qué juegos interesan más, sin identificar tu cuenta.</p>
+          <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; cursor: pointer; margin-bottom: 1.1rem;">
+            <input type="checkbox" id="privacy-tracking-checkbox" style="width: 1.05rem; height: 1.05rem; accent-color: var(--joycon-cyan, #00f0ff);">
+            Permitir seguimiento anónimo de mi actividad
+          </label>
+          <button type="button" class="auth-submit-btn" id="save-privacy-btn" style="width: auto; padding: 0.6rem 1.2rem;">Guardar</button>
+        </div>
 
         <!-- Tab Administrador (Protegido por Rol) -->
         <div id="tab-admin" class="settings-form tab-pane">
@@ -1093,6 +1105,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           <span>Términos y condiciones</span>
         </a>
+        <button type="button" class="footer-btn" id="footer-privacy-toggle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span>Privacidad</span>
+        </button>
       </div>
     </div>
   </footer>

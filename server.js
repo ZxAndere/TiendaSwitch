@@ -218,6 +218,14 @@ const adminImportLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const analyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: "Demasiadas solicitudes. Por favor, espera unos minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 const emailOtpLimiter = new Map(); // Mapa en memoria para rate limit por dirección de correo (60s)
 
 // Esquema de Usuario seguro
@@ -229,7 +237,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: 'user' },
   tokenVersion: { type: Number, default: 0 },
   deletedAt: Date,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  trackingOptOut: { type: Boolean, default: false }
 });
 
 const gameSchema = new mongoose.Schema({
@@ -249,7 +258,8 @@ const gameSchema = new mongoose.Schema({
   stockPrimaria: { type: Number, default: null },
   stockSecundaria: { type: Number, default: null },
   soldPrimaria: { type: Number, default: 0 },
-  soldSecundaria: { type: Number, default: 0 }
+  soldSecundaria: { type: Number, default: 0 },
+  createdAt: Date
 }, { strict: false });
 
 const gallerySchema = new mongoose.Schema({
@@ -286,11 +296,22 @@ const auditLogSchema = new mongoose.Schema({
   metadata: mongoose.Schema.Types.Mixed
 }, { strict: false });
 
+const analyticsEventSchema = new mongoose.Schema({
+  type: String,
+  gameId: Number,
+  search: String,
+  itemCount: Number,
+  sessionId: String,
+  userId: String,
+  timestamp: { type: Date, default: Date.now }
+}, { strict: false });
+
 const UserModel = mongoose.model('User', userSchema);
 const GameModel = mongoose.model('Game', gameSchema);
 const GalleryModel = mongoose.model('Gallery', gallerySchema);
 const OrderModel = mongoose.model('Order', orderSchema);
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
+const AnalyticsEvent = mongoose.model('AnalyticsEvent', analyticsEventSchema);
 
 // Asegurar directorio de datos de forma segura (Directory Traversal Protection)
 const DATA_DIR = path.resolve(__dirname, 'data');
@@ -300,6 +321,7 @@ const GAMES_FILE = path.resolve(DATA_DIR, 'games.json');
 const GALLERY_FILE = path.resolve(DATA_DIR, 'gallery.json');
 const SETTINGS_FILE = path.resolve(DATA_DIR, 'settings.json');
 const AUDIT_FILE = path.resolve(DATA_DIR, 'audit-log.json');
+const ANALYTICS_FILE = path.resolve(DATA_DIR, 'analytics.json');
 
 // Helpers de validación de tipos y escritura atómica segura de JSON (Problemas 2 y 6)
 function safeString(val) {
@@ -478,7 +500,8 @@ function verifyToken(req, res, next) {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role || 'user'
+        role: user.role || 'user',
+        trackingOptOut: !!user.trackingOptOut
       };
       next();
     }).catch(err => {
@@ -515,7 +538,8 @@ if (process.env.MONGODB_URI) {
             passwordHash: u.passwordHash,
             password: u.password,
             role: u.role || 'user',
-            tokenVersion: u.tokenVersion || 0
+            tokenVersion: u.tokenVersion || 0,
+            trackingOptOut: !!u.trackingOptOut
           }));
           safeWriteJsonSync(USERS_FILE, formatted);
           console.log(`📥 Sincronizados ${formatted.length} usuarios desde MongoDB Atlas.`);
@@ -669,6 +693,22 @@ app.delete('/api/user/account', verifyToken, userApiLimiter, async (req, res) =>
     await OrderModel.updateMany({ email: req.user.email }, { $set: { email: `eliminado_${deletedId}@privado.invalid`, usuario: 'Cuenta eliminada', cliente: 'Cliente eliminado' } });
   }
   res.json({ exito: true, mensaje: 'Cuenta eliminada correctamente.' });
+});
+
+// Preferencia de privacidad: opt-out de tracking de comportamiento
+app.post('/api/user/tracking', verifyToken, userApiLimiter, (req, res) => {
+  const raw = req.body?.optOut;
+  let optOut;
+  if (raw === true || raw === 'true' || raw === 1 || raw === '1') optOut = true;
+  else if (raw === false || raw === 'false' || raw === 0 || raw === '0') optOut = false;
+  else return res.status(400).json({ error: 'El valor de optOut debe ser true o false.' });
+
+  const users = getUsers();
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  user.trackingOptOut = optOut;
+  saveUsers(users);
+  res.json({ exito: true, trackingOptOut: optOut });
 });
 
 // --- CONFIGURACIÓN E INTEGRACIÓN DE PASARELAS (FLOW Y MERCADO PAGO CHILE) ---
@@ -876,7 +916,8 @@ function saveUsers(users) {
           email: u.email,
           passwordHash: u.passwordHash,
           role: u.role || 'user',
-          tokenVersion: u.tokenVersion || 0
+          tokenVersion: u.tokenVersion || 0,
+          trackingOptOut: !!u.trackingOptOut
         };
         await UserModel.findOneAndUpdate({ id: u.id }, cleanUser, { upsert: true, returnDocument: 'after' });
         console.log(`🍃 Usuario ${u.username} sincronizado en MongoDB Atlas.`);
@@ -2418,7 +2459,8 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
       stockSecundaria: stockSec,
       soldPrimaria: 0,
       soldSecundaria: 0,
-      visible: visible !== false
+      visible: visible !== false,
+      createdAt: new Date().toISOString()
     };
 
     // Persistir primero en Mongo cuando está disponible.
@@ -2465,12 +2507,24 @@ app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
 });
 
 
-// Endpoint Admin: Desactivar/eliminar juego del catálogo
+// Endpoint Admin: Desactivar/eliminar juego del catálogo (soft delete) o eliminarlo definitivamente (permanent: true)
 app.post('/api/admin/juegos/delete', verifyAdmin, (req, res) => {
   const gameId = Number(req.body?.gameId);
   const gameIndex = GAMES_STORE.findIndex(g => g.id === gameId);
   if (gameIndex === -1) return res.status(404).json({ error: 'Juego no encontrado.' });
   const game = GAMES_STORE[gameIndex];
+  const permanent = req.body?.permanent === true;
+
+  if (permanent) {
+    GAMES_STORE.splice(gameIndex, 1);
+    if (isMongoConnected) GameModel.deleteOne({ id: gameId }).catch(e => console.error('Error eliminando juego en Mongo:', e.message));
+    saveGamesLocal(GAMES_STORE);
+    broadcastCatalogUpdate();
+    console.log(`🛠️ [ADMIN] Juego eliminado definitivamente: "${game.titulo}" (ID ${game.id})`);
+    logAudit({ actor: req.user, action: 'juegos.delete_permanent', resourceType: 'juego', resourceId: game.id, summary: `Juego "${game.titulo}" eliminado definitivamente.` });
+    return res.json({ exito: true, mensaje: `Juego "${game.titulo}" eliminado definitivamente.`, juegos: GAMES_STORE });
+  }
+
   game.visible = false;
   game.deletedAt = new Date().toISOString();
   saveGamesLocal(GAMES_STORE);
@@ -2554,7 +2608,7 @@ const IMPORT_ALLOWED_KEYS = new Set([
   'id', 'titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'precioOriginal',
   'rating', 'peso', 'imagen', 'imagenDetalle', 'imagenesDetalle', 'descripcion',
   'resumenExtenso', 'youtubeUrl', 'correoTexto', 'correoImagen', 'visible',
-  'stockPrimaria', 'stockSecundaria'
+  'stockPrimaria', 'stockSecundaria', 'createdAt'
 ].map(k => k.toLowerCase()));
 
 function parseImportRows(body) {
@@ -2688,6 +2742,13 @@ function buildImportGame(norm) {
   };
   if (gameId !== null) game.id = gameId;
 
+  // createdAt: si viene, debe ser una fecha válida; si viene vacío, el commit lo asigna
+  if (get('createdAt') !== undefined && get('createdAt') !== null && s(get('createdAt')) !== '') {
+    const parsedDate = new Date(s(get('createdAt')));
+    if (Number.isNaN(parsedDate.getTime())) return err('createdAt', 'La fecha de creación no es válida.');
+    game.createdAt = parsedDate.toISOString();
+  }
+
   return { game };
 }
 
@@ -2775,6 +2836,10 @@ app.post('/api/admin/juegos/import/commit', verifyAdmin, adminImportLimiter, imp
         }
         game.id = nextId;
         takenIds.add(String(nextId));
+      }
+      // createdAt: si la fila no lo trajo, asignar ahora (igual que create)
+      if (game.createdAt === undefined) {
+        game.createdAt = new Date().toISOString();
       }
       // Persistir primero en Mongo cuando está disponible (igual que create)
       if (isMongoConnected) {
@@ -3650,6 +3715,125 @@ app.post('/api/mp/confirm', async (req, res) => {
   }
 
   res.send('OK');
+});
+
+
+// --- ANALÍTICA DE COMPORTAMIENTO DEL CLIENTE (anónima por defecto, sin PII) ---
+const ANALYTICS_EVENT_TYPES = new Set(['game_view', 'add_to_cart', 'checkout_start', 'purchase', 'favorite_add', 'favorite_remove', 'search']);
+
+// Recepción de eventos de telemetría (fire-and-forget; un token inválido NUNCA bloquea el evento)
+app.post('/api/analytics/event', analyticsLimiter, (req, res) => {
+  const body = req.body || {};
+  if (!ANALYTICS_EVENT_TYPES.has(body.type)) {
+    return res.status(400).json({ error: 'Tipo de evento no válido.' });
+  }
+
+  const event = { type: body.type, timestamp: new Date().toISOString() };
+
+  if (body.gameId !== undefined && body.gameId !== null) {
+    const g = Number(body.gameId);
+    if (!Number.isSafeInteger(g)) return res.status(400).json({ error: 'gameId inválido.' });
+    event.gameId = g;
+  }
+  if (body.search !== undefined && body.search !== null) {
+    if (typeof body.search !== 'string') return res.status(400).json({ error: 'search inválido.' });
+    const s = body.search.trim();
+    if (s.length > 100) return res.status(400).json({ error: 'search muy largo.' });
+    event.search = s;
+  }
+  if (body.itemCount !== undefined && body.itemCount !== null) {
+    const n = Number(body.itemCount);
+    if (!Number.isSafeInteger(n) || n < 0) return res.status(400).json({ error: 'itemCount inválido.' });
+    event.itemCount = n;
+  }
+  if (body.sessionId !== undefined && body.sessionId !== null) {
+    if (typeof body.sessionId !== 'string' || body.sessionId.length > 64) return res.status(400).json({ error: 'sessionId inválido.' });
+    event.sessionId = body.sessionId;
+  }
+
+  // userId solo se puebla server-side; token inválido/expirado se ignora (nunca 401)
+  const authHeader = req.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET);
+      if (decoded && decoded.id) event.userId = String(decoded.id);
+    } catch (e) {}
+  }
+
+  const persistEvent = (ev) => {
+    if (isMongoConnected) {
+      AnalyticsEvent.create(ev).catch(err => console.error('Error guardando evento de analítica en Mongo:', err.message));
+    } else {
+      try {
+        const log = safeReadJsonSync(ANALYTICS_FILE, []);
+        log.push(ev);
+        while (log.length > 5000) log.shift();
+        safeWriteJsonSync(ANALYTICS_FILE, log);
+      } catch (err) {
+        console.error('Error guardando evento de analítica local:', err.message);
+      }
+    }
+  };
+  persistEvent(event);
+  res.json({ exito: true });
+});
+
+// Resumen de analítica para administradores
+function computeAnalytics(events, days) {
+  const groupTop = (matchType, field) => {
+    const counts = new Map();
+    events.forEach(e => {
+      if (e.type !== matchType) return;
+      const key = field === 'search' ? String(e.search || '').toLowerCase() : e[field];
+      if (key === undefined || key === null || key === '') return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([key, count]) => field === 'search' ? { search: key, count } : { gameId: key, count });
+  };
+
+  const started = events.filter(e => e.type === 'checkout_start').length;
+  const purchased = events.filter(e => e.type === 'purchase').length;
+
+  return {
+    days,
+    topViewed: groupTop('game_view', 'gameId'),
+    topFavorited: groupTop('favorite_add', 'gameId'),
+    cartAbandonment: {
+      started,
+      purchased,
+      rate: started === 0 ? 0 : Math.round(((started - purchased) / started) * 100) / 100
+    },
+    searches: groupTop('search', 'search')
+  };
+}
+
+app.get('/api/admin/analytics', verifyAdmin, (req, res) => {
+  let days = Number(req.query.days);
+  if (!Number.isInteger(days) || days <= 0) days = 30;
+  if (days > 90) days = 90;
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  const loadEvents = async () => {
+    if (isMongoConnected) {
+      try {
+        return await AnalyticsEvent.find({ timestamp: { $gte: new Date(cutoff) } }).lean();
+      } catch (e) {
+        console.error('Error cargando analítica desde Mongo:', e.message);
+      }
+    }
+    const log = safeReadJsonSync(ANALYTICS_FILE, []);
+    return log.filter(e => e.timestamp && new Date(e.timestamp).getTime() >= cutoff);
+  };
+
+  loadEvents().then(events => {
+    res.json(computeAnalytics(events, days));
+  }).catch(err => {
+    console.error('Error calculando analítica:', err);
+    res.status(500).json({ error: 'No se pudo calcular la analítica.' });
+  });
 });
 
 

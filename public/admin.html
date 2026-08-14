@@ -18,6 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="favicon.png">
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -88,6 +90,24 @@
           <div class="panel-card">
             <div class="panel-head"><h3>Top vendedores</h3></div>
             <div class="panel-body" id="dash-top"></div>
+          </div>
+        </div>
+        <div class="dash-grid dash-grid-2">
+          <div class="panel-card">
+            <div class="panel-head"><h3>Top vistos</h3></div>
+            <div class="panel-body" id="dash-viewed"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-head"><h3>Carritos abandonados</h3></div>
+            <div class="panel-body" id="dash-cart"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-head"><h3>Clientes recurrentes</h3></div>
+            <div class="panel-body" id="dash-repeat"></div>
+          </div>
+          <div class="panel-card panel-wide">
+            <div class="panel-head"><h3>Búsquedas frecuentes</h3></div>
+            <div class="panel-body" id="dash-searches"></div>
           </div>
         </div>
       </section>
@@ -297,10 +317,7 @@
                 </div>
                 <div class="field">
                   <label for="g-stars">Estrellas</label>
-                  <select id="g-stars">
-                    <option value="⭐ ⭐ ⭐ ⭐ ⭐">⭐ ⭐ ⭐ ⭐ ⭐</option>
-                    <option value="⭐ ⭐ ⭐ ⭐">⭐ ⭐ ⭐ ⭐</option>
-                  </select>
+                  <select id="g-stars"></select>
                 </div>
                 <div class="field field-full">
                   <label for="g-imagen">URL de la foto <span class="req" aria-hidden="true">*</span></label>
@@ -572,6 +589,12 @@
       <textarea id="confirm-reason" rows="3" maxlength="500"></textarea>
       <p class="field-err" id="confirm-reason-err"></p>
     </div>
+    <div class="field" id="confirm-text-wrap" hidden>
+      <label for="confirm-text" id="confirm-text-label"></label>
+      <input type="text" id="confirm-text" autocomplete="off">
+      <p class="field-err" id="confirm-text-err"></p>
+    </div>
+    <p class="field-err" id="confirm-api-error" hidden></p>
     <div class="confirm-actions">
       <button type="button" class="btn-secondary" id="confirm-no">Cancelar</button>
       <button type="button" class="btn-danger" id="confirm-yes">Confirmar</button>

@@ -101,6 +101,8 @@ async function initJuegoPage() {
     currentDetailGame = catalog[0];
   }
 
+  if (typeof trackAnalytics === 'function' && currentDetailGame) trackAnalytics({ type: 'game_view', gameId: currentDetailGame.id });
+
   // Actualizar la URL de la barra de direcciones a la limpia SEO (ej: https://zonaswitchchile.com/Mario-Kart-8-Deluxe)
   if (currentDetailGame.titulo && window.history && window.history.replaceState) {
     const cleanSlug = slugify(currentDetailGame.titulo);
