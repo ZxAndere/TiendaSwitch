@@ -1151,13 +1151,322 @@ html.light-mode .kpi-red {
   align-items: start;
 }
 
-/* Segunda fila de paneles (analytics): 3 columnas, el último ancho completo */
-.dash-grid-2 {
-  grid-template-columns: repeat(3, 1fr);
+/* ==========================================================================
+   CHECKBOX PERSONALIZADO (selección de filas)
+   ========================================================================== */
+.row-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-card);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s var(--ease-in), border-color 0.15s var(--ease-in);
 }
 
-.dash-grid-2 .panel-wide {
-  grid-column: 1 / -1;
+.row-check:hover {
+  border-color: var(--joycon-cyan-dark);
+}
+
+.row-check:checked {
+  background: var(--joycon-cyan);
+  border-color: var(--joycon-cyan);
+}
+
+.row-check:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #000000;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.row-check:indeterminate {
+  background: var(--joycon-cyan);
+  border-color: var(--joycon-cyan);
+}
+
+.row-check:indeterminate::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  width: 10px;
+  height: 2px;
+  background: #000000;
+}
+
+.row-check:focus-visible {
+  outline: 2px solid var(--joycon-cyan);
+  outline-offset: 2px;
+}
+
+.col-check {
+  width: 46px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   BARRA DE SELECCIÓN (juegos)
+   ========================================================================== */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: rgba(0, 240, 255, 0.07);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.selection-count {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--joycon-cyan);
+}
+
+.bulk-progress {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.selection-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+@media (min-width: 768px) {
+  .selection-bar {
+    position: sticky;
+    top: 64px;
+    z-index: 25;
+  }
+}
+
+/* ==========================================================================
+   PAGINACIÓN — selector de tamaño de página
+   ========================================================================== */
+.page-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-size-select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  font-size: 0.8rem;
+}
+
+/* ==========================================================================
+   EMBUDO DE COMPRA
+   ========================================================================== */
+.funnel {
+  padding: 16px 20px 18px;
+}
+
+.funnel-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.funnel-step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 8px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+.funnel-icon {
+  color: var(--joycon-cyan);
+}
+
+.funnel-num {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.funnel-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.funnel-chev {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.funnel-rates {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.funnel-ticket {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.funnel-ticket strong {
+  color: var(--joycon-cyan);
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   ACTIVIDAD POR HORA
+   ========================================================================== */
+.hour-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 110px;
+  padding: 14px 20px 0;
+}
+
+.hour-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.hour-bar {
+  width: 100%;
+  max-width: 14px;
+  border-radius: 3px 3px 0 0;
+  background: var(--bg-card-hover);
+  min-height: 2px;
+  transition: background 0.15s var(--ease-in);
+}
+
+.hour-col.peak .hour-bar {
+  background: var(--joycon-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+.peak-tag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--joycon-cyan);
+}
+
+.hour-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 22px 14px;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+/* ==========================================================================
+   NUEVOS CLIENTES — mini barras
+   ========================================================================== */
+.mini-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+  height: 80px;
+  padding: 0 20px 16px;
+}
+
+.mini-bar-col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.mini-bar {
+  width: 38px;
+  border-radius: 6px 6px 0 0;
+  background: var(--joycon-cyan);
+  min-height: 2px;
+}
+
+.mini-bar.bar-week {
+  background: rgba(0, 240, 255, 0.45);
+}
+
+.mini-bar-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+/* Icono mini corazón para Top favoritos */
+.mini-icon.mini-heart {
+  background: rgba(255, 0, 60, 0.1);
+  color: #fca5a5;
+}
+
+html.light-mode .mini-icon.mini-heart {
+  color: #b91c1c;
+}
+
+/* Checkbox de confirmación en el diálogo */
+.confirm-check-field {
+  margin-bottom: 14px;
+}
+
+.confirm-check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.confirm-check-label .row-check {
+  margin-top: 2px;
+}
+
+/* Fila de dos paneles de igual ancho (embudo + actividad) */
+.dash-grid-even {
+  grid-template-columns: 1fr 1fr;
 }
 
 /* --- Carritos abandonados --- */
@@ -2215,7 +2524,8 @@ html.light-mode .toast-error {
 
 @media (max-width: 900px) {
   .dash-grid,
-  .dash-grid-2 {
+  .dash-grid-2,
+  .dash-grid-even {
     grid-template-columns: 1fr;
   }
 

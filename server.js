@@ -3779,7 +3779,7 @@ app.post('/api/analytics/event', analyticsLimiter, (req, res) => {
 });
 
 // Resumen de analítica para administradores
-function computeAnalytics(events, days) {
+function computeAnalytics(events, days, users, orders) {
   const groupTop = (matchType, field) => {
     const counts = new Map();
     events.forEach(e => {
@@ -3794,19 +3794,92 @@ function computeAnalytics(events, days) {
       .map(([key, count]) => field === 'search' ? { search: key, count } : { gameId: key, count });
   };
 
-  const started = events.filter(e => e.type === 'checkout_start').length;
-  const purchased = events.filter(e => e.type === 'purchase').length;
+  const rate = (num, den) => den === 0 ? 0 : Math.round((num / den) * 100) / 100;
+  const countType = (type) => events.filter(e => e.type === type).length;
+  const views = countType('game_view');
+  const addToCart = countType('add_to_cart');
+  const checkoutStart = countType('checkout_start');
+  const purchases = countType('purchase');
+
+  // Funnel de conversión
+  const funnel = {
+    views,
+    addToCart,
+    checkoutStart,
+    purchases,
+    viewToCart: rate(addToCart, views),
+    cartToCheckout: rate(checkoutStart, addToCart),
+    checkoutToPurchase: rate(purchases, checkoutStart)
+  };
+
+  // Actividad por hora (0-23, hora local del servidor) — siempre 24 entradas
+  const activityByHour = Array.from({ length: 24 }, (_, hour) => ({ hour, count: 0 }));
+  // Actividad por día de la semana (Lunes=1 … Domingo=7) — siempre 7 entradas
+  const activityByDay = Array.from({ length: 7 }, (_, i) => ({ day: i + 1, count: 0 }));
+
+  events.forEach(e => {
+    const t = e.timestamp ? new Date(e.timestamp) : null;
+    if (!t || Number.isNaN(t.getTime())) return;
+    const h = t.getHours();
+    if (h >= 0 && h <= 23) activityByHour[h].count += 1;
+    const dow = t.getDay() === 0 ? 7 : t.getDay(); // JS getDay(): 0=Dom → 7
+    activityByDay[dow - 1].count += 1;
+  });
+
+  // Usuarios nuevos (excluye usuarios sin createdAt)
+  const now = Date.now();
+  const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+  let thisWeek = 0;
+  let thisMonth = 0;
+  (Array.isArray(users) ? users : []).forEach(u => {
+    if (!u || !u.createdAt) return;
+    const t = new Date(u.createdAt).getTime();
+    if (Number.isNaN(t)) return;
+    if (t >= monthAgo) thisMonth += 1;
+    if (t >= weekAgo) thisWeek += 1;
+  });
+
+  // Ingresos por título y ticket promedio (excluye órdenes canceladas/reembolsadas)
+  const EXCLUDED_ORDER_STATES = new Set(['cancelada', 'reembolsada']);
+  const validOrders = (Array.isArray(orders) ? orders : []).filter(o => o && !EXCLUDED_ORDER_STATES.has(String(o.estado || '').toLowerCase()));
+  const revenueByTitulo = new Map();
+  let ticketTotal = 0;
+  validOrders.forEach(o => {
+    ticketTotal += Number(o.total || o.monto || 0) || 0;
+    const carrito = Array.isArray(o.carrito) ? o.carrito : [];
+    carrito.forEach(item => {
+      if (!item || typeof item !== 'object') return;
+      const titulo = String(item.titulo || 'Desconocido');
+      const qty = Number(item.cantidad) || 1;
+      const price = Number(item.precio) || 0;
+      const cur = revenueByTitulo.get(titulo) || { revenue: 0, units: 0 };
+      cur.revenue += price * qty;
+      cur.units += qty;
+      revenueByTitulo.set(titulo, cur);
+    });
+  });
+  const topRevenue = [...revenueByTitulo.entries()]
+    .map(([titulo, { revenue, units }]) => ({ titulo, revenue, units }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
 
   return {
     days,
     topViewed: groupTop('game_view', 'gameId'),
     topFavorited: groupTop('favorite_add', 'gameId'),
     cartAbandonment: {
-      started,
-      purchased,
-      rate: started === 0 ? 0 : Math.round(((started - purchased) / started) * 100) / 100
+      started: checkoutStart,
+      purchased: purchases,
+      rate: rate(checkoutStart - purchases, checkoutStart)
     },
-    searches: groupTop('search', 'search')
+    searches: groupTop('search', 'search'),
+    funnel,
+    activityByHour,
+    activityByDay,
+    newUsers: { thisWeek, thisMonth },
+    topRevenue,
+    ticketPromedio: validOrders.length === 0 ? 0 : Math.round(ticketTotal / validOrders.length)
   };
 }
 
@@ -3828,8 +3901,18 @@ app.get('/api/admin/analytics', verifyAdmin, (req, res) => {
     return log.filter(e => e.timestamp && new Date(e.timestamp).getTime() >= cutoff);
   };
 
-  loadEvents().then(events => {
-    res.json(computeAnalytics(events, days));
+  // Mismo patrón que /api/admin/orders: Mongo si está conectado, respaldo al archivo JSON
+  const loadOrders = async () => {
+    let orders = [];
+    if (isMongoConnected) {
+      try { orders = await OrderModel.find({}).lean(); } catch (e) { console.error('Error cargando órdenes para analítica:', e.message); }
+    }
+    if (!orders.length) orders = safeReadJsonSync(ORDERS_FILE, []);
+    return orders;
+  };
+
+  Promise.all([loadEvents(), loadOrders()]).then(([events, orders]) => {
+    res.json(computeAnalytics(events, days, getUsers(), orders));
   }).catch(err => {
     console.error('Error calculando analítica:', err);
     res.status(500).json({ error: 'No se pudo calcular la analítica.' });

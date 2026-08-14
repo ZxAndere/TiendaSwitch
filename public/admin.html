@@ -110,6 +110,32 @@
             <div class="panel-body" id="dash-searches"></div>
           </div>
         </div>
+
+        <div class="dash-grid dash-grid-even">
+          <div class="panel-card">
+            <div class="panel-head"><h3>Embudo de compra</h3></div>
+            <div class="panel-body" id="dash-funnel"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-head"><h3>Actividad por hora</h3></div>
+            <div class="panel-body" id="dash-activity"></div>
+          </div>
+        </div>
+
+        <div class="dash-grid-2">
+          <div class="panel-card">
+            <div class="panel-head"><h3>Top favoritos</h3></div>
+            <div class="panel-body" id="dash-fav"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-head"><h3>Ingresos por juego</h3></div>
+            <div class="panel-body" id="dash-revenue"></div>
+          </div>
+          <div class="panel-card">
+            <div class="panel-head"><h3>Nuevos clientes</h3></div>
+            <div class="panel-body" id="dash-newusers"></div>
+          </div>
+        </div>
       </section>
 
       <!-- ============ VISTA: JUEGOS ============ -->
@@ -145,6 +171,18 @@
             <input type="text" id="games-search" placeholder="Buscar por título o categoría…" autocomplete="off">
           </div>
           <span class="toolbar-count" id="games-count"></span>
+        </div>
+
+        <div class="selection-bar" id="selection-bar" hidden>
+          <span class="selection-count" id="selection-count"></span>
+          <button type="button" class="btn-ghost" data-action="clear-selection">Limpiar</button>
+          <span class="bulk-progress" id="bulk-progress" hidden></span>
+          <div class="selection-actions">
+            <button type="button" class="btn-secondary" data-action="bulk-toggle" data-visible="1">Activar</button>
+            <button type="button" class="btn-secondary" data-action="bulk-toggle" data-visible="0">Desactivar</button>
+            <button type="button" class="btn-secondary" data-action="bulk-edit">Editar en lote</button>
+            <button type="button" class="btn-danger" data-action="bulk-delete">Eliminar definitivamente</button>
+          </div>
         </div>
 
         <div class="table-card">
@@ -562,6 +600,58 @@
   </div>
 </div>
 
+<!-- ============ MODAL: EDICIÓN EN LOTE ============ -->
+<div class="modal-backdrop" id="bulk-modal" hidden>
+  <div class="modal-card modal-bulk" role="dialog" aria-modal="true" aria-labelledby="bulk-modal-title">
+    <div class="modal-head">
+      <h3 id="bulk-modal-title">Editar en lote</h3>
+      <button type="button" class="icon-btn" data-action="close-modal" data-modal="bulk-modal" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="bulk-hint" id="bulk-hint">Los campos vacíos no se modifican.</p>
+      <div class="form-error" id="bulk-form-error" hidden></div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="be-sec">Precio Secundaria (CLP)</label>
+          <input type="number" id="be-sec" min="0" step="1">
+          <p class="field-err" id="err-be-sec"></p>
+        </div>
+        <div class="field">
+          <label for="be-prim">Precio Primaria (CLP)</label>
+          <input type="number" id="be-prim" min="0" step="1">
+          <p class="field-err" id="err-be-prim"></p>
+        </div>
+        <div class="field">
+          <label for="be-stock-sec">Stock Secundaria</label>
+          <input type="number" id="be-stock-sec" min="0" step="1">
+          <p class="field-hint">Vacío = ilimitado</p>
+          <p class="field-err" id="err-be-stock-sec"></p>
+        </div>
+        <div class="field">
+          <label for="be-stock-prim">Stock Primaria</label>
+          <input type="number" id="be-stock-prim" min="0" step="1">
+          <p class="field-hint">Vacío = ilimitado</p>
+          <p class="field-err" id="err-be-stock-prim"></p>
+        </div>
+        <div class="field">
+          <label for="be-visible">Visibilidad</label>
+          <select id="be-visible">
+            <option value="">No cambiar</option>
+            <option value="1">Visible</option>
+            <option value="0">Oculto</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-secondary" data-action="close-modal" data-modal="bulk-modal">Cancelar</button>
+      <button type="button" class="btn-primary" id="bulk-apply-btn">Aplicar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ MODAL: DETALLE DE PEDIDO ============ -->
 <div class="modal-backdrop" id="order-modal" hidden>
   <div class="modal-card modal-order" role="dialog" aria-modal="true" aria-labelledby="order-head">
@@ -593,6 +683,13 @@
       <label for="confirm-text" id="confirm-text-label"></label>
       <input type="text" id="confirm-text" autocomplete="off">
       <p class="field-err" id="confirm-text-err"></p>
+    </div>
+    <div class="field" id="confirm-check-wrap" hidden>
+      <label class="confirm-check-label">
+        <input type="checkbox" id="confirm-check" class="row-check">
+        <span id="confirm-check-text"></span>
+      </label>
+      <p class="field-err" id="confirm-check-err"></p>
     </div>
     <p class="field-err" id="confirm-api-error" hidden></p>
     <div class="confirm-actions">

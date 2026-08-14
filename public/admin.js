@@ -57,6 +57,8 @@ const ICONS = {
   chevDown: '<path d="m6 9 6 6 6-6"></path>',
   chevronsLeft: '<path d="m11 17-5-5 5-5"></path><path d="m18 17-5-5 5-5"></path>',
   chevronsRight: '<path d="m6 17 5-5-5-5"></path><path d="m13 17 5-5-5-5"></path>',
+  check: '<path d="M20 6 9 17l-5-5"></path>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>',
   wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>',
   star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line>',
@@ -112,15 +114,28 @@ function showToast(message, type = 'success') {
 /* ==========================================================================
    ESTADO
    ========================================================================== */
-const PAGE_SIZE = 20;
+const PAGE_SIZES = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
 const state = {
   user: null,
   view: 'juegos',
+  /* Tamaño de página compartido entre tablas, persistido */
+  pageSize: (() => {
+    try {
+      const v = Number(localStorage.getItem('zonaswitch_admin_pagesize'));
+      return PAGE_SIZES.includes(v) ? v : DEFAULT_PAGE_SIZE;
+    } catch (e) {
+      return DEFAULT_PAGE_SIZE;
+    }
+  })(),
   games: [],
   gamesLoaded: false,
   gamesQuery: '',
   gamesSort: { key: null, dir: 1 },
   gamesPage: 1,
+  /* Selección masiva de juegos (ids); sobrevive búsqueda/orden/paginación */
+  selectedGames: new Set(),
+  currentGamePage: [],
   orders: [],
   ordersLoaded: false,
   ordersQuery: '',
@@ -193,6 +208,9 @@ function renderNav() {
 
 function switchView(view) {
   state.view = view;
+  /* La selección de juegos es específica de la vista: se limpia al cambiar */
+  state.selectedGames.clear();
+  state.currentGamePage = [];
   document.querySelectorAll('.view').forEach(v => {
     v.hidden = v.id !== 'view-' + view;
   });
@@ -205,8 +223,10 @@ function switchView(view) {
   const meta = VIEW_META[view] || { title: view, sub: '' };
   document.getElementById('topbar-title').textContent = meta.title;
   document.getElementById('topbar-subtitle').textContent = meta.sub;
-  if (view === 'juegos') ensureGames();
-  else if (view === 'pedidos') ensureOrders();
+  if (view === 'juegos') {
+    ensureGames();
+    if (state.gamesLoaded) renderGames();
+  } else if (view === 'pedidos') ensureOrders();
   else if (view === 'dashboard') ensureDash();
   else if (view === 'cupones') ensureCoupons();
   else if (view === 'galeria') ensureGallery();
@@ -292,11 +312,17 @@ function renderPagination(containerId, page, total) {
     return;
   }
   el.style.display = '';
-  const pages = Math.ceil(total / PAGE_SIZE);
-  const from = (page - 1) * PAGE_SIZE + 1;
-  const to = Math.min(page * PAGE_SIZE, total);
+  const pages = Math.ceil(total / state.pageSize);
+  const from = (page - 1) * state.pageSize + 1;
+  const to = Math.min(page * state.pageSize, total);
+  const sizeOptions = PAGE_SIZES.map(s =>
+    `<option value="${s}"${s === state.pageSize ? ' selected' : ''}>${s} por página</option>`
+  ).join('');
   el.innerHTML = `
-    <span class="page-info">Mostrando ${from}–${to} de ${total}</span>
+    <div class="page-left">
+      <span class="page-info">Mostrando ${from}–${to} de ${total}</span>
+      <select class="toolbar-select page-size-select" data-action="page-size" aria-label="Tamaño de página">${sizeOptions}</select>
+    </div>
     <div class="page-btns">
       <button type="button" class="btn-ghost" data-action="page-prev" ${page <= 1 ? 'disabled' : ''}>${icon('chevLeft', 14)} Anterior</button>
       <button type="button" class="btn-ghost" data-action="page-next" ${page >= pages ? 'disabled' : ''}>Siguiente ${icon('chevRight', 14)}</button>
@@ -344,12 +370,12 @@ function stockCell(s) {
 async function fetchGames() {
   const tb = document.getElementById('games-tbody');
   document.getElementById('games-count').textContent = '';
-  tb.innerHTML = skeletonRows(5, 9);
+  tb.innerHTML = skeletonRows(5, 10);
   try {
     const res = await apiFetch('/api/admin/juegos');
     if (!res.ok) {
       showToast(await readError(res), 'error');
-      tb.innerHTML = tableEmpty(9, 'No se pudieron cargar los juegos.', 'Usa el botón Actualizar para reintentar.');
+      tb.innerHTML = tableEmpty(10, 'No se pudieron cargar los juegos.', 'Usa el botón Actualizar para reintentar.');
       return;
     }
     state.games = await res.json();
@@ -357,7 +383,7 @@ async function fetchGames() {
     renderGames();
   } catch (err) {
     if (String(err.message) !== 'Sesión expirada') {
-      tb.innerHTML = tableEmpty(9, 'No se pudieron cargar los juegos.', 'Error de comunicación con el servidor.');
+      tb.innerHTML = tableEmpty(10, 'No se pudieron cargar los juegos.', 'Error de comunicación con el servidor.');
     }
   }
 }
@@ -404,6 +430,7 @@ function sortHeader(key, label, align = '') {
 
 function gamesThead() {
   return `<tr>
+    <th scope="col" class="col-check"><input type="checkbox" id="select-all-games" class="row-check" aria-label="Seleccionar todos"></th>
     ${sortHeader('titulo', 'Juego')}
     ${sortHeader('categoria', 'Categoría')}
     ${sortHeader('createdAt', 'Creado')}
@@ -422,6 +449,9 @@ function gamesRow(g) {
   const ariaTitle = escapeHTML(g.titulo || '');
   const deletedChip = deleted ? '<span class="chip chip-cancelada">Desactivado</span>' : '';
   return `<tr class="${deleted ? 'row-deleted' : ''}">
+    <td data-label="Seleccionar" class="col-check">
+      <input type="checkbox" class="row-check" data-action="toggle-select" data-id="${g.id}" ${state.selectedGames.has(g.id) ? 'checked' : ''} aria-label="Seleccionar ${ariaTitle}">
+    </td>
     <td data-label="Juego"><div class="cell-game">
       <img class="game-thumb" src="${escapeHTML(g.imagen || '')}" alt="" loading="lazy" onerror="this.classList.add('thumb-broken')">
       <div class="cell-game-txt">
@@ -451,20 +481,244 @@ function gamesRow(g) {
 
 function renderGames() {
   const list = sortGames(filteredGames());
-  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(list.length / state.pageSize));
   if (state.gamesPage > pages) state.gamesPage = pages;
-  const pageList = list.slice((state.gamesPage - 1) * PAGE_SIZE, state.gamesPage * PAGE_SIZE);
+  const pageList = list.slice((state.gamesPage - 1) * state.pageSize, state.gamesPage * state.pageSize);
+  state.currentGamePage = pageList;
   document.getElementById('games-count').textContent = list.length ? `${list.length} juegos` : '';
   document.getElementById('games-thead').innerHTML = gamesThead();
   const tb = document.getElementById('games-tbody');
   if (!pageList.length) {
-    tb.innerHTML = tableEmpty(9, 'No se encontraron juegos.',
+    tb.innerHTML = tableEmpty(10, 'No se encontraron juegos.',
       list.length ? 'Prueba con otro término de búsqueda.' : 'Crea tu primer juego con el botón "Crear Juego".');
   } else {
     tb.innerHTML = pageList.map(gamesRow).join('');
   }
   renderPagination('games-pagination', state.gamesPage, list.length);
+  syncSelectAll(pageList.map(g => g.id));
+  renderSelectionBar();
   buildCategoriasList();
+}
+
+/* --- Selección masiva --- */
+function syncSelectAll(pageIds) {
+  const el = document.getElementById('select-all-games');
+  if (!el) return;
+  const sel = pageIds.filter(id => state.selectedGames.has(id)).length;
+  el.checked = pageIds.length > 0 && sel === pageIds.length;
+  el.indeterminate = sel > 0 && sel < pageIds.length;
+}
+
+function renderSelectionBar() {
+  const bar = document.getElementById('selection-bar');
+  const n = state.selectedGames.size;
+  bar.hidden = n === 0;
+  document.getElementById('bulk-progress').hidden = true;
+  if (n) document.getElementById('selection-count').textContent = `${n} juegos seleccionados`;
+}
+
+function setBulkBusy(busy, label) {
+  const progress = document.getElementById('bulk-progress');
+  progress.hidden = !busy;
+  if (busy) progress.textContent = label;
+  document.querySelectorAll('#selection-bar button').forEach(b => { b.disabled = busy; });
+}
+
+/* Ejecuta una petición por id; acumula errores y la última lista de juegos */
+async function bulkApiLoop(ids, fn, onProgress) {
+  const errors = [];
+  let lastJuegos = null;
+  for (let i = 0; i < ids.length; i++) {
+    if (onProgress) onProgress(i + 1);
+    try {
+      const res = await fn(ids[i]);
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) errors.push({ id: ids[i], error: d.error || 'Error' });
+      else if (Array.isArray(d.juegos)) lastJuegos = d.juegos;
+    } catch (err) {
+      if (String(err.message) === 'Sesión expirada') throw err;
+      errors.push({ id: ids[i], error: 'Error de comunicación' });
+    }
+  }
+  return { errors, lastJuegos };
+}
+
+/* Cierre común: sin errores → limpiar selección + toast de éxito;
+   con errores → conservar selección + toast con el primer error. */
+function finishBulkOp(total, errors, okMessage) {
+  if (!errors.length) {
+    state.selectedGames.clear();
+    renderGames();
+    showToast(okMessage);
+  } else {
+    const ok = total - errors.length;
+    showToast(`${ok} de ${total} completados. Error: ${errors[0].error}`, 'error');
+    renderGames();
+  }
+}
+
+async function bulkToggleVisibility(visible) {
+  const ids = [...state.selectedGames];
+  const n = ids.length;
+  if (!n) return;
+  setBulkBusy(true, `Procesando 0 de ${n}…`);
+  try {
+    const result = await bulkApiLoop(ids, id =>
+      apiFetch('/api/admin/juegos/toggle', {
+        method: 'POST',
+        body: JSON.stringify({ gameId: id, visible })
+      }),
+      done => setBulkProgress(`Procesando ${done} de ${n}…`)
+    );
+    if (result.lastJuegos) state.games = result.lastJuegos;
+    finishBulkOp(n, result.errors, `${n} juegos actualizados.`);
+  } catch (err) {
+    if (String(err.message) === 'Sesión expirada') return;
+    setBulkBusy(false);
+    showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+function setBulkProgress(label) {
+  const p = document.getElementById('bulk-progress');
+  p.textContent = label;
+}
+
+function openBulkEditModal() {
+  const n = state.selectedGames.size;
+  if (!n) return;
+  document.getElementById('bulk-hint').textContent =
+    `Los campos vacíos no se modifican. Se aplicará a ${n} juegos seleccionados.`;
+  ['be-sec', 'be-prim', 'be-stock-sec', 'be-stock-prim'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('be-visible').value = '';
+  document.getElementById('bulk-form-error').hidden = true;
+  document.querySelectorAll('#bulk-modal .field').forEach(f => f.classList.remove('invalid'));
+  document.querySelectorAll('#bulk-modal .field-err').forEach(e => (e.textContent = ''));
+  openModal('bulk-modal');
+}
+
+async function bulkEditApply() {
+  const ids = [...state.selectedGames];
+  const n = ids.length;
+  if (!n) {
+    closeModal('bulk-modal');
+    return;
+  }
+  const sec = document.getElementById('be-sec').value.trim();
+  const prim = document.getElementById('be-prim').value.trim();
+  const stockSec = document.getElementById('be-stock-sec').value.trim();
+  const stockPrim = document.getElementById('be-stock-prim').value.trim();
+  const vis = document.getElementById('be-visible').value;
+
+  const errs = {};
+  const intOk = v => v === '' || (Number.isInteger(Number(v)) && Number(v) >= 0);
+  if (!intOk(sec)) errs['be-sec'] = 'Precio inválido (entero ≥ 0).';
+  if (!intOk(prim)) errs['be-prim'] = 'Precio inválido (entero ≥ 0).';
+  if (!intOk(stockSec)) errs['be-stock-sec'] = 'Stock inválido (entero ≥ 0).';
+  if (!intOk(stockPrim)) errs['be-stock-prim'] = 'Stock inválido (entero ≥ 0).';
+  if (Object.keys(errs).length) {
+    renderFieldErrors(errs);
+    return;
+  }
+
+  const btn = document.getElementById('bulk-apply-btn');
+  const banner = document.getElementById('bulk-form-error');
+  btn.disabled = true;
+  banner.hidden = true;
+
+  const payloadBase = {};
+  if (sec !== '') payloadBase.precioSecundaria = Number(sec);
+  if (prim !== '') payloadBase.precioPrimaria = Number(prim);
+  if (stockSec !== '') payloadBase.stockSecundaria = Number(stockSec);
+  if (stockPrim !== '') payloadBase.stockPrimaria = Number(stockPrim);
+
+  try {
+    let errors = [];
+    let lastJuegos = null;
+
+    /* Precios y stock vía update (el endpoint no acepta visible) */
+    if (Object.keys(payloadBase).length) {
+      const upd = await bulkApiLoop(ids, id =>
+        apiFetch('/api/admin/juegos/update', {
+          method: 'POST',
+          body: JSON.stringify(Object.assign({ gameId: id }, payloadBase))
+        }),
+        done => { btn.textContent = `Aplicando ${done} de ${n}…`; }
+      );
+      errors = upd.errors;
+      lastJuegos = upd.lastJuegos;
+    }
+
+    /* Visibilidad vía toggle */
+    if (vis !== '') {
+      const tg = await bulkApiLoop(ids, id =>
+        apiFetch('/api/admin/juegos/toggle', {
+          method: 'POST',
+          body: JSON.stringify({ gameId: id, visible: vis === '1' })
+        })
+      );
+      errors = errors.concat(tg.errors);
+      if (tg.lastJuegos) lastJuegos = tg.lastJuegos;
+    }
+
+    if (lastJuegos) state.games = lastJuegos;
+    renderGames();
+    if (errors.length) {
+      banner.textContent = `${n - errors.length} de ${n} juegos actualizados. Error: ${errors[0].error}`;
+      banner.hidden = false;
+    } else {
+      state.selectedGames.clear();
+      closeModal('bulk-modal');
+      showToast(`${n} juegos actualizados.`);
+    }
+  } catch (err) {
+    if (String(err.message) === 'Sesión expirada') return;
+    banner.textContent = 'Error de comunicación con el servidor.';
+    banner.hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Aplicar';
+  }
+}
+
+function bulkPermanentDelete() {
+  const n = state.selectedGames.size;
+  if (!n) return;
+  openConfirm({
+    title: 'Eliminar definitivamente',
+    message: 'Esto elimina los juegos seleccionados y sus cuentas de forma permanente. Esta acción no se puede deshacer.',
+    checkboxLabel: `Entiendo que esto elimina ${n} juegos y sus cuentas de forma permanente.`,
+    confirmLabel: 'Eliminar definitivamente',
+    danger: true,
+    onConfirm: async () => {
+      const ids = [...state.selectedGames];
+      try {
+        const result = await bulkApiLoop(ids, id =>
+          apiFetch('/api/admin/juegos/delete', {
+            method: 'POST',
+            body: JSON.stringify({ gameId: id, permanent: true })
+          }),
+          done => {
+            document.getElementById('confirm-yes').textContent = `Procesando ${done} de ${n}…`;
+          }
+        );
+        if (result.lastJuegos) state.games = result.lastJuegos;
+        renderGames();
+        if (result.errors.length) {
+          return { ok: false, error: `${n - result.errors.length} de ${n} eliminados. Error: ${result.errors[0].error}` };
+        }
+        state.selectedGames.clear();
+        renderGames();
+        showToast(`${n} juegos eliminados definitivamente.`);
+        return { ok: true };
+      } catch (err) {
+        if (String(err.message) === 'Sesión expirada') return { ok: true };
+        return { ok: false, error: 'Error de comunicación con el servidor.' };
+      }
+    }
+  });
 }
 
 function toggleSort(key) {
@@ -783,9 +1037,9 @@ function ordersRow(o) {
 
 function renderOrders() {
   const list = Array.isArray(state.orders) ? state.orders : [];
-  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(list.length / state.pageSize));
   if (state.ordersPage > pages) state.ordersPage = pages;
-  const pageList = list.slice((state.ordersPage - 1) * PAGE_SIZE, state.ordersPage * PAGE_SIZE);
+  const pageList = list.slice((state.ordersPage - 1) * state.pageSize, state.ordersPage * state.pageSize);
   document.getElementById('orders-count').textContent = list.length ? `${list.length} pedidos` : '';
   const tb = document.getElementById('orders-tbody');
   if (!pageList.length) {
@@ -1075,7 +1329,7 @@ function kpiCard(label, value, ic, tint, clickable, view) {
 function dashSkeleton() {
   document.getElementById('dash-kpis').innerHTML =
     '<div class="kpi-card"><div class="kpi-text"><span class="skeleton-line"></span><span class="skeleton-line" style="width:65%"></span></div></div>'.repeat(4);
-  ['dash-recent', 'dash-stock', 'dash-audit', 'dash-top', 'dash-viewed', 'dash-cart', 'dash-repeat', 'dash-searches'].forEach(id => {
+  ['dash-recent', 'dash-stock', 'dash-audit', 'dash-top', 'dash-viewed', 'dash-cart', 'dash-repeat', 'dash-searches', 'dash-funnel', 'dash-activity', 'dash-fav', 'dash-revenue', 'dash-newusers'].forEach(id => {
     document.getElementById(id).innerHTML =
       '<div class="panel-list">' + '<span class="skeleton-line" style="margin:10px 20px;width:82%"></span>'.repeat(4) + '</div>';
   });
@@ -1230,40 +1484,47 @@ function renderDashTop(games) {
 /* ==========================================================================
    DASHBOARD — analytics (GET /api/admin/analytics?days=30)
    ========================================================================== */
-function renderDashAnalytics(a) {
-  const empty = '<p class="panel-empty">Sin datos suficientes todavía</p>';
+const DASH_EMPTY = '<p class="panel-empty">Sin datos suficientes todavía</p>';
 
+/* Acepta fracción (0-1) o porcentaje directo (0-100) */
+function toPercent(v) {
+  let r = Number(v) || 0;
+  if (r <= 1) r = Math.round(r * 100);
+  else r = Math.round(r);
+  return Math.min(100, Math.max(0, r));
+}
+
+function gameTitleById(id) {
+  const g = state.dash.games.find(x => Number(x.id) === Number(id));
+  return g ? (g.titulo || 'Sin título') : 'Juego #' + escapeHTML(String(id));
+}
+
+function renderDashAnalytics(a) {
   /* Top vistos */
   const elV = document.getElementById('dash-viewed');
   const viewed = (a && Array.isArray(a.topViewed) ? a.topViewed : []).slice(0, 5);
   if (!viewed.length) {
-    elV.innerHTML = empty;
+    elV.innerHTML = DASH_EMPTY;
   } else {
-    elV.innerHTML = `<div class="panel-list">${viewed.map(v => {
-      const g = state.dash.games.find(x => Number(x.id) === Number(v.gameId));
-      const title = g ? (g.titulo || 'Sin título') : 'Juego #' + escapeHTML(String(v.gameId));
-      return `<button type="button" class="stock-row" data-action="nav" data-view="juegos" title="Ver juegos">
+    elV.innerHTML = `<div class="panel-list">${viewed.map(v => `
+      <button type="button" class="stock-row" data-action="nav" data-view="juegos" title="Ver juegos">
         <span class="mini-icon" aria-hidden="true">${icon('eye', 14)}</span>
         <span class="stock-info">
-          <span class="stock-title">${escapeHTML(title)}</span>
+          <span class="stock-title">${escapeHTML(gameTitleById(v.gameId))}</span>
         </span>
         <span class="top-count">${escapeHTML(String(v.count ?? 0))} vistas</span>
-      </button>`;
-    }).join('')}</div>`;
+      </button>`).join('')}</div>`;
   }
 
   /* Carritos abandonados */
   const elC = document.getElementById('dash-cart');
   const ca = a && a.cartAbandonment ? a.cartAbandonment : null;
   if (!ca || (!Number(ca.started) && !Number(ca.purchased))) {
-    elC.innerHTML = empty;
+    elC.innerHTML = DASH_EMPTY;
   } else {
     const started = Number(ca.started) || 0;
     const purchased = Number(ca.purchased) || 0;
-    let rate = Number(ca.rate) || 0;
-    /* Acepta fracción (0-1) o porcentaje directo */
-    rate = rate <= 1 ? Math.round(rate * 100) : Math.round(rate);
-    const pct = Math.min(100, Math.max(0, rate));
+    const pct = toPercent(ca.rate);
     elC.innerHTML = `
       <div class="panel-list">
         <p class="cart-line">${started} carritos iniciados · ${purchased} compras · <strong>${pct}% abandono</strong></p>
@@ -1282,7 +1543,7 @@ function renderDashAnalytics(a) {
   });
   const recurrent = [...byEmail.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
   if (!recurrent.length) {
-    elR.innerHTML = empty;
+    elR.innerHTML = DASH_EMPTY;
   } else {
     const repOrders = recurrent.reduce((acc, [, n]) => acc + n, 0);
     elR.innerHTML = `
@@ -1300,11 +1561,145 @@ function renderDashAnalytics(a) {
   const elS = document.getElementById('dash-searches');
   const searches = (a && Array.isArray(a.searches) ? a.searches : []).slice(0, 5);
   if (!searches.length) {
-    elS.innerHTML = empty;
+    elS.innerHTML = DASH_EMPTY;
   } else {
     elS.innerHTML = `<div class="search-chips">${searches.map(s => `
       <span class="chip chip-search">${icon('search', 12)} ${escapeHTML(String(s.search || ''))} · ${escapeHTML(String(s.count ?? 0))}</span>`).join('')}</div>`;
   }
+
+  renderFunnel(a);
+  renderActivity(a);
+  renderFavorites(a);
+  renderRevenue(a);
+  renderNewUsers(a);
+}
+
+/* --- Embudo de compra --- */
+function renderFunnel(a) {
+  const el = document.getElementById('dash-funnel');
+  const f = a && a.funnel ? a.funnel : null;
+  if (!f) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  const views = Number(f.views) || 0;
+  const addToCart = Number(f.addToCart) || 0;
+  const checkoutStart = Number(f.checkoutStart) || 0;
+  const purchases = Number(f.purchases) || 0;
+  if (!views && !addToCart && !checkoutStart && !purchases) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  const rates = [
+    { label: 'vista→carrito', v: f.viewToCart },
+    { label: 'carrito→checkout', v: f.cartToCheckout },
+    { label: 'checkout→compra', v: f.checkoutToPurchase }
+  ];
+  el.innerHTML = `
+    <div class="funnel">
+      <div class="funnel-steps">
+        <div class="funnel-step"><span class="funnel-icon">${icon('eye', 16)}</span><span class="funnel-num">${views}</span><span class="funnel-label">Vistas</span></div>
+        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
+        <div class="funnel-step"><span class="funnel-icon">${icon('bag', 16)}</span><span class="funnel-num">${addToCart}</span><span class="funnel-label">Carrito</span></div>
+        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
+        <div class="funnel-step"><span class="funnel-icon">${icon('ticket', 16)}</span><span class="funnel-num">${checkoutStart}</span><span class="funnel-label">Checkout</span></div>
+        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
+        <div class="funnel-step"><span class="funnel-icon">${icon('check', 16)}</span><span class="funnel-num">${purchases}</span><span class="funnel-label">Compras</span></div>
+      </div>
+      <div class="funnel-rates">
+        ${rates.map(r => `<span class="chip chip-percent">${toPercent(r.v)}% ${r.label}</span>`).join('')}
+      </div>
+      <p class="funnel-ticket">Ticket promedio: <strong>${formatCLP(a.ticketPromedio)}</strong></p>
+    </div>`;
+}
+
+/* --- Actividad por hora (24 barras) --- */
+function renderActivity(a) {
+  const el = document.getElementById('dash-activity');
+  const hours = a && Array.isArray(a.activityByHour) ? a.activityByHour : [];
+  const counts = hours.map(h => Number(h.count) || 0);
+  if (!hours.length || counts.every(c => c === 0)) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  const max = Math.max(...counts);
+  let peakCount = 0;
+  let peakHour = 0;
+  hours.forEach(h => {
+    const c = Number(h.count) || 0;
+    if (c > peakCount) {
+      peakCount = c;
+      peakHour = Number(h.hour);
+    }
+  });
+  el.innerHTML = `
+    <div class="hour-chart">
+      ${hours.map(h => {
+        const c = Number(h.count) || 0;
+        const hh = Number(h.hour);
+        const isPeak = c > 0 && c === peakCount;
+        return `<div class="hour-col${isPeak ? ' peak' : ''}" title="Hora ${hh} · ${c} eventos">
+          <div class="hour-bar" style="height:${c ? Math.max(4, Math.round((c / max) * 100)) : 2}%"></div>
+          ${isPeak ? '<span class="peak-tag">pico</span>' : ''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="hour-labels"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>`;
+}
+
+/* --- Top favoritos --- */
+function renderFavorites(a) {
+  const el = document.getElementById('dash-fav');
+  const fav = (a && Array.isArray(a.topFavorited) ? a.topFavorited : []).slice(0, 5);
+  if (!fav.length) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  el.innerHTML = `<div class="panel-list">${fav.map(v => `
+    <button type="button" class="stock-row" data-action="nav" data-view="juegos" title="Ver juegos">
+      <span class="mini-icon mini-heart" aria-hidden="true">${icon('heart', 14)}</span>
+      <span class="stock-info">
+        <span class="stock-title">${escapeHTML(gameTitleById(v.gameId))}</span>
+      </span>
+      <span class="top-count">${escapeHTML(String(v.count ?? 0))} favoritos</span>
+    </button>`).join('')}</div>`;
+}
+
+/* --- Ingresos por juego --- */
+function renderRevenue(a) {
+  const el = document.getElementById('dash-revenue');
+  const rev = (a && Array.isArray(a.topRevenue) ? a.topRevenue : []).slice(0, 5);
+  if (!rev.length) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  el.innerHTML = `<div class="panel-list">${rev.map((x, i) => `
+    <div class="top-row">
+      <span class="top-rank">${i + 1}</span>
+      <span class="top-info">
+        <span class="top-title">${escapeHTML(x.titulo || 'Sin título')}</span>
+      </span>
+      <span class="top-count">x${escapeHTML(String(x.units ?? 0))} · ${formatCLP(x.revenue)}</span>
+    </div>`).join('')}</div>`;
+}
+
+/* --- Nuevos clientes --- */
+function renderNewUsers(a) {
+  const el = document.getElementById('dash-newusers');
+  const nu = a && a.newUsers ? a.newUsers : null;
+  const week = nu ? Number(nu.thisWeek) || 0 : 0;
+  const month = nu ? Number(nu.thisMonth) || 0 : 0;
+  if (!nu || (!week && !month)) {
+    el.innerHTML = DASH_EMPTY;
+    return;
+  }
+  const max = Math.max(week, month, 1);
+  el.innerHTML = `
+    <p class="cart-line"><strong>${week}</strong> nuevos esta semana · <strong>${month}</strong> este mes</p>
+    <div class="mini-bars">
+      <div class="mini-bar-col"><div class="mini-bar bar-week" style="height:${Math.round((week / max) * 100)}%"></div><span class="mini-bar-label">Semana</span></div>
+      <div class="mini-bar-col"><div class="mini-bar bar-month" style="height:${Math.round((month / max) * 100)}%"></div><span class="mini-bar-label">Mes</span></div>
+    </div>`;
 }
 
 /* ==========================================================================
@@ -1902,8 +2297,19 @@ let confirmResolver = null;
 let confirmOptions = null;
 let confirmBusy = false;
 
-function openConfirm({ title, message, textareaLabel = null, required = false, confirmLabel = 'Confirmar', danger = false, confirmText = null, onConfirm = null }) {
-  confirmOptions = { confirmText, confirmLabel, required };
+function confirmYesDisabled() {
+  const opts = confirmOptions || {};
+  if (opts.confirmText !== null && opts.confirmText !== undefined) {
+    return document.getElementById('confirm-text').value !== opts.confirmText;
+  }
+  if (opts.checkboxLabel !== null && opts.checkboxLabel !== undefined) {
+    return !document.getElementById('confirm-check').checked;
+  }
+  return false;
+}
+
+function openConfirm({ title, message, textareaLabel = null, required = false, confirmLabel = 'Confirmar', danger = false, confirmText = null, checkboxLabel = null, onConfirm = null }) {
+  confirmOptions = { confirmText, checkboxLabel, confirmLabel, required };
   confirmBusy = false;
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent = message;
@@ -1922,16 +2328,24 @@ function openConfirm({ title, message, textareaLabel = null, required = false, c
   txt.value = '';
   document.getElementById('confirm-text-err').textContent = '';
 
+  const chkWrap = document.getElementById('confirm-check-wrap');
+  const chk = document.getElementById('confirm-check');
+  chkWrap.hidden = checkboxLabel === null || checkboxLabel === undefined;
+  document.getElementById('confirm-check-text').textContent = checkboxLabel || '';
+  chk.checked = false;
+  document.getElementById('confirm-check-err').textContent = '';
+
   document.getElementById('confirm-api-error').hidden = true;
 
   const yes = document.getElementById('confirm-yes');
   yes.textContent = confirmLabel;
   yes.classList.toggle('btn-danger', !!danger);
   yes.classList.toggle('btn-primary', !danger);
-  yes.disabled = confirmText !== null && confirmText !== undefined && txt.value !== confirmText;
+  yes.disabled = confirmYesDisabled();
   openModal('confirm-modal');
   if (textareaLabel) ta.focus();
   else if (confirmText !== null && confirmText !== undefined) txt.focus();
+  else if (checkboxLabel !== null && checkboxLabel !== undefined) chk.focus();
   else yes.focus();
   return new Promise(res => {
     confirmResolver = res;
@@ -1951,6 +2365,7 @@ function resolveConfirm(ok) {
   const opts = confirmOptions || {};
   const ta = document.getElementById('confirm-reason');
   const txt = document.getElementById('confirm-text');
+  const chk = document.getElementById('confirm-check');
   const reason = ta.value.trim();
   if (ok && ta.required && !reason) {
     document.getElementById('confirm-reason-err').textContent = 'El motivo es obligatorio.';
@@ -1960,6 +2375,11 @@ function resolveConfirm(ok) {
   if (ok && opts.confirmText !== null && opts.confirmText !== undefined && txt.value !== opts.confirmText) {
     document.getElementById('confirm-text-err').textContent = 'El texto no coincide con el título del juego.';
     txt.focus();
+    return;
+  }
+  if (ok && opts.checkboxLabel !== null && opts.checkboxLabel !== undefined && !chk.checked) {
+    document.getElementById('confirm-check-err').textContent = 'Debes confirmar para continuar.';
+    chk.focus();
     return;
   }
   if (ok && opts.onConfirm) {
@@ -1973,7 +2393,7 @@ function resolveConfirm(ok) {
         return;
       }
       confirmBusy = false;
-      yes.disabled = opts.confirmText !== null && opts.confirmText !== undefined && txt.value !== opts.confirmText;
+      yes.disabled = confirmYesDisabled();
       yes.textContent = opts.confirmLabel;
       const errEl = document.getElementById('confirm-api-error');
       errEl.textContent = (result && result.error) || 'No se pudo completar la acción.';
@@ -2039,6 +2459,13 @@ document.addEventListener('click', (e) => {
     case 'delete-gallery': deleteGalleryItem(Number(el.dataset.id)); break;
     case 'refresh-users': fetchUsers(); break;
     case 'toggle-user-role': toggleUserRole(el.dataset.id); break;
+    case 'clear-selection':
+      state.selectedGames.clear();
+      renderGames();
+      break;
+    case 'bulk-toggle': bulkToggleVisibility(el.dataset.visible === '1'); break;
+    case 'bulk-edit': openBulkEditModal(); break;
+    case 'bulk-delete': bulkPermanentDelete(); break;
   }
 });
 
@@ -2047,6 +2474,31 @@ document.addEventListener('change', (e) => {
   if (t.dataset.action === 'toggle-visibility') {
     t.disabled = true;
     toggleVisibility(Number(t.dataset.id), t.checked);
+  } else if (t.dataset.action === 'toggle-select') {
+    const id = Number(t.dataset.id);
+    if (t.checked) state.selectedGames.add(id);
+    else state.selectedGames.delete(id);
+    renderGames();
+  } else if (t.dataset.action === 'page-size') {
+    const v = Number(t.value);
+    state.pageSize = PAGE_SIZES.includes(v) ? v : DEFAULT_PAGE_SIZE;
+    try {
+      localStorage.setItem('zonaswitch_admin_pagesize', String(state.pageSize));
+    } catch (err) {}
+    state.gamesPage = 1;
+    state.ordersPage = 1;
+    if (state.view === 'juegos') renderGames();
+    else if (state.view === 'pedidos') renderOrders();
+  } else if (t.id === 'select-all-games') {
+    const ids = state.currentGamePage.map(g => g.id);
+    ids.forEach(id => {
+      if (t.checked) state.selectedGames.add(id);
+      else state.selectedGames.delete(id);
+    });
+    renderGames();
+  } else if (t.id === 'confirm-check') {
+    document.getElementById('confirm-yes').disabled = !t.checked;
+    document.getElementById('confirm-api-error').hidden = true;
   } else if (t.id === 'orders-status') {
     state.ordersStatus = t.value;
     state.ordersPage = 1;
@@ -2078,8 +2530,7 @@ document.addEventListener('input', (e) => {
   } else if (t.id === 'import-json') {
     handleImportJsonInput();
   } else if (t.id === 'confirm-text') {
-    const expected = confirmOptions ? confirmOptions.confirmText : null;
-    document.getElementById('confirm-yes').disabled = expected === null || expected === undefined || t.value !== expected;
+    document.getElementById('confirm-yes').disabled = confirmYesDisabled();
     document.getElementById('confirm-api-error').hidden = true;
   }
   /* Limpiar error de campo al escribir */
@@ -2155,6 +2606,7 @@ function init() {
   document.getElementById('coupon-form').addEventListener('submit', handleCouponSubmit);
   document.getElementById('gallery-form').addEventListener('submit', handleGallerySubmit);
   document.getElementById('import-apply-btn').addEventListener('click', applyImport);
+  document.getElementById('bulk-apply-btn').addEventListener('click', bulkEditApply);
   document.getElementById('confirm-no').addEventListener('click', () => resolveConfirm(false));
   document.getElementById('confirm-yes').addEventListener('click', () => resolveConfirm(true));
   switchView('juegos');
