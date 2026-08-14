@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
+const { parse: parseCsv } = require('csv-parse/sync');
 
 // Nuevas dependencias de seguridad
 const bcrypt = require('bcryptjs');
@@ -108,7 +109,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Manejar felizmente cualquier SyntaxError en JSON malformado (de pasarelas o bots) sin ensuciar logs
@@ -209,6 +210,14 @@ const checkoutLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const adminImportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Demasiadas importaciones desde esta IP. Por favor, intenta en 15 minutos." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 const emailOtpLimiter = new Map(); // Mapa en memoria para rate limit por dirección de correo (60s)
 
 // Esquema de Usuario seguro
@@ -265,10 +274,23 @@ const orderSchema = new mongoose.Schema({
   detallesPago: Object
 }, { strict: false });
 
+const auditLogSchema = new mongoose.Schema({
+  timestamp: { type: Date, default: Date.now },
+  actorId: String,
+  actorUsername: String,
+  action: String,
+  resourceType: String,
+  resourceId: String,
+  summary: String,
+  result: { type: String, default: 'ok' },
+  metadata: mongoose.Schema.Types.Mixed
+}, { strict: false });
+
 const UserModel = mongoose.model('User', userSchema);
 const GameModel = mongoose.model('Game', gameSchema);
 const GalleryModel = mongoose.model('Gallery', gallerySchema);
 const OrderModel = mongoose.model('Order', orderSchema);
+const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
 // Asegurar directorio de datos de forma segura (Directory Traversal Protection)
 const DATA_DIR = path.resolve(__dirname, 'data');
@@ -277,6 +299,7 @@ const ORDERS_FILE = path.resolve(DATA_DIR, 'orders.json');
 const GAMES_FILE = path.resolve(DATA_DIR, 'games.json');
 const GALLERY_FILE = path.resolve(DATA_DIR, 'gallery.json');
 const SETTINGS_FILE = path.resolve(DATA_DIR, 'settings.json');
+const AUDIT_FILE = path.resolve(DATA_DIR, 'audit-log.json');
 
 // Helpers de validación de tipos y escritura atómica segura de JSON (Problemas 2 y 6)
 function safeString(val) {
@@ -310,6 +333,38 @@ function safeReadJsonSync(filePath, fallback = []) {
   } catch (err) {
     console.error(`❌ Error parseando JSON en ${filePath}:`, err.message);
     return fallback;
+  }
+}
+
+// ============================================================
+// Auditoría de acciones de administración (audit log)
+// ============================================================
+async function logAudit({ actor, action, resourceType, resourceId, summary, result = 'ok', metadata }) {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      actorId: actor && actor.id !== undefined ? String(actor.id) : 'system',
+      actorUsername: actor && actor.username ? actor.username : 'system',
+      action,
+      resourceType,
+      resourceId: resourceId !== undefined && resourceId !== null ? String(resourceId) : undefined,
+      summary: isString(summary) ? summary.slice(0, 500) : '',
+      result: result === 'error' ? 'error' : 'ok',
+      metadata: metadata === undefined ? undefined : metadata
+    };
+
+    // Respaldo local (máx. 2000 entradas, se descartan las más antiguas)
+    const log = safeReadJsonSync(AUDIT_FILE, []);
+    log.push(entry);
+    while (log.length > 2000) log.shift();
+    safeWriteJsonSync(AUDIT_FILE, log);
+
+    // Mongo (fire-and-forget)
+    if (isMongoConnected) {
+      AuditLog.create(entry).catch(err => console.error('Error guardando audit log en Mongo:', err.message));
+    }
+  } catch (err) {
+    console.error('Error en logAudit:', err.message);
   }
 }
 
@@ -540,7 +595,37 @@ app.post('/api/admin/users/:id/role', verifyAdmin, async (req, res) => {
   if (user.id === req.user.id) return res.status(400).json({ error: 'No puedes cambiar tu propio rol.' });
   user.role = role;
   saveUsers(users);
+  logAudit({ actor: req.user, action: 'users.role', resourceType: 'usuario', resourceId: user.id, summary: `Rol de "${user.username}" cambiado a "${role}".` });
   res.json({ exito: true, usuario: { id: user.id, username: user.username, role: user.role } });
+});
+
+// Consulta de auditoría (PROTEGIDO — solo administradores)
+app.get('/api/admin/audit', verifyAdmin, async (req, res) => {
+  let limit = Number(req.query.limit);
+  if (!Number.isInteger(limit) || limit <= 0) limit = 50;
+  if (limit > 200) limit = 200;
+
+  let entries = [];
+  if (isMongoConnected) {
+    try {
+      entries = await AuditLog.find({}).sort({ timestamp: -1 }).limit(limit).lean();
+    } catch (e) {
+      console.error('Error cargando audit log desde Mongo:', e.message);
+    }
+  }
+  if (!entries.length) {
+    const log = safeReadJsonSync(AUDIT_FILE, []);
+    entries = log.slice(-limit).reverse();
+  }
+  res.json(entries.map(e => ({
+    timestamp: e.timestamp instanceof Date ? e.timestamp.toISOString() : (e.timestamp || null),
+    actorUsername: e.actorUsername || '',
+    action: e.action || '',
+    resourceType: e.resourceType || '',
+    resourceId: e.resourceId !== undefined && e.resourceId !== null ? String(e.resourceId) : null,
+    summary: e.summary || '',
+    result: e.result || 'ok'
+  })));
 });
 
 // Detalle de una orden del usuario autenticado
@@ -2346,6 +2431,7 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
     broadcastCatalogUpdate();
 
     console.log(`🛠️ [ADMIN] Juego creado: "${newGame.titulo}" (ID ${newGame.id})`);
+    logAudit({ actor: req.user, action: 'juegos.create', resourceType: 'juego', resourceId: newGame.id, summary: `Juego "${newGame.titulo}" creado (ID ${newGame.id}).` });
 
     return res.status(201).json({
       exito: true,
@@ -2355,6 +2441,7 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error creando juego:', err);
+    logAudit({ actor: req.user, action: 'juegos.create', resourceType: 'juego', summary: 'Error creando juego.', result: 'error' });
     if (err && err.code === 11000) {
       return res.status(409).json({ error: 'Ya existe un juego con ese ID. Intenta nuevamente.' });
     }
@@ -2373,6 +2460,7 @@ app.post('/api/admin/juegos/toggle', verifyAdmin, (req, res) => {
   saveGamesLocal(GAMES_STORE);
 
   console.log(`🛠️ [ADMIN] Visibilidad de "${game.titulo}" cambiada a: ${game.visible ? 'VISIBLE' : 'OCULTO'}`);
+  logAudit({ actor: req.user, action: 'juegos.toggle', resourceType: 'juego', resourceId: game.id, summary: `Visibilidad de "${game.titulo}" cambiada a ${game.visible ? 'visible' : 'oculto'}.` });
   res.json({ exito: true, mensaje: `Visibilidad de ${game.titulo} actualizada.`, juegos: GAMES_STORE });
 });
 
@@ -2387,6 +2475,7 @@ app.post('/api/admin/juegos/delete', verifyAdmin, (req, res) => {
   game.deletedAt = new Date().toISOString();
   saveGamesLocal(GAMES_STORE);
   if (isMongoConnected) GameModel.findOneAndUpdate({ id: gameId }, { visible: false, deletedAt: game.deletedAt }).catch(e => console.error('Error desactivando juego en Mongo:', e.message));
+  logAudit({ actor: req.user, action: 'juegos.delete', resourceType: 'juego', resourceId: game.id, summary: `Juego "${game.titulo}" desactivado.` });
   res.json({ exito: true, mensaje: `Juego "${game.titulo}" desactivado.`, juegos: GAMES_STORE });
 });
 
@@ -2453,7 +2542,269 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   broadcastCatalogUpdate();
 
   console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado. Fotos: ${game.imagenesDetalle ? game.imagenesDetalle.length : 0}, YouTube: ${game.youtubeUrl || 'no'}`);
+  logAudit({ actor: req.user, action: 'juegos.update', resourceType: 'juego', resourceId: game.id, summary: `Juego "${game.titulo}" actualizado.` });
   res.json({ exito: true, mensaje: `Juego ${game.titulo} actualizado exitosamente.`, juegos: GAMES_STORE, juego: game });
+});
+
+
+// --- IMPORTACIÓN MASIVA DE JUEGOS ---
+const importJsonParser = express.json({ limit: '2mb' });
+
+const IMPORT_ALLOWED_KEYS = new Set([
+  'id', 'titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'precioOriginal',
+  'rating', 'peso', 'imagen', 'imagenDetalle', 'imagenesDetalle', 'descripcion',
+  'resumenExtenso', 'youtubeUrl', 'correoTexto', 'correoImagen', 'visible',
+  'stockPrimaria', 'stockSecundaria'
+].map(k => k.toLowerCase()));
+
+function parseImportRows(body) {
+  const rows = Array.isArray(body && body.rows) ? body.rows : null;
+  if (rows !== null) {
+    if (rows.length === 0) return { error: 'Sin datos' };
+    if (rows.length > 200) return { error: 'Máximo 200 filas por importación.' };
+    return { rows: rows.map((data, i) => ({ rowNum: i + 1, data })) };
+  }
+  if (body && body.csv !== undefined && body.csv !== null) {
+    const csvText = String(body.csv);
+    if (!csvText.trim()) return { error: 'Sin datos' };
+    let parsed;
+    try {
+      parsed = parseCsv(csvText, { columns: true, skip_empty_lines: true, trim: true });
+    } catch (e) {
+      return { error: 'Formato CSV inválido.' };
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) return { error: 'Sin datos' };
+    if (parsed.length > 200) return { error: 'Máximo 200 filas por importación.' };
+    return { rows: parsed.map((data, i) => ({ rowNum: i + 2, data })) };
+  }
+  return { error: 'Debes enviar un arreglo "rows" o un texto "csv".' };
+}
+
+function buildImportGame(norm) {
+  const err = (field, message) => ({ error: { field, message } });
+  const s = (v) => (v === undefined || v === null ? '' : String(v).trim());
+  // norm llega con claves normalizadas a minúsculas; get() busca ambas formas por robustez
+  const get = (k) => (norm[k.toLowerCase()] !== undefined ? norm[k.toLowerCase()] : norm[k]);
+
+  // Obligatorios no vacíos
+  for (const key of ['titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'imagen', 'imagenDetalle', 'descripcion']) {
+    if (!s(get(key))) return err(key, 'Campo obligatorio.');
+  }
+
+  // id (opcional)
+  let gameId = null;
+  if (get('id') !== undefined && get('id') !== null && s(get('id')) !== '') {
+    gameId = Number(get('id'));
+    if (!Number.isSafeInteger(gameId)) return err('id', 'El id debe ser un número entero.');
+  }
+
+  // URLs
+  if (!isSafeHttpUrl(s(get('imagen')))) return err('imagen', 'La URL de la imagen principal debe ser http(s).');
+  if (!isSafeHttpUrl(s(get('imagenDetalle')))) return err('imagenDetalle', 'La URL de la imagen de detalle debe ser http(s).');
+
+  const yt = s(get('youtubeUrl'));
+  if (yt && !isSafeHttpUrl(yt)) return err('youtubeUrl', 'La URL de YouTube debe ser http(s).');
+  const correoImg = s(get('correoImagen'));
+  if (correoImg && !isSafeHttpUrl(correoImg)) return err('correoImagen', 'La URL de la imagen del correo debe ser http(s).');
+
+  let cleanImages = [];
+  if (get('imagenesDetalle') !== undefined && get('imagenesDetalle') !== null && s(get('imagenesDetalle')) !== '') {
+    const list = Array.isArray(get('imagenesDetalle'))
+      ? get('imagenesDetalle')
+      : String(get('imagenesDetalle')).split('\n').map(i => i.trim()).filter(Boolean);
+    for (const img of list) {
+      if (!isSafeHttpUrl(img)) return err('imagenesDetalle', 'Cada imagen adicional debe ser una URL http(s).');
+    }
+    cleanImages = list.map(i => i.trim());
+  }
+
+  // Precios: entero seguro ≥ 0 (acepta strings numéricos como "4990")
+  const price = (v) => {
+    const n = Number(v);
+    return (Number.isSafeInteger(n) && n >= 0) ? n : null;
+  };
+  const sec = price(get('precioSecundaria'));
+  if (sec === null) return err('precioSecundaria', 'El precio de licencia secundaria debe ser un número entero mayor o igual a 0.');
+  const prim = price(get('precioPrimaria'));
+  if (prim === null) return err('precioPrimaria', 'El precio de licencia primaria debe ser un número entero mayor o igual a 0.');
+  let original = 0;
+  if (get('precioOriginal') !== undefined && get('precioOriginal') !== null && s(get('precioOriginal')) !== '') {
+    const o = price(get('precioOriginal'));
+    if (o === null) return err('precioOriginal', 'El precio original debe ser un número entero mayor o igual a 0.');
+    original = o;
+  }
+
+  // rating: 0-5, por defecto 5
+  let rating = 5;
+  if (get('rating') !== undefined && get('rating') !== null && s(get('rating')) !== '') {
+    const r = Number(get('rating'));
+    if (!Number.isFinite(r) || r < 0 || r > 5) return err('rating', 'La valoración debe estar entre 0 y 5.');
+    rating = r;
+  }
+
+  // Stock: vacío / "null" → null (ilimitado); si no, entero ≥ 0
+  const parseStock = (v) => {
+    const sv = s(v);
+    if (sv === '' || sv === 'null') return { ok: true, value: null };
+    const n = Number(sv);
+    if (!Number.isSafeInteger(n) || n < 0) return { ok: false };
+    return { ok: true, value: n };
+  };
+  const stP = parseStock(get('stockPrimaria'));
+  if (!stP.ok) return err('stockPrimaria', 'El stock debe ser un número entero mayor o igual a 0, o vacío.');
+  const stS = parseStock(get('stockSecundaria'));
+  if (!stS.ok) return err('stockSecundaria', 'El stock debe ser un número entero mayor o igual a 0, o vacío.');
+
+  // visible: true/false/"true"/"false"/1/0/vacío (por defecto true)
+  let visible = true;
+  if (get('visible') !== undefined && get('visible') !== null && s(get('visible')) !== '') {
+    const v = String(get('visible')).trim().toLowerCase();
+    if (v === 'true' || v === '1') visible = true;
+    else if (v === 'false' || v === '0') visible = false;
+    else return err('visible', 'El valor de visible debe ser true o false.');
+  }
+
+  const game = {
+    titulo: s(get('titulo')),
+    categoria: s(get('categoria')),
+    precioSecundaria: sec,
+    precioPrimaria: prim,
+    precioOriginal: original,
+    rating,
+    peso: s(get('peso')),
+    imagen: s(get('imagen')),
+    imagenDetalle: s(get('imagenDetalle')),
+    imagenesDetalle: cleanImages,
+    descripcion: s(get('descripcion')),
+    resumenExtenso: (get('resumenExtenso') === undefined || get('resumenExtenso') === null)
+      ? s(get('descripcion'))
+      : s(get('resumenExtenso')),
+    youtubeUrl: yt,
+    correoTexto: s(get('correoTexto')),
+    correoImagen: correoImg,
+    visible,
+    stockPrimaria: stP.value,
+    stockSecundaria: stS.value
+  };
+  if (gameId !== null) game.id = gameId;
+
+  return { game };
+}
+
+function validateImportRows(rows) {
+  const seenIds = new Set(GAMES_STORE.map(g => String(g.id)));
+  const seenTitulos = new Set(GAMES_STORE.map(g => String(g.titulo || '').trim().toLowerCase()));
+  const errors = [];
+  const validRows = [];
+  let duplicates = 0;
+
+  rows.forEach(({ rowNum, data }) => {
+    if (!data || typeof data !== 'object') {
+      errors.push({ row: rowNum, field: '', message: 'Fila inválida.' });
+      return;
+    }
+
+    // Campos no permitidos (case-insensitive; se reporta la clave original)
+    const norm = {};
+    let badKey = null;
+    for (const key of Object.keys(data)) {
+      const normKey = key.trim().toLowerCase();
+      if (!IMPORT_ALLOWED_KEYS.has(normKey)) { badKey = key; break; }
+      norm[normKey] = data[key];
+    }
+    if (badKey !== null) {
+      errors.push({ row: rowNum, field: badKey, message: 'Campo no permitido.' });
+      return;
+    }
+
+    // Duplicados: id en GAMES_STORE, título normalizado en GAMES_STORE o en el mismo lote (gana la primera ocurrencia)
+    const tituloNorm = String(norm.titulo == null ? '' : norm.titulo).trim().toLowerCase();
+    let rawIdStr = null;
+    if (norm.id !== undefined && norm.id !== null && String(norm.id).trim() !== '') {
+      const idNum = Number(norm.id);
+      if (Number.isSafeInteger(idNum)) rawIdStr = String(idNum);
+    }
+    if ((rawIdStr !== null && seenIds.has(rawIdStr)) || (tituloNorm && seenTitulos.has(tituloNorm))) {
+      duplicates += 1;
+      return;
+    }
+
+    const res = buildImportGame(norm);
+    if (res.error) {
+      errors.push({ row: rowNum, field: res.error.field, message: res.error.message });
+      return;
+    }
+    if (rawIdStr !== null) seenIds.add(rawIdStr);
+    if (tituloNorm) seenTitulos.add(tituloNorm);
+    validRows.push({ rowNum, data, game: res.game });
+  });
+
+  return { errors, validRows, duplicates };
+}
+
+// Vista previa de importación (valida SIN persistir nada)
+app.post('/api/admin/juegos/import/preview', verifyAdmin, adminImportLimiter, importJsonParser, (req, res) => {
+  const parsed = parseImportRows(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const { errors, validRows, duplicates } = validateImportRows(parsed.rows);
+  res.json({
+    total: parsed.rows.length,
+    valid: validRows.length,
+    invalid: errors.length,
+    duplicates,
+    errors
+  });
+});
+
+// Confirmar importación (revalida TODO y persiste solo filas válidas no duplicadas)
+app.post('/api/admin/juegos/import/commit', verifyAdmin, adminImportLimiter, importJsonParser, async (req, res) => {
+  try {
+    const parsed = parseImportRows(req.body);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    const { errors, validRows, duplicates } = validateImportRows(parsed.rows);
+
+    const takenIds = new Set(validRows.map(({ game }) => game.id !== undefined ? String(game.id) : null).filter(Boolean));
+    const importedGames = [];
+    for (const { game } of validRows) {
+      // id omitido → auto-asignación (max+1 con loop anti colisión en Mongo, igual que create)
+      if (game.id === undefined) {
+        let nextId = GAMES_STORE.reduce((max, g) => Math.max(max, Number(g.id) || 0), 0) + 1;
+        while (takenIds.has(String(nextId))) nextId += 1;
+        if (isMongoConnected) {
+          while (await GameModel.exists({ id: nextId })) nextId += 1;
+        }
+        game.id = nextId;
+        takenIds.add(String(nextId));
+      }
+      // Persistir primero en Mongo cuando está disponible (igual que create)
+      if (isMongoConnected) {
+        await GameModel.create(game);
+      }
+      GAMES_STORE.push(game);
+      importedGames.push(game);
+    }
+
+    if (importedGames.length > 0) {
+      saveGamesLocal(GAMES_STORE);
+      broadcastCatalogUpdate();
+    }
+
+    logAudit({
+      actor: req.user,
+      action: 'juegos.import',
+      resourceType: 'juego',
+      summary: `Importación masiva: ${importedGames.length} juego(s) importado(s).`,
+      result: 'ok',
+      metadata: { imported: importedGames.length, total: parsed.rows.length, invalid: errors.length, duplicates }
+    });
+
+    console.log(`🛠️ [ADMIN] Importación masiva: ${importedGames.length} juegos importados (${errors.length} errores, ${duplicates} duplicados).`);
+    res.json({ exito: true, imported: importedGames.length, errors, juegos: GAMES_STORE });
+  } catch (err) {
+    console.error('❌ Error en importación masiva:', err);
+    logAudit({ actor: req.user, action: 'juegos.import', resourceType: 'juego', summary: 'Error en importación masiva.', result: 'error' });
+    res.status(500).json({ error: 'No se pudo completar la importación.' });
+  }
 });
 
 
@@ -2605,6 +2956,7 @@ app.post('/api/admin/coupons/create', verifyAdmin, (req, res) => {
 
   saveCouponsLocal(COUPONS_STORE);
   console.log(`🎟️ [ADMIN] Cupón permanente guardado: ${cleanCode} (${newCoupon.desc})`);
+  logAudit({ actor: req.user, action: 'coupons.create', resourceType: 'cupon', resourceId: cleanCode, summary: `Cupón "${cleanCode}" guardado.` });
   res.json({ exito: true, mensaje: `Cupón "${cleanCode}" guardado exitosamente.`, cupones: COUPONS_STORE });
 });
 
@@ -2619,6 +2971,7 @@ app.post('/api/admin/coupons/delete', verifyAdmin, (req, res) => {
   saveCouponsLocal(COUPONS_STORE);
 
   console.log(`🎟️ [ADMIN] Cupón eliminado: ${cleanCode}`);
+  logAudit({ actor: req.user, action: 'coupons.delete', resourceType: 'cupon', resourceId: cleanCode, summary: `Cupón "${cleanCode}" eliminado.` });
   res.json({ exito: true, mensaje: `Cupón "${cleanCode}" eliminado.`, cupones: COUPONS_STORE });
 });
 let STORED_SETTINGS = {
@@ -2721,6 +3074,7 @@ app.post('/api/admin/settings/toggle-gallery', verifyAdmin, (req, res) => {
   saveSettings(STORED_SETTINGS);
 
   console.log(`🛠️ [ADMIN] Galería cambiada a: ${STORED_SETTINGS.galleryEnabled ? 'HABILITADA' : 'DESHABILITADA'}`);
+  logAudit({ actor: req.user, action: 'settings.gallery', resourceType: 'configuracion', resourceId: 'galeria', summary: `Galería de clientes ${STORED_SETTINGS.galleryEnabled ? 'habilitada' : 'deshabilitada'} en la tienda.` });
   res.json({ exito: true, mensaje: `Galería de clientes ${STORED_SETTINGS.galleryEnabled ? 'habilitada' : 'deshabilitada'} en la tienda.`, settings: STORED_SETTINGS });
 });
 
@@ -2762,6 +3116,7 @@ app.post('/api/admin/gallery/add', verifyAdmin, (req, res) => {
   saveGalleryLocal(GALLERY_STORE);
 
   console.log(`🛠️ [ADMIN] Nueva foto agregada a la galería por "${cleanUser}"`);
+  logAudit({ actor: req.user, action: 'gallery.add', resourceType: 'galeria', resourceId: newItem.id, summary: `Reseña/foto de "${cleanUser}" agregada a la galería.` });
   res.json({ exito: true, mensaje: "Reseña / Foto agregada a la galería exitosamente.", galeria: GALLERY_STORE });
 });
 
@@ -2772,6 +3127,7 @@ app.post('/api/admin/gallery/delete', verifyAdmin, (req, res) => {
   GALLERY_STORE = GALLERY_STORE.filter(item => item.id !== Number(id));
   saveGalleryLocal(GALLERY_STORE);
 
+  logAudit({ actor: req.user, action: 'gallery.delete', resourceType: 'galeria', resourceId: id, summary: `Foto de la galería eliminada (ID ${id}).` });
   res.json({ exito: true, mensaje: "Foto removida de la galería.", galeria: GALLERY_STORE });
 });
 
@@ -3326,6 +3682,7 @@ app.post('/api/admin/orders/:code/cancel', verifyAdmin, async (req, res) => {
   order.cancelReason = reason;
   addOrderEvent(order, 'cancelled', reason, req.user.username);
   await saveSingleOrder(order);
+  logAudit({ actor: req.user, action: 'orders.cancel', resourceType: 'orden', resourceId: order.codigoOrden, summary: `Orden ${order.codigoOrden} cancelada.` });
   res.json({ exito: true, order: getOrderForAdmin(order) });
 });
 
@@ -3338,6 +3695,7 @@ app.post('/api/admin/orders/:code/refund', verifyAdmin, async (req, res) => {
   order.refundReason = reason;
   addOrderEvent(order, 'refunded', reason, req.user.username);
   await saveSingleOrder(order);
+  logAudit({ actor: req.user, action: 'orders.refund', resourceType: 'orden', resourceId: order.codigoOrden, summary: `Orden ${order.codigoOrden} reembolsada.` });
   res.json({ exito: true, order: getOrderForAdmin(order), aviso: 'El reembolso monetario debe ejecutarse también en la pasarela si corresponde.' });
 });
 
@@ -3350,6 +3708,7 @@ app.post('/api/admin/orders/:code/resend-delivery', verifyAdmin, async (req, res
   order.deliveryStatus = 'sent';
   addOrderEvent(order, 'delivery_email_resent', 'Correo de entrega reenviado por administración.', req.user.username);
   await saveSingleOrder(order);
+  logAudit({ actor: req.user, action: 'orders.resend_delivery', resourceType: 'orden', resourceId: order.codigoOrden, summary: `Correo de entrega reenviado para la orden ${order.codigoOrden}.` });
   res.json({ exito: true, order: getOrderForAdmin(order) });
 });
 
@@ -3363,6 +3722,7 @@ app.post('/api/admin/orders/:code/status', verifyAdmin, async (req, res) => {
   order.estado = nextStatus;
   addOrderEvent(order, 'status_changed', `${old} → ${nextStatus}`, req.user.username);
   await saveSingleOrder(order);
+  logAudit({ actor: req.user, action: 'orders.status', resourceType: 'orden', resourceId: order.codigoOrden, summary: `Estado de la orden ${order.codigoOrden} cambiado de "${old}" a "${nextStatus}".` });
   res.json({ exito: true, order: getOrderForAdmin(order) });
 });
 

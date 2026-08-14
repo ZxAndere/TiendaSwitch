@@ -56,7 +56,10 @@ const ICONS = {
   chevUp: '<path d="m18 15-6-6-6 6"></path>',
   chevDown: '<path d="m6 9 6 6 6-6"></path>',
   chevronsLeft: '<path d="m11 17-5-5 5-5"></path><path d="m18 17-5-5 5-5"></path>',
-  chevronsRight: '<path d="m6 17 5-5-5-5"></path><path d="m13 17 5-5-5-5"></path>'
+  chevronsRight: '<path d="m6 17 5-5-5-5"></path><path d="m13 17 5-5-5-5"></path>',
+  wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line>'
 };
 
 function icon(name, size = 18) {
@@ -124,7 +127,18 @@ const state = {
   ordersPage: 1,
   ordersTimer: null,
   editingGameId: null,
-  detailOrder: null
+  detailOrder: null,
+  dash: { orders: [], games: [], users: [], coupons: [], audit: [], loaded: false },
+  coupons: [],
+  couponsLoaded: false,
+  gallery: [],
+  galleryLoaded: false,
+  galleryEnabled: false,
+  users: [],
+  usersLoaded: false,
+  importPayload: null,
+  importPreview: null,
+  importTimer: null
 };
 
 /* ==========================================================================
@@ -192,6 +206,10 @@ function switchView(view) {
   document.getElementById('topbar-subtitle').textContent = meta.sub;
   if (view === 'juegos') ensureGames();
   else if (view === 'pedidos') ensureOrders();
+  else if (view === 'dashboard') ensureDash();
+  else if (view === 'cupones') ensureCoupons();
+  else if (view === 'galeria') ensureGallery();
+  else if (view === 'usuarios') ensureUsers();
 }
 
 function ensureGames() {
@@ -200,6 +218,22 @@ function ensureGames() {
 
 function ensureOrders() {
   if (!state.ordersLoaded) fetchOrders();
+}
+
+function ensureDash() {
+  if (!state.dash.loaded) fetchDash();
+}
+
+function ensureCoupons() {
+  if (!state.couponsLoaded) fetchCouponsAdmin();
+}
+
+function ensureGallery() {
+  if (!state.galleryLoaded) fetchGallery();
+}
+
+function ensureUsers() {
+  if (!state.usersLoaded) fetchUsers();
 }
 
 /* ==========================================================================
@@ -581,13 +615,12 @@ function validateGameForm() {
   return errs;
 }
 
-function renderGameErrors(errs) {
+function renderFieldErrors(errs) {
   Object.keys(errs).forEach(key => {
     const errEl = document.getElementById('err-' + key);
-    const fieldEl = document.getElementById('f-' + key);
-    if (errEl) errEl.textContent = errs[key];
-    if (fieldEl) {
-      const field = fieldEl.closest('.field');
+    if (errEl) {
+      errEl.textContent = errs[key];
+      const field = errEl.closest('.field');
       if (field) field.classList.add('invalid');
     }
   });
@@ -597,7 +630,7 @@ async function handleGameSubmit(e) {
   e.preventDefault();
   const errs = validateGameForm();
   if (Object.keys(errs).length) {
-    renderGameErrors(errs);
+    renderFieldErrors(errs);
     return;
   }
 
@@ -958,6 +991,698 @@ async function retryPayment(code) {
 }
 
 /* ==========================================================================
+   VISTA: DASHBOARD — KPIs y paneles (todo calculado cliente-side)
+   ========================================================================== */
+const AUDIT_ACTION_LABELS = {
+  'juegos.create': 'Juego creado',
+  'juegos.update': 'Juego actualizado',
+  'juegos.toggle': 'Visibilidad cambiada',
+  'juegos.delete': 'Juego desactivado',
+  'coupons.create': 'Cupón creado',
+  'coupons.delete': 'Cupón eliminado',
+  'gallery.add': 'Foto de galería agregada',
+  'gallery.delete': 'Foto eliminada',
+  'settings.gallery': 'Galería modificada',
+  'orders.cancel': 'Orden cancelada',
+  'orders.refund': 'Orden reembolsada',
+  'orders.resend_delivery': 'Entrega reenviada',
+  'orders.status': 'Estado cambiado',
+  'users.role': 'Rol cambiado',
+  'juegos.import': 'Importación de juegos'
+};
+
+function isAgotado(g) {
+  return [g.stockPrimaria, g.stockSecundaria].some(s => Number.isInteger(s) && s <= 0);
+}
+
+function isLowOrOut(g) {
+  return [g.stockPrimaria, g.stockSecundaria].some(s => Number.isInteger(s) && s <= 3);
+}
+
+function kpiCard(label, value, ic, tint, clickable, view) {
+  const inner = `<div class="kpi-text"><span class="kpi-label">${escapeHTML(label)}</span><span class="kpi-value">${value}</span></div><span class="kpi-icon kpi-${tint}" aria-hidden="true">${icon(ic, 20)}</span>`;
+  if (clickable) {
+    return `<button type="button" class="kpi-card" data-action="nav" data-view="${view}">${inner}</button>`;
+  }
+  return `<div class="kpi-card">${inner}</div>`;
+}
+
+function dashSkeleton() {
+  document.getElementById('dash-kpis').innerHTML =
+    '<div class="kpi-card"><div class="kpi-text"><span class="skeleton-line"></span><span class="skeleton-line" style="width:65%"></span></div></div>'.repeat(4);
+  ['dash-recent', 'dash-stock', 'dash-audit', 'dash-top'].forEach(id => {
+    document.getElementById(id).innerHTML =
+      '<div class="panel-list">' + '<span class="skeleton-line" style="margin:10px 20px;width:82%"></span>'.repeat(4) + '</div>';
+  });
+}
+
+async function fetchDash() {
+  dashSkeleton();
+  try {
+    const [oR, gR, uR, cR, aR] = await Promise.all([
+      apiFetch('/api/admin/orders'),
+      apiFetch('/api/admin/juegos'),
+      apiFetch('/api/admin/users'),
+      apiFetch('/api/coupons'),
+      apiFetch('/api/admin/audit?limit=8')
+    ]);
+    const grab = async (r, fallback) => (r.ok ? (await r.json().catch(() => fallback)) : fallback);
+    state.dash.orders = await grab(oR, []);
+    state.dash.games = await grab(gR, []);
+    state.dash.users = await grab(uR, []);
+    state.dash.coupons = await grab(cR, []);
+    state.dash.audit = await grab(aR, []);
+    state.dash.loaded = true;
+    renderDash();
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+function renderDash() {
+  const { orders, games, coupons, audit } = state.dash;
+  const ventas = orders.reduce((acc, o) => {
+    if (['cancelada', 'reembolsada'].includes(o.estado)) return acc;
+    return acc + (Number(o.total != null ? o.total : o.monto) || 0);
+  }, 0);
+  const pendientes = orders.filter(o => o.estado === 'pendiente').length;
+  const agotados = games.filter(isAgotado).length;
+
+  document.getElementById('dash-kpis').innerHTML =
+    kpiCard('Ventas totales', formatCLP(ventas), 'wallet', 'cyan', false) +
+    kpiCard('Pedidos pendientes', String(pendientes), 'clock', 'gold', false) +
+    kpiCard('Agotados', String(agotados), 'package', 'red', true, 'juegos') +
+    kpiCard('Cupones', String(coupons.length), 'ticket', 'cyan', true, 'cupones');
+
+  renderDashRecent(orders);
+  renderDashStock(games);
+  renderDashAudit(audit);
+  renderDashTop(games);
+}
+
+function renderDashRecent(orders) {
+  const el = document.getElementById('dash-recent');
+  const recent = (Array.isArray(orders) ? orders : []).slice(0, 8);
+  if (!recent.length) {
+    el.innerHTML = '<p class="panel-empty">Aún no hay pedidos.</p>';
+    return;
+  }
+  el.innerHTML = `<div class="table-wrap"><table class="data-table">
+    <thead><tr><th scope="col">Código</th><th scope="col">Cliente</th><th scope="col" class="num">Total</th><th scope="col">Estado</th><th scope="col"></th></tr></thead>
+    <tbody>${recent.map(o => {
+      const code = escapeHTML(o.codigoOrden || '—');
+      return `<tr>
+        <td data-label="Código"><span class="cell-code">${code}</span></td>
+        <td data-label="Cliente">${escapeHTML(o.emailCompleto || o.usuario || '—')}</td>
+        <td data-label="Total" class="num">${escapeHTML(o.totalFormatted || formatCLP(o.total))}</td>
+        <td data-label="Estado">${statusChip(o.estado)}</td>
+        <td data-label=""><button type="button" class="btn-ghost" data-action="open-order" data-code="${code}">${icon('eye', 14)}<span>Ver</span></button></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderDashStock(games) {
+  const el = document.getElementById('dash-stock');
+  const low = (Array.isArray(games) ? games : [])
+    .filter(isLowOrOut)
+    .map(g => ({
+      g,
+      min: Math.min(
+        Number.isInteger(g.stockPrimaria) ? g.stockPrimaria : Infinity,
+        Number.isInteger(g.stockSecundaria) ? g.stockSecundaria : Infinity
+      )
+    }))
+    .sort((a, b) => a.min - b.min)
+    .slice(0, 10);
+  if (!low.length) {
+    el.innerHTML = '<p class="panel-empty">Sin juegos con stock bajo.</p>';
+    return;
+  }
+  el.innerHTML = low.map(({ g }) => {
+    const sec = Number.isInteger(g.stockSecundaria) ? String(g.stockSecundaria) : '∞';
+    const prim = Number.isInteger(g.stockPrimaria) ? String(g.stockPrimaria) : '∞';
+    return `<button type="button" class="stock-row" data-action="nav" data-view="juegos" title="Ver juegos">
+      <img class="stock-thumb" src="${escapeHTML(g.imagen || '')}" alt="" loading="lazy" onerror="this.classList.add('thumb-broken')">
+      <span class="stock-info">
+        <span class="stock-title">${escapeHTML(g.titulo || 'Sin título')}</span>
+        <span class="stock-sub">Sec: ${sec} · Prim: ${prim}</span>
+      </span>
+      ${isAgotado(g) ? '<span class="stock-tag">⛔ agotado</span>' : ''}
+    </button>`;
+  }).join('');
+}
+
+function auditLabel(action) {
+  return AUDIT_ACTION_LABELS[String(action || '')] || escapeHTML(String(action || 'Acción'));
+}
+
+function renderDashAudit(audit) {
+  const el = document.getElementById('dash-audit');
+  const list = (Array.isArray(audit) ? audit : []).slice(0, 8);
+  if (!list.length) {
+    el.innerHTML = '<p class="panel-empty">Sin actividad reciente.</p>';
+    return;
+  }
+  el.innerHTML = `<ul class="audit-list">${list.map(a => {
+    const bad = a.result && !/^(ok|success|exito|true)$/i.test(String(a.result));
+    return `<li>
+      <span class="audit-dot${bad ? ' err' : ''}" aria-hidden="true"></span>
+      <div>
+        <strong>${auditLabel(a.action)}</strong>
+        <span class="tl-meta">${escapeHTML(a.actorUsername || '')}${a.actorUsername ? ' · ' : ''}${formatFecha(a.timestamp)}</span>
+        ${a.summary ? `<p>${escapeHTML(a.summary)}</p>` : ''}
+      </div>
+    </li>`;
+  }).join('')}</ul>`;
+}
+
+function renderDashTop(games) {
+  const el = document.getElementById('dash-top');
+  const top = (Array.isArray(games) ? games : [])
+    .map(g => ({ g, sold: (Number(g.soldPrimaria) || 0) + (Number(g.soldSecundaria) || 0) }))
+    .filter(x => x.sold > 0)
+    .sort((a, b) => b.sold - a.sold)
+    .slice(0, 5);
+  if (!top.length) {
+    el.innerHTML = '<p class="panel-empty">Aún no hay ventas registradas.</p>';
+    return;
+  }
+  el.innerHTML = `<div class="panel-list">${top.map((x, i) => `
+    <div class="top-row">
+      <span class="top-rank">${i + 1}</span>
+      <span class="top-info">
+        <span class="top-title">${escapeHTML(x.g.titulo || 'Sin título')}</span>
+        <span class="top-count">S: ${Number(x.g.soldSecundaria) || 0} · P: ${Number(x.g.soldPrimaria) || 0}</span>
+      </span>
+      <span class="top-count">${x.sold} vendidos</span>
+    </div>`).join('')}</div>`;
+}
+
+/* ==========================================================================
+   VISTA: CUPONES
+   ========================================================================== */
+async function fetchCouponsAdmin() {
+  const tb = document.getElementById('coupons-tbody');
+  tb.innerHTML = skeletonRows(4, 5);
+  try {
+    const res = await apiFetch('/api/coupons');
+    if (!res.ok) {
+      showToast(await readError(res), 'error');
+      tb.innerHTML = tableEmpty(5, 'No se pudieron cargar los cupones.', 'Usa el botón Actualizar para reintentar.');
+      return;
+    }
+    const d = await res.json();
+    state.coupons = Array.isArray(d) ? d : [];
+    state.couponsLoaded = true;
+    renderCoupons();
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') {
+      tb.innerHTML = tableEmpty(5, 'No se pudieron cargar los cupones.', 'Error de comunicación con el servidor.');
+    }
+  }
+}
+
+function renderCoupons() {
+  const tb = document.getElementById('coupons-tbody');
+  if (!state.coupons.length) {
+    tb.innerHTML = tableEmpty(5, 'No hay cupones.', 'Crea tu primer código de descuento con el formulario.');
+    return;
+  }
+  tb.innerHTML = state.coupons.map(c => `
+    <tr>
+      <td data-label="Código"><span class="cell-code">${escapeHTML(c.code || '—')}</span></td>
+      <td data-label="Tipo">${c.type === 'fixed' ? '<span class="chip chip-fixed">Fijo</span>' : '<span class="chip chip-percent">%</span>'}</td>
+      <td data-label="Valor" class="num">${c.type === 'fixed' ? formatCLP(c.value) : escapeHTML(String(c.value)) + '%'}</td>
+      <td data-label="Descripción">${escapeHTML(c.desc || '—')}</td>
+      <td data-label="Acciones" class="cell-actions">
+        <button type="button" class="btn-ghost danger" data-action="delete-coupon" data-code="${escapeHTML(c.code || '')}">${icon('trash', 14)}<span>Eliminar</span></button>
+      </td>
+    </tr>`).join('');
+}
+
+function handleCouponSubmit(e) {
+  e.preventDefault();
+  const code = document.getElementById('c-code').value.trim();
+  const type = document.getElementById('c-type').value;
+  const value = document.getElementById('c-value').value.trim();
+  const errs = {};
+  if (!code) errs['c-code'] = 'El código es obligatorio.';
+  if (value === '' || !Number.isInteger(Number(value)) || Number(value) < 1) {
+    errs['c-value'] = 'Ingresa un valor entero mayor o igual a 1.';
+  } else if (type === 'percent' && Number(value) > 100) {
+    errs['c-value'] = 'El porcentaje debe estar entre 1 y 100.';
+  }
+  if (Object.keys(errs).length) {
+    renderFieldErrors(errs);
+    return;
+  }
+
+  const payload = { code, type, value: Number(value), desc: document.getElementById('c-desc').value.trim() };
+  const btn = document.getElementById('coupon-save-btn');
+  const banner = document.getElementById('coupon-form-error');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  banner.hidden = true;
+
+  apiFetch('/api/admin/coupons/create', { method: 'POST', body: JSON.stringify(payload) })
+    .then(async res => {
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        banner.textContent = d.error || 'No se pudo guardar el cupón.';
+        banner.hidden = false;
+        return;
+      }
+      if (Array.isArray(d.cupones)) state.coupons = d.cupones;
+      renderCoupons();
+      document.getElementById('coupon-form').reset();
+      showToast(d.mensaje || 'Cupón guardado.');
+    })
+    .catch(err => {
+      if (String(err.message) !== 'Sesión expirada') {
+        banner.textContent = 'Error de comunicación con el servidor.';
+        banner.hidden = false;
+      }
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Guardar Cupón';
+    });
+}
+
+async function deleteCoupon(code) {
+  const r = await openConfirm({
+    title: 'Eliminar cupón',
+    message: `¿Eliminar el cupón "${code}"? Los clientes ya no podrán usarlo.`,
+    confirmLabel: 'Eliminar',
+    danger: true
+  });
+  if (!r.ok) return;
+  try {
+    const res = await apiFetch('/api/admin/coupons/delete', { method: 'POST', body: JSON.stringify({ code }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(d.error || 'No se pudo eliminar el cupón.', 'error');
+      return;
+    }
+    if (Array.isArray(d.cupones)) state.coupons = d.cupones;
+    renderCoupons();
+    showToast(d.mensaje || 'Cupón eliminado.');
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+/* ==========================================================================
+   VISTA: GALERÍA DE CLIENTES
+   ========================================================================== */
+async function fetchGallery() {
+  const grid = document.getElementById('gallery-grid');
+  grid.innerHTML = '<div class="panel-list">' + '<span class="skeleton-line" style="width:90%;margin:8px 6px"></span>'.repeat(5) + '</div>';
+  try {
+    const [setRes, listRes] = await Promise.all([apiFetch('/api/settings'), apiFetch('/api/gallery')]);
+    if (!setRes.ok || !listRes.ok) {
+      showToast('No se pudo cargar la galería.', 'error');
+      grid.innerHTML = '<div class="panel-card"><p class="panel-empty">No se pudo cargar la galería. Usa Actualizar para reintentar.</p></div>';
+      return;
+    }
+    const set = await setRes.json().catch(() => ({}));
+    const list = await listRes.json().catch(() => []);
+    state.galleryEnabled = !!set.galleryEnabled;
+    state.gallery = Array.isArray(list) ? list : [];
+    state.galleryLoaded = true;
+    document.getElementById('gallery-toggle').checked = state.galleryEnabled;
+    renderGalleryGrid();
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+function renderGalleryGrid() {
+  const grid = document.getElementById('gallery-grid');
+  if (!state.gallery.length) {
+    grid.innerHTML = '<div class="panel-card"><p class="panel-empty">Aún no hay fotos en la galería. Agrega la primera con el formulario.</p></div>';
+    return;
+  }
+  grid.innerHTML = state.gallery.map(item => `
+    <figure class="gallery-item">
+      <img src="${escapeHTML(item.imagen || '')}" alt="Foto de ${escapeHTML(item.user || '')}" loading="lazy" onerror="this.classList.add('thumb-broken')">
+      <button type="button" class="gallery-del" data-action="delete-gallery" data-id="${escapeHTML(String(item.id ?? ''))}" aria-label="Eliminar foto de ${escapeHTML(item.user || '')}">${icon('trash', 15)}</button>
+      <figcaption class="gallery-cap">
+        <strong>${escapeHTML(item.user || '—')}</strong>
+        <span class="stars">${escapeHTML(item.stars || '')}</span>
+        ${item.comment ? `<p>${escapeHTML(item.comment)}</p>` : ''}
+      </figcaption>
+    </figure>`).join('');
+}
+
+async function toggleGallery(enabled) {
+  const sw = document.getElementById('gallery-toggle');
+  sw.disabled = true;
+  try {
+    const res = await apiFetch('/api/admin/settings/toggle-gallery', { method: 'POST', body: JSON.stringify({ enabled }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(d.error || 'No se pudo actualizar la galería.', 'error');
+      sw.checked = !enabled;
+      return;
+    }
+    state.galleryEnabled = !!(d.settings && d.settings.galleryEnabled);
+    sw.checked = state.galleryEnabled;
+    showToast(d.mensaje || (state.galleryEnabled ? 'Galería habilitada.' : 'Galería deshabilitada.'));
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  } finally {
+    sw.disabled = false;
+  }
+}
+
+function handleGallerySubmit(e) {
+  e.preventDefault();
+  const user = document.getElementById('g-user').value.trim();
+  const imagen = document.getElementById('g-imagen').value.trim();
+  const comment = document.getElementById('g-comment').value.trim();
+  const errs = {};
+  if (!user) errs['g-user'] = 'El usuario es obligatorio.';
+  if (!imagen) errs['g-imagen'] = 'La URL de la foto es obligatoria.';
+  else if (!/^https?:\/\//i.test(imagen)) errs['g-imagen'] = 'La URL debe comenzar con http(s).';
+  if (!comment) errs['g-comment'] = 'El comentario es obligatorio.';
+  if (Object.keys(errs).length) {
+    renderFieldErrors(errs);
+    return;
+  }
+
+  const payload = { user, stars: document.getElementById('g-stars').value, comment, imagen };
+  const btn = document.getElementById('gallery-save-btn');
+  const banner = document.getElementById('gallery-form-error');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  banner.hidden = true;
+
+  apiFetch('/api/admin/gallery/add', { method: 'POST', body: JSON.stringify(payload) })
+    .then(async res => {
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        banner.textContent = d.error || 'No se pudo agregar la foto.';
+        banner.hidden = false;
+        return;
+      }
+      if (Array.isArray(d.galeria)) state.gallery = d.galeria;
+      renderGalleryGrid();
+      document.getElementById('gallery-form').reset();
+      showToast(d.mensaje || 'Foto agregada a la galería.');
+    })
+    .catch(err => {
+      if (String(err.message) !== 'Sesión expirada') {
+        banner.textContent = 'Error de comunicación con el servidor.';
+        banner.hidden = false;
+      }
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Agregar a la galería';
+    });
+}
+
+async function deleteGalleryItem(id) {
+  const r = await openConfirm({
+    title: 'Eliminar foto',
+    message: '¿Eliminar esta foto y reseña de la galería?',
+    confirmLabel: 'Eliminar',
+    danger: true
+  });
+  if (!r.ok) return;
+  try {
+    const res = await apiFetch('/api/admin/gallery/delete', { method: 'POST', body: JSON.stringify({ id }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(d.error || 'No se pudo eliminar la foto.', 'error');
+      return;
+    }
+    if (Array.isArray(d.galeria)) state.gallery = d.galeria;
+    renderGalleryGrid();
+    showToast(d.mensaje || 'Foto eliminada.');
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+/* ==========================================================================
+   VISTA: USUARIOS
+   ========================================================================== */
+async function fetchUsers() {
+  const tb = document.getElementById('users-tbody');
+  tb.innerHTML = skeletonRows(4, 4);
+  try {
+    const res = await apiFetch('/api/admin/users');
+    if (!res.ok) {
+      showToast(await readError(res), 'error');
+      tb.innerHTML = tableEmpty(4, 'No se pudieron cargar los usuarios.', 'Usa el botón Actualizar para reintentar.');
+      return;
+    }
+    state.users = await res.json();
+    state.usersLoaded = true;
+    renderUsers();
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') {
+      tb.innerHTML = tableEmpty(4, 'No se pudieron cargar los usuarios.', 'Error de comunicación con el servidor.');
+    }
+  }
+}
+
+function renderUsers() {
+  const tb = document.getElementById('users-tbody');
+  if (!state.users.length) {
+    tb.innerHTML = tableEmpty(4, 'No hay usuarios.', '');
+    return;
+  }
+  const meId = state.user ? String(state.user.id) : null;
+  tb.innerHTML = state.users.map(u => {
+    const isMe = meId !== null && String(u.id) === meId;
+    const roleChip = u.role === 'admin'
+      ? '<span class="chip chip-admin">admin</span>'
+      : '<span class="chip chip-user">usuario</span>';
+    const actionBtn = isMe
+      ? '<span class="text-dim">—</span>'
+      : `<button type="button" class="btn-ghost${u.role === 'admin' ? ' danger' : ''}" data-action="toggle-user-role" data-id="${escapeHTML(String(u.id))}">${u.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}</button>`;
+    return `<tr>
+      <td data-label="Usuario">${escapeHTML(u.username || '—')}${isMe ? '<span class="badge-you">tú</span>' : ''}</td>
+      <td data-label="Email">${escapeHTML(u.email || '—')}</td>
+      <td data-label="Rol">${roleChip}</td>
+      <td data-label="Acciones" class="cell-actions">${actionBtn}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleUserRole(id) {
+  const user = state.users.find(u => String(u.id) === String(id));
+  if (!user) return;
+  const makeAdmin = user.role !== 'admin';
+  const r = await openConfirm({
+    title: makeAdmin ? 'Hacer administrador' : 'Quitar permisos de administrador',
+    message: `¿${makeAdmin ? 'Otorgar permisos de administrador a' : 'Quitar los permisos de administrador a'} "${user.username}"?`,
+    confirmLabel: makeAdmin ? 'Hacer admin' : 'Quitar admin',
+    danger: !makeAdmin
+  });
+  if (!r.ok) return;
+  try {
+    const res = await apiFetch(`/api/admin/users/${encodeURIComponent(id)}/role`, {
+      method: 'POST',
+      body: JSON.stringify({ role: makeAdmin ? 'admin' : 'user' })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(d.error || 'No se pudo cambiar el rol.', 'error');
+      return;
+    }
+    showToast(d.usuario && d.usuario.role === 'admin' ? 'Ahora es administrador.' : 'Ya no es administrador.');
+    fetchUsers();
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
+  }
+}
+
+/* ==========================================================================
+   IMPORTAR / EXPORTAR JUEGOS
+   ========================================================================== */
+const CSV_COLUMNS = ['id', 'titulo', 'categoria', 'precioSecundaria', 'precioPrimaria', 'precioOriginal', 'rating', 'peso', 'imagen', 'imagenDetalle', 'descripcion', 'resumenExtenso', 'youtubeUrl', 'visible', 'stockPrimaria', 'stockSecundaria'];
+
+function openImportModal() {
+  state.importPayload = null;
+  state.importPreview = null;
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-json').value = '';
+  document.getElementById('import-preview').hidden = true;
+  document.getElementById('import-form-error').hidden = true;
+  const btn = document.getElementById('import-apply-btn');
+  btn.disabled = true;
+  btn.textContent = 'Aplicar juegos';
+  openModal('import-modal');
+}
+
+function showImportError(msg) {
+  const b = document.getElementById('import-form-error');
+  b.textContent = msg;
+  b.hidden = false;
+}
+
+function handleImportFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  document.getElementById('import-json').value = '';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result || '');
+    if (/\.json$/i.test(file.name)) {
+      let rows = null;
+      try {
+        rows = JSON.parse(text);
+      } catch (err) {
+        showImportError('El archivo JSON no es válido: ' + err.message);
+        return;
+      }
+      if (!Array.isArray(rows)) {
+        showImportError('El JSON debe ser un arreglo de juegos.');
+        return;
+      }
+      state.importPayload = { rows };
+    } else {
+      state.importPayload = { csv: text };
+    }
+    previewImport();
+  };
+  reader.readAsText(file);
+}
+
+function handleImportJsonInput() {
+  clearTimeout(state.importTimer);
+  state.importTimer = setTimeout(() => {
+    const text = document.getElementById('import-json').value.trim();
+    if (!text) return;
+    let rows = null;
+    try {
+      rows = JSON.parse(text);
+    } catch (err) {
+      showImportError('El JSON pegado no es válido: ' + err.message);
+      return;
+    }
+    if (!Array.isArray(rows)) {
+      showImportError('El JSON debe ser un arreglo de juegos.');
+      return;
+    }
+    document.getElementById('import-file').value = '';
+    state.importPayload = { rows };
+    previewImport();
+  }, 400);
+}
+
+async function previewImport() {
+  document.getElementById('import-form-error').hidden = true;
+  try {
+    const res = await apiFetch('/api/admin/juegos/import/preview', { method: 'POST', body: JSON.stringify(state.importPayload) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showImportError(d.error || 'No se pudo previsualizar la importación.');
+      return;
+    }
+    state.importPreview = d;
+    renderImportPreview(d);
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showImportError('Error de comunicación con el servidor.');
+  }
+}
+
+function renderImportPreview(d) {
+  const valid = Number(d.valid) || 0;
+  const invalid = Number(d.invalid) || 0;
+  const dups = Number(d.duplicates) || 0;
+  const errors = Array.isArray(d.errors) ? d.errors : [];
+  document.getElementById('import-preview').hidden = false;
+  document.getElementById('import-summary').innerHTML =
+    `<span class="chip chip-pagada">${valid} juegos válidos</span>` +
+    (invalid ? `<span class="chip chip-rechazada">${invalid} con errores</span>` : '') +
+    (dups ? `<span class="chip chip-pendiente">${dups} duplicados</span>` : '');
+  const wrap = document.getElementById('import-errors-wrap');
+  wrap.hidden = errors.length === 0;
+  document.getElementById('import-errors-tbody').innerHTML = errors.map(err =>
+    `<tr><td>${escapeHTML(String(err.row ?? ''))}</td><td>${escapeHTML(String(err.field ?? ''))}</td><td>${escapeHTML(String(err.message ?? ''))}</td></tr>`
+  ).join('');
+  const btn = document.getElementById('import-apply-btn');
+  btn.disabled = valid === 0;
+  btn.textContent = `Aplicar ${valid} juegos`;
+}
+
+async function applyImport() {
+  if (!state.importPayload || !state.importPreview) return;
+  const btn = document.getElementById('import-apply-btn');
+  btn.disabled = true;
+  btn.textContent = 'Importando…';
+  try {
+    const res = await apiFetch('/api/admin/juegos/import/commit', { method: 'POST', body: JSON.stringify(state.importPayload) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showImportError(d.error || 'No se pudo importar.');
+      btn.disabled = false;
+      btn.textContent = 'Aplicar juegos';
+      return;
+    }
+    if (Array.isArray(d.juegos)) {
+      state.games = d.juegos;
+      renderGames();
+    }
+    closeModal('import-modal');
+    showToast(d.imported ? `${d.imported} juegos importados.` : (d.mensaje || 'Importación completada.'));
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') showImportError('Error de comunicación con el servidor.');
+  }
+}
+
+/* --- Exportar --- */
+function downloadFile(name, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function csvCell(v) {
+  let s = String(v === null || v === undefined ? '' : v);
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  return '"' + s.replace(/"/g, '""') + '"';
+}
+
+function exportGamesCsv() {
+  const lines = [CSV_COLUMNS.map(csvCell).join(',')];
+  state.games.forEach(g => lines.push(CSV_COLUMNS.map(c => csvCell(g[c])).join(',')));
+  downloadFile('juegos.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  showToast('Archivo CSV descargado.');
+}
+
+function exportGamesJson() {
+  const clean = state.games.map(g => {
+    const out = {};
+    Object.keys(g).forEach(k => {
+      if (!['cuentas', 'soldPrimaria', 'soldSecundaria', 'siguienteVarianteIndex', 'deletedAt'].includes(k)) out[k] = g[k];
+    });
+    return out;
+  });
+  downloadFile('juegos.json', JSON.stringify(clean, null, 2), 'application/json');
+  showToast('Archivo JSON descargado.');
+}
+
+function exportMenuItems() {
+  return [
+    { label: 'CSV (para Excel)', icon: 'download', action: exportGamesCsv },
+    { label: 'JSON', icon: 'download', action: exportGamesJson }
+  ];
+}
+
+/* ==========================================================================
    MENÚ KEBAB (posición fija, nunca recortado por overflow)
    ========================================================================== */
 function openKebab(items, anchor) {
@@ -1111,6 +1836,15 @@ document.addEventListener('click', (e) => {
     case 'order-retry': retryPayment(el.dataset.code); break;
     case 'order-cancel': cancelOrder(el.dataset.code); break;
     case 'order-refund': refundOrder(el.dataset.code); break;
+    case 'refresh-dash': fetchDash(); break;
+    case 'open-import': openImportModal(); break;
+    case 'export-menu': openKebab(exportMenuItems(), el); break;
+    case 'refresh-coupons': fetchCouponsAdmin(); break;
+    case 'delete-coupon': deleteCoupon(el.dataset.code); break;
+    case 'refresh-gallery': fetchGallery(); break;
+    case 'delete-gallery': deleteGalleryItem(Number(el.dataset.id)); break;
+    case 'refresh-users': fetchUsers(); break;
+    case 'toggle-user-role': toggleUserRole(el.dataset.id); break;
   }
 });
 
@@ -1123,6 +1857,10 @@ document.addEventListener('change', (e) => {
     state.ordersStatus = t.value;
     state.ordersPage = 1;
     fetchOrders();
+  } else if (t.id === 'gallery-toggle') {
+    toggleGallery(t.checked);
+  } else if (t.id === 'import-file') {
+    handleImportFile(e);
   }
 });
 
@@ -1143,6 +1881,8 @@ document.addEventListener('input', (e) => {
     renderPreview('f-imagen', 'preview-imagen');
   } else if (t.id === 'f-imagen-detalle') {
     renderPreview('f-imagen-detalle', 'preview-imagen-detalle');
+  } else if (t.id === 'import-json') {
+    handleImportJsonInput();
   }
   /* Limpiar error de campo al escribir */
   const field = t.closest('.field');
@@ -1212,6 +1952,9 @@ function init() {
   bindRail();
   renderNav();
   document.getElementById('game-form').addEventListener('submit', handleGameSubmit);
+  document.getElementById('coupon-form').addEventListener('submit', handleCouponSubmit);
+  document.getElementById('gallery-form').addEventListener('submit', handleGallerySubmit);
+  document.getElementById('import-apply-btn').addEventListener('click', applyImport);
   document.getElementById('confirm-no').addEventListener('click', () => resolveConfirm(false));
   document.getElementById('confirm-yes').addEventListener('click', () => resolveConfirm(true));
   switchView('juegos');
