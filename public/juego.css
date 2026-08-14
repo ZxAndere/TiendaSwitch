@@ -276,52 +276,6 @@
   transform: translateY(-2px);
 }
 
-/* BotÃ³n Teaser TrÃ¡iler */
-.jd-trailer-btn {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12) 0%, rgba(255, 0, 60, 0.12) 100%);
-  border: 1px solid var(--joycon-cyan);
-  color: #ffffff;
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition-fast);
-  width: 100%;
-  text-align: left;
-}
-
-.jd-trailer-btn:hover {
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(255, 0, 60, 0.25) 100%);
-  box-shadow: var(--glow-cyan);
-  transform: translateY(-2px);
-}
-
-.jd-trailer-btn .play-icon {
-  font-size: 1.5rem;
-  color: var(--joycon-cyan);
-  width: 42px;
-  height: 42px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.trailer-btn-text strong {
-  display: block;
-  font-size: 0.95rem;
-  color: #ffffff;
-}
-
-.trailer-btn-text span {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
 /* --- COLUMNA DERECHA: PANEL DE COMPRA (45%) --- */
 .jd-info-col {
   display: flex;
@@ -997,31 +951,6 @@
   transition: transform 0.08s ease !important;
 }
 
-/* --- ANIMACIÃ“N BONITA AL CAMBIAR PRECIO --- */
-@keyframes priceChangePop {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.6;
-    filter: brightness(1.7) drop-shadow(0 0 10px rgba(0, 240, 255, 0.8));
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-    filter: brightness(1.3) drop-shadow(0 0 15px rgba(0, 240, 255, 0.9));
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-    filter: brightness(1) drop-shadow(0 0 0 transparent);
-  }
-}
-
-.price-anim-pop {
-  animation: priceChangePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-  display: inline-block;
-  will-change: transform, filter, opacity;
-}
-
 /* ==========================================================================
    Lenguaje de sombras de controles (compartido con style.css)
    ========================================================================== */
@@ -1030,12 +959,8 @@
   box-shadow: none;
 }
 
-.jd-trailer-btn:hover {
-  box-shadow: none;
-}
-
-/* CTAs de la página de detalle: el rojo usa el token primario fuerte,
-   el cian (ghost) usa la elevación neutra */
+/* CTAs de la pï¿½gina de detalle: el rojo usa el token primario fuerte,
+   el cian (ghost) usa la elevaciï¿½n neutra */
 .jd-cta-btn.btn-add-cart:hover {
   box-shadow: var(--btn-shadow-primary-strong-hover) !important;
 }

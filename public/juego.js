@@ -1,5 +1,4 @@
 var currentDetailGame = null;
-window.currentDetailGame = null;
 let currentSelectedLicense = null;
 let detailActiveThumbIndex = 0;
 let detailImagesList = [];
@@ -8,13 +7,6 @@ let catalogLoadedFromServer = false;
 let currentTrailerList = [];
 let currentTrailerIndex = 0;
 let isTrailerInitialized = false;
-
-function safeEscapeHTML(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[&<>'"]/g,
-    tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-  );
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Escuchar cambio de moneda para actualizar precios en tiempo real
@@ -36,18 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Cargar catálogo e inicializar juego por URL id
   await initJuegoPage();
 });
-
-function slugify(text) {
-  if (!text) return '';
-  return text
-    .toString()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
 
 async function initJuegoPage() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -192,7 +172,7 @@ function renderGameDetailView(animatePrice = false) {
     if (strip) {
       strip.innerHTML = (detailImagesList || []).map((imgUrl, idx) => `
         <div class="jd-thumb-item ${idx === detailActiveThumbIndex ? 'active' : ''}" onclick="selectDetailThumbnail(${idx})">
-          <img src="${safeEscapeHTML(imgUrl)}" alt="Captura ${idx + 1}" loading="lazy">
+          <img src="${escapeHTML(imgUrl) || ''}" alt="Captura ${idx + 1}" loading="lazy">
         </div>
       `).join('');
     }
@@ -314,7 +294,7 @@ function renderGameDetailView(animatePrice = false) {
     const descContent = document.getElementById('jd-desc-content');
     if (descContent) {
       descContent.innerHTML = `
-        <p style="margin-bottom: 1rem;">${safeEscapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
+        <p style="margin-bottom: 1rem;">${escapeHTML(game.resumenExtenso || game.descripcion || '')}</p>
         <p>Disfruta de la máxima calidad de Switch en formato digital. Con tu compra obtienes acceso inmediato a los servidores oficiales de la eShop con garantía de uso permanente ZonaSwitchChile.</p>
       `;
     }
@@ -331,7 +311,7 @@ function renderGameDetailView(animatePrice = false) {
       videoWrapper.innerHTML = `
         <iframe
           src="${videoUrl}"
-          title="Tráiler Oficial de ${safeEscapeHTML(game.titulo)}"
+          title="Tráiler Oficial de ${escapeHTML(game.titulo) || ''}"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen>
@@ -566,23 +546,23 @@ function parseYouTubeVideoId(url) {
   return null;
 }
 
+const TRAILER_MAP = {
+  1: 'uHGShqcAHlQ', // Zelda TOTK
+  2: 'JStAYvbe_3s', // Mario Wonder
+  3: 'tKlRN2YpxRE', // Mario Kart 8 Deluxe
+  4: 'WShCN-AYHqA', // Smash Ultimate
+  5: '7V20G0S_Y4w', // Pokémon Escarlata
+  6: '8wjY0q01uOk'  // Metroid Dread
+};
+
 function getYouTubeEmbedUrl(game) {
   if (!game) return 'https://www.youtube.com/embed/uHGShqcAHlQ?autoplay=0&rel=0&modestbranding=1&enablejsapi=1';
 
   const customYt = game.youtubeUrl || game.videoTrailerUrl;
   let videoId = parseYouTubeVideoId(customYt);
 
-  const trailerMap = {
-    1: 'uHGShqcAHlQ', // Zelda TOTK
-    2: 'JStAYvbe_3s', // Mario Wonder
-    3: 'tKlRN2YpxRE', // Mario Kart 8 Deluxe
-    4: 'WShCN-AYHqA', // Smash Ultimate
-    5: '7V20G0S_Y4w', // Pokémon Escarlata
-    6: '8wjY0q01uOk'  // Metroid Dread
-  };
-
   if (!videoId) {
-    videoId = trailerMap[game.id] || 'uHGShqcAHlQ';
+    videoId = TRAILER_MAP[game.id] || 'uHGShqcAHlQ';
   }
 
   return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`;
@@ -620,15 +600,7 @@ function initDetailTrailers(game) {
     if (customId) {
       currentTrailerList.push(customId);
     } else {
-      const trailerMap = {
-        1: 'uHGShqcAHlQ',
-        2: 'JStAYvbe_3s',
-        3: 'tKlRN2YpxRE',
-        4: 'WShCN-AYHqA',
-        5: '7V20G0S_Y4w',
-        6: '8wjY0q01uOk'
-      };
-      currentTrailerList.push(trailerMap[game.id] || 'uHGShqcAHlQ');
+      currentTrailerList.push(TRAILER_MAP[game.id] || 'uHGShqcAHlQ');
     }
   }
 
@@ -823,7 +795,7 @@ async function handleAdminQuickGameSubmit(e) {
   }
 
   try {
-    const res = await apiFetch('/api/admin/juegos/update', {
+    const res = await fetch('/api/admin/juegos/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

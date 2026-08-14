@@ -1592,11 +1592,6 @@ html.light-mode .mini-icon.mini-heart {
   grid-column: 1 / -1;
 }
 
-/* Checkbox de confirmación en el diálogo */
-.confirm-check-field {
-  margin-bottom: 14px;
-}
-
 .confirm-check-label {
   display: flex;
   align-items: flex-start;

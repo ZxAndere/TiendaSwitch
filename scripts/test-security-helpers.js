@@ -5,7 +5,7 @@ const crypto = require('crypto');
 function sanitizeGameForPublic(game) {
   if (!game || typeof game !== 'object') return game;
   const g = { ...game };
-  ['cuentas','siguienteVarianteIndex','soldPrimaria','soldSecundaria','stockPrimaria','stockSecundaria','deletedAt'].forEach(f => delete g[f]);
+  ['cuentas','siguienteVarianteIndex','soldPrimaria','soldSecundaria','deletedAt'].forEach(f => delete g[f]);
   return g;
 }
 
@@ -33,7 +33,8 @@ const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); proces
 const g = { id: 1, titulo: 'X', cuentas: ['user/pass/123'], siguienteVarianteIndex: 3, stockPrimaria: 1, soldSecundaria: 9, deletedAt: 'd', visible: true, imagen: 'https://x' };
 const clean = sanitizeGameForPublic(g);
 assert(clean.cuentas === undefined, 'cuentas stripped');
-assert(clean.siguienteVarianteIndex === undefined && clean.stockPrimaria === undefined && clean.soldSecundaria === undefined && clean.deletedAt === undefined, 'internals stripped');
+assert(clean.siguienteVarianteIndex === undefined && clean.soldSecundaria === undefined && clean.deletedAt === undefined, 'internals stripped');
+assert(clean.stockPrimaria === 1 && clean.stockSecundaria === undefined, 'stock kept (storefront availability)');
 assert(clean.titulo === 'X' && clean.visible === true && clean.imagen === 'https://x', 'public fields kept');
 assert(g.cuentas !== undefined, 'original object untouched (copy, not mutate)');
 

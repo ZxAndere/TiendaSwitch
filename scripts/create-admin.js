@@ -25,7 +25,6 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
   email: { type: String, required: true },
   passwordHash: String,
-  password: String, // Se mantendrá en el esquema por compatibilidad pero no se guardará texto plano
   role: { type: String, default: 'user' },
   createdAt: { type: Date, default: Date.now }
 });

@@ -1,128 +1,5 @@
 // Estado Global de ZonaSwitchChile
-const DEFAULT_GAMES_FRONTEND = [
-  {
-    id: 1,
-    titulo: "The Legend of Zelda: Tears of the Kingdom",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 14990,
-    precioPrimaria: 24990,
-    precioOriginal: 59990,
-    rating: 5,
-    peso: "16.3 GB",
-    imagen: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Explora los cielos y las profundidades de Hyrule en esta aclamada secuela épica.",
-    resumenExtenso: "Embarca en una aventura sin precedentes a través de la tierra y los cielos de Hyrule...",
-    visible: true
-  },
-  {
-    id: 2,
-    titulo: "Super Mario Bros. Wonder",
-    categoria: "Plataformas",
-    precioSecundaria: 12990,
-    precioPrimaria: 21990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "4.5 GB",
-    imagen: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Disfruta de la magia de las Flores Maravilla y transforma el mundo de Mario en compañía.",
-    resumenExtenso: "Super Mario Bros. Wonder redefine la experiencia clásica de plataformas 2D...",
-    visible: true
-  },
-  {
-    id: 3,
-    titulo: "Mario Kart 8 Deluxe",
-    categoria: "Multijugador",
-    precioSecundaria: 11990,
-    precioPrimaria: 19990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "8.0 GB",
-    imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Compite con tus personajes favoritos en 48 pistas llenas de emoción y objetos locos.",
-    resumenExtenso: "La versión definitiva del juego de carreras más famoso de Switch...",
-    visible: true
-  },
-  {
-    id: 4,
-    titulo: "Super Smash Bros. Ultimate",
-    categoria: "Multijugador",
-    precioSecundaria: 13990,
-    precioPrimaria: 22990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "17.0 GB",
-    imagen: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "¡Todos están aquí! El mayor crossover de la historia del videojuego con más de 80 luchadores.",
-    resumenExtenso: "Super Smash Bros. Ultimate reúne a icónicos héroes y villanos...",
-    visible: true
-  },
-  {
-    id: 5,
-    titulo: "Pokémon Escarlata",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 12990,
-    precioPrimaria: 21990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "10.0 GB",
-    imagen: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Explora la región de Paldea en un mundo abierto sin fronteras y atrapa nuevos Pokémon.",
-    resumenExtenso: "Vive la primera gran aventura de mundo abierto de Pokémon...",
-    visible: true
-  },
-  {
-    id: 6,
-    titulo: "Metroid Dread",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 10990,
-    precioPrimaria: 18990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "4.1 GB",
-    imagen: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Acompaña a Samus Aran en su misión más peligrosa huyendo de los mortales robots E.M.M.I.",
-    resumenExtenso: "Metroid Dread marca el regreso de la legendaria caza-recompensas Samus Aran...",
-    visible: true
-  },
-  {
-    id: 7,
-    titulo: "Animal Crossing: New Horizons",
-    categoria: "Simulación",
-    precioSecundaria: 11990,
-    precioPrimaria: 19990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "7.0 GB",
-    imagen: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Crea tu propio paraíso en una isla desierta y vive a tu propio ritmo con vecinos encantadores.",
-    resumenExtenso: "Escapa a tu propia isla desierta en Animal Crossing: New Horizons...",
-    visible: true
-  },
-  {
-    id: 8,
-    titulo: "Hollow Knight",
-    categoria: "Indie",
-    precioSecundaria: 4990,
-    precioPrimaria: 8990,
-    precioOriginal: 14990,
-    rating: 5,
-    peso: "5.3 GB",
-    imagen: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Desciende al oscuro reino de Hallownest en una obra maestra de acción y exploración en 2D.",
-    resumenExtenso: "Hollow Knight es una aventura de acción en 2D de estilo metroidvania...",
-    visible: true
-  }
-];
-
-let catalog = [...DEFAULT_GAMES_FRONTEND];
+let catalog = [];
 let cart = JSON.parse(localStorage.getItem('zonaswitch_cart_v4')) || [];
 cart = Array.isArray(cart) ? cart.map(item => {
   if (!item || typeof item !== 'object') return null;
@@ -220,37 +97,16 @@ window.fetch = async function (resource, init) {
   return response;
 };
 
-const apiFetch = function (resource, init) {
-  return window.fetch(resource, init);
-};
-
 let activeCategory = 'todos';
 let searchQuery = '';
 let searchAnalyticsTimer = null;
 let filterState = { priceMin: null, priceMax: null, sort: '', license: '', inStockOnly: false };
-let selectedGameForModal = null;
-let selectedLicenseType = null;
-let currentModalImages = [];
-let currentModalImageIndex = 0;
 let payCarouselIndex = 0;
+let directCheckoutItem = null; // "Comprar ahora": ítem de pago directo SIN tocar el carrito
 
 let adminCatalog = []; // Catálogo completo para el panel de administración
 let pendingRegisterData = null; // Guardar datos temporales para confirmación OTP
 let pendingUpdateType = null; // 'email' o 'password'
-
-// Textos exactos de condiciones de Cuentas solicitados por el usuario
-const ACCOUNT_CONDITIONS = {
-  secundaria: [
-    "✔️ Deberás seguir los pasos de instalación proporcionados.",
-    "✔️ Puedes acumular trofeos y guardar avances.",
-    "✔️ Para jugar no es necesario usar conexión a internet."
-  ],
-  primaria: [
-    "✔️ Instalas desde nuestra cuenta y lo juegas con tu cuenta personal.",
-    "✔️ Puedes acumular trofeos y guardar avances.",
-    "✔️ Puedes jugar con o sin internet."
-  ]
-};
 
 // --- SISTEMA DE MULTIMONEDA / CONVERSIÓN DE PESOS Y DIVISAS 2026 (FREECURRENCY API) ---
 const CURRENCY_RATES = {
@@ -352,7 +208,7 @@ function renderGlobalAdminGear() {
 // Inicializar Aplicación al cargar el DOM
 document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('userToken')) {
-    apiFetch('/api/auth/me').catch(() => {});
+    fetch('/api/auth/me').catch(() => {});
   }
 
   try { initFilters(); } catch (e) { console.error('Error initFilters:', e); }
@@ -471,10 +327,6 @@ function initEventListeners() {
       if (typeof renderCartDrawer === 'function') renderCartDrawer();
       if (typeof renderGameDetailView === 'function') renderGameDetailView(true);
       if (typeof updateFilterPriceLabels === 'function') updateFilterPriceLabels();
-      if (selectedGameForModal) {
-        document.getElementById('gmodal-price-sec').textContent = formatCLP(selectedGameForModal.precioSecundaria);
-        document.getElementById('gmodal-price-prim').textContent = formatCLP(selectedGameForModal.precioPrimaria);
-      }
     });
   }
 
@@ -725,32 +577,6 @@ function initEventListeners() {
     });
   });
 
-  // Modal de Detalle de Juego
-  const closeGameModalBtn = document.getElementById('close-game-modal');
-  if (closeGameModalBtn) closeGameModalBtn.addEventListener('click', closeGameModal);
-
-  const sliderPrevBtn = document.getElementById('modal-slider-prev');
-  const sliderNextBtn = document.getElementById('modal-slider-next');
-  if (sliderPrevBtn) sliderPrevBtn.addEventListener('click', (e) => { e.stopPropagation(); navigateModalSlider(-1); });
-  if (sliderNextBtn) sliderNextBtn.addEventListener('click', (e) => { e.stopPropagation(); navigateModalSlider(1); });
-
-  // Radios de Cuenta (Secundaria / Primaria)
-  document.querySelectorAll('input[name="license_type"]').forEach(radio => {
-    radio.addEventListener('change', handleLicenseSelection);
-  });
-
-  const gmodalAddBtn = document.getElementById('gmodal-add-btn');
-  if (gmodalAddBtn) gmodalAddBtn.addEventListener('click', (e) => {
-    animateButtonSuccess(e.currentTarget, '✓ ¡Añadido al Carrito!');
-    handleAddSelectedLicenseToCart();
-  });
-
-  const gmodalBuyBtn = document.getElementById('gmodal-buy-btn');
-  if (gmodalBuyBtn) gmodalBuyBtn.addEventListener('click', (e) => {
-    animateButtonSuccess(e.currentTarget, '✓ Redirigiendo...');
-    handleBuySelectedLicenseNow();
-  });
-
   // Checkout & Recibo
   const checkoutForm = document.getElementById('checkout-form');
   if (checkoutForm) checkoutForm.addEventListener('submit', handleCheckout);
@@ -890,7 +716,7 @@ async function handlePrivacySave() {
   const checkbox = document.getElementById('privacy-tracking-checkbox');
   if (!checkbox) return;
   try {
-    const res = await apiFetch('/api/user/tracking', {
+    const res = await fetch('/api/user/tracking', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ optOut: !checkbox.checked })
@@ -927,7 +753,7 @@ async function fetchAndRenderAdminGames() {
   if (container) container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">Cargando juegos en panel admin...</p>';
 
   try {
-    const res = await apiFetch('/api/admin/juegos');
+    const res = await fetch('/api/admin/juegos');
     if (!res.ok) {
       triggerSecurityViolation();
       return;
@@ -976,12 +802,10 @@ function renderAdminGamesList(gamesList) {
   }).join('');
 }
 
-async function deactivateGame(gameId){ if(!verifyAdminSecurity())return; if(!confirm('¿Desactivar este juego de la tienda?'))return; const r=await apiFetch('/api/admin/juegos/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gameId})});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo desactivar.');adminCatalog=d.juegos||adminCatalog;renderAdminGamesList(adminCatalog);await fetchCatalog();showToast('Juego desactivado.');}
-
 async function toggleGameVisibility(gameId, isVisible) {
   if (!currentUser) return;
   try {
-    const res = await apiFetch('/api/admin/juegos/toggle', {
+    const res = await fetch('/api/admin/juegos/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gameId, visible: isVisible })
@@ -1090,7 +914,7 @@ async function handleGameCreateSubmit(e) {
   if (errorMsg) errorMsg.textContent = '';
 
   try {
-    const res = await apiFetch('/api/admin/juegos/create', {
+    const res = await fetch('/api/admin/juegos/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -1169,7 +993,7 @@ async function handleGameEditSubmit(e) {
   saveBtn.textContent = 'Guardando...';
 
   try {
-    const res = await apiFetch('/api/admin/juegos/update', {
+    const res = await fetch('/api/admin/juegos/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1332,7 +1156,7 @@ async function fetchAndRenderUserOrders() {
   if (!currentUser) return;
   container.innerHTML = '<p style=\"text-align:center;color:var(--text-muted)\">Cargando tus órdenes...</p>';
   try {
-    const res = await apiFetch('/api/user/orders');
+    const res = await fetch('/api/user/orders');
     const orders = await res.json();
     if (!res.ok) throw new Error(orders.error || 'Error');
     if (!Array.isArray(orders) || !orders.length) {
@@ -1359,7 +1183,7 @@ async function fetchAndRenderUserOrders() {
 
 async function showUserOrderDetail(code) {
   try {
-    const res = await apiFetch(`/api/user/orders/${encodeURIComponent(code)}`);
+    const res = await fetch(`/api/user/orders/${encodeURIComponent(code)}`);
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'No se pudo cargar la orden.');
     const history = Array.isArray(data.history) ? data.history.map(h=>`<li><strong>${escapeHTML(h.type)}</strong> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join('') : '';
@@ -1370,7 +1194,7 @@ async function showUserOrderDetail(code) {
 
 async function retryOrderPayment(code, email) {
   try {
-    const res = await apiFetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`, { method:'POST', body: JSON.stringify({ email: email || '' }), headers: { 'Content-Type': 'application/json' } });
+    const res = await fetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`, { method:'POST', body: JSON.stringify({ email: email || '' }), headers: { 'Content-Type': 'application/json' } });
     const data = await res.json();
     if (!res.ok || !data.exito) return showToast(data.error || 'No se pudo reintentar el pago.');
     if (data.redirectUrl) window.location.href = data.redirectUrl;
@@ -1393,7 +1217,7 @@ async function handleUsernameChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await apiFetch('/api/user/update-username', {
+    const res = await fetch('/api/user/update-username', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newUsername, currentPassword })
@@ -1426,7 +1250,7 @@ async function handleEmailChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await apiFetch('/api/user/send-email-code', {
+    const res = await fetch('/api/user/send-email-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newEmail, currentPassword })
@@ -1458,7 +1282,7 @@ async function handlePasswordChangeSubmit(e) {
   errorMsg.textContent = '';
 
   try {
-    const res = await apiFetch('/api/user/send-password-code', {
+    const res = await fetch('/api/user/send-password-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newPassword })
@@ -1494,7 +1318,7 @@ async function handleUpdateOtpSubmit(e) {
 
   try {
     const endpoint = pendingUpdateType === 'email' ? '/api/user/confirm-email-update' : '/api/user/confirm-password-update';
-    const res = await apiFetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code })
@@ -1643,7 +1467,7 @@ function ensureAccountDeleteUi(){
   box.innerHTML=`<div class=\"delete-account-title\">Eliminar mi cuenta</div><p>Esta acción es permanente.</p><button type=\"button\" class=\"delete-account-btn\" onclick=\"deleteMyAccount()\">Eliminar cuenta</button>`;
   form.appendChild(box);
 }
-async function deleteMyAccount(){ if(!confirm('¿Seguro que quieres eliminar tu cuenta?')) return; const password=prompt('Escribe tu contraseña actual para confirmar:'); if(!password) return; try{const r=await apiFetch('/api/user/account',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:password})}); const d=await r.json(); if(!r.ok){showToast(d.error||'No se pudo eliminar la cuenta.');return;} localStorage.removeItem('userToken');localStorage.removeItem('zonaswitch_user');currentUser=null;initUserSession();closeUserSettingsModal();showToast('Cuenta eliminada correctamente.');}catch(e){showToast('Error de conexión.');}}
+async function deleteMyAccount(){ if(!confirm('¿Seguro que quieres eliminar tu cuenta?')) return; const password=prompt('Escribe tu contraseña actual para confirmar:'); if(!password) return; try{const r=await fetch('/api/user/account',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:password})}); const d=await r.json(); if(!r.ok){showToast(d.error||'No se pudo eliminar la cuenta.');return;} localStorage.removeItem('userToken');localStorage.removeItem('zonaswitch_user');currentUser=null;initUserSession();closeUserSettingsModal();showToast('Cuenta eliminada correctamente.');}catch(e){showToast('Error de conexión.');}}
 function ensureAdminOrdersUi(){
   // Guard de rol SIN efectos secundarios: verifyAdminSecurity() aquí disparaba
   // triggerSecurityViolation() (toast + logout) para todo visitante no-admin
@@ -1659,14 +1483,14 @@ function ensureAdminUsersUi(){
   const b=document.createElement('button'); b.type='button'; b.className='tab-btn'; b.id='btn-subtab-users'; b.textContent='Usuarios'; b.onclick=()=>switchAdminSubtab('users'); tabs.appendChild(b);
   const view=document.createElement('div'); view.id='admin-view-users'; view.style.display='none'; view.innerHTML='<div id="admin-users-container" class="admin-games-container"></div>'; games.parentElement.insertBefore(view, games.nextSibling);
 }
-async function fetchAdminUsers(){ if(!verifyAdminSecurity()) return; const c=document.getElementById('admin-users-container'); if(!c)return; c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Cargando...</p>'; try{const r=await apiFetch('/api/admin/users'); const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(u=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(u.username)}${u.id===currentUser.id?' <em style="color:var(--text-muted);font-weight:400;font-style:normal">(tú)</em>':''}</strong><span class=\"admin-game-sub\">${escapeHTML(u.email||'')}</span></div></div><div class=\"admin-game-actions\"><span class=\"admin-game-sub\" style=\"margin-right:.5rem\">${u.role==='admin'?'Administrador':'Usuario'}</span>${u.id===currentUser.id?'':`<button type=\"button\" class=\"auth-submit-btn\" style=\"width:auto;padding:.35rem .8rem\" onclick=\"toggleUserRole('${escapeHTML(u.id)}','${escapeHTML(u.role||'user')}')\">${u.role==='admin'?'Quitar admin':'Hacer admin'}</button>`}</div></div>`).join('');}catch(e){c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Error al cargar usuarios.</p>';}}
-async function toggleUserRole(id, role){ if(!verifyAdminSecurity()) return; const newRole=role==='admin'?'user':'admin'; if(!confirm(newRole==='admin'?'¿Hacer administrador a este usuario?':'¿Quitar permisos de administrador a este usuario?'))return; try{const r=await apiFetch(`/api/admin/users/${encodeURIComponent(id)}/role`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo cambiar el rol.');showToast(`Rol actualizado: ahora es ${newRole==='admin'?'administrador':'usuario'}.`);fetchAdminUsers();}catch(e){showToast('Error de conexión.');}}
-async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await apiFetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" class=\"admin-icon-btn\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\" title=\"Ver detalle\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\" title=\"Reenviar entrega\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m22 2-7 20-4-9-9-4Z\"></path><path d=\"M22 2 11 13\"></path></svg></button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" class=\"admin-icon-btn\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}','${escapeHTML(o.emailCompleto||'')}')\" title=\"Reintentar pago\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg></button>`:''}<button type=\"button\" class=\"admin-icon-btn\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Cancelar orden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Reembolsar\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 14 4 9l5-5\"></path><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11\"></path></svg></button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
-async function showAdminOrderDetail(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`Orden ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
-async function resendAdminDelivery(code){ const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/resend-delivery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();showToast(r.ok?'📩 Entrega reenviada.':(d.error||'No se pudo reenviar.')); if(r.ok)fetchAdminOrders(); }
-async function retryAdminPayment(code, email){ const r=await apiFetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`,{method:'POST',body:JSON.stringify({email:email||''}),headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo reintentar.');if(d.redirectUrl)window.location.href=d.redirectUrl; }
-async function cancelAdminOrder(code){ const reason=prompt('Motivo de la cancelación:','Cancelada por administración');if(reason===null)return;const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/cancel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'✖️ Orden cancelada.':(d.error||'No se pudo cancelar.'));if(r.ok)fetchAdminOrders();}
-async function refundAdminOrder(code){ const reason=prompt('Motivo del reembolso/cancelación:','Gestionado por administración');if(reason===null)return;const r=await apiFetch(`/api/admin/orders/${encodeURIComponent(code)}/refund`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'↩️ Reembolso registrado.':(d.error||'No se pudo registrar.'));if(r.ok)fetchAdminOrders(); }
+async function fetchAdminUsers(){ if(!verifyAdminSecurity()) return; const c=document.getElementById('admin-users-container'); if(!c)return; c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Cargando...</p>'; try{const r=await fetch('/api/admin/users'); const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(u=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(u.username)}${u.id===currentUser.id?' <em style="color:var(--text-muted);font-weight:400;font-style:normal">(tú)</em>':''}</strong><span class=\"admin-game-sub\">${escapeHTML(u.email||'')}</span></div></div><div class=\"admin-game-actions\"><span class=\"admin-game-sub\" style=\"margin-right:.5rem\">${u.role==='admin'?'Administrador':'Usuario'}</span>${u.id===currentUser.id?'':`<button type=\"button\" class=\"auth-submit-btn\" style=\"width:auto;padding:.35rem .8rem\" onclick=\"toggleUserRole('${escapeHTML(u.id)}','${escapeHTML(u.role||'user')}')\">${u.role==='admin'?'Quitar admin':'Hacer admin'}</button>`}</div></div>`).join('');}catch(e){c.innerHTML='<p style="text-align:center;color:var(--text-muted)">Error al cargar usuarios.</p>';}}
+async function toggleUserRole(id, role){ if(!verifyAdminSecurity()) return; const newRole=role==='admin'?'user':'admin'; if(!confirm(newRole==='admin'?'¿Hacer administrador a este usuario?':'¿Quitar permisos de administrador a este usuario?'))return; try{const r=await fetch(`/api/admin/users/${encodeURIComponent(id)}/role`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:newRole})});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo cambiar el rol.');showToast(`Rol actualizado: ahora es ${newRole==='admin'?'administrador':'usuario'}.`);fetchAdminUsers();}catch(e){showToast('Error de conexión.');}}
+async function fetchAdminOrders(){ if(!verifyAdminSecurity()) return; const q=document.getElementById('admin-order-search')?.value.trim()||''; const status=document.getElementById('admin-order-status')?.value||''; const c=document.getElementById('admin-orders-container'); if(!c)return; c.innerHTML='<p style=\"text-align:center;color:var(--text-muted)\">Cargando...</p>'; try{const r=await fetch(`/api/admin/orders?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}`);const d=await r.json(); if(!r.ok)throw new Error(d.error); c.innerHTML=(d||[]).map(o=>`<div class=\"admin-game-row\"><div class=\"admin-game-info\"><div class=\"admin-game-details\"><strong class=\"admin-game-title\">${escapeHTML(o.codigoOrden)}</strong><span class=\"admin-game-sub\">${escapeHTML(o.emailCompleto||o.usuario||'')} · ${escapeHTML(o.estado||'')}</span><span class=\"admin-game-sub\">${escapeHTML(o.totalFormatted||formatCLP(o.total))} · ${escapeHTML(o.deliveryStatus||'')}</span></div></div><div class=\"admin-game-actions\"><button type=\"button\" class=\"admin-icon-btn\" onclick=\"showAdminOrderDetail('${escapeHTML(o.codigoOrden)}')\" title=\"Ver detalle\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"resendAdminDelivery('${escapeHTML(o.codigoOrden)}')\" title=\"Reenviar entrega\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m22 2-7 20-4-9-9-4Z\"></path><path d=\"M22 2 11 13\"></path></svg></button>${['pendiente','rechazada','cancelada'].includes(o.estado)?`<button type=\"button\" class=\"admin-icon-btn\" onclick=\"retryAdminPayment('${escapeHTML(o.codigoOrden)}','${escapeHTML(o.emailCompleto||'')}')\" title=\"Reintentar pago\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg></button>`:''}<button type=\"button\" class=\"admin-icon-btn\" onclick=\"cancelAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Cancelar orden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"></path><path d=\"m6 6 12 12\"></path></svg></button><button type=\"button\" class=\"admin-icon-btn\" onclick=\"refundAdminOrder('${escapeHTML(o.codigoOrden)}')\" title=\"Reembolsar\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 14 4 9l5-5\"></path><path d=\"M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11\"></path></svg></button></div></div>`).join('') || '<p>No hay pedidos.</p>'; }catch(e){c.innerHTML='<p style=\"color:#f87171\">No se pudieron cargar los pedidos.</p>';}}
+async function showAdminOrderDetail(code){ const r=await fetch(`/api/admin/orders/${encodeURIComponent(code)}`); const d=await r.json(); if(!r.ok)return showToast(d.error||'Error'); const items=(d.carrito||[]).map(i=>`<li>${escapeHTML(i.titulo)} (${escapeHTML(i.licencia)}) x${i.cantidad}${i.varianteAsignada?`<br><code>${escapeHTML(i.varianteAsignada)}</code>`:''}</li>`).join(''); const hist=(d.history||[]).map(h=>`<li><b>${escapeHTML(h.type)}</b> — ${escapeHTML(h.detail||'')} <small>${escapeHTML(h.at||'')}</small></li>`).join(''); showSimpleModal(`Orden ${escapeHTML(d.codigoOrden)}`,`<p><b>Cliente:</b> ${escapeHTML(d.clienteCompleto||d.cliente||'')}</p><p><b>Email:</b> ${escapeHTML(d.emailCompleto||'')}</p><p><b>Estado:</b> ${escapeHTML(d.estado||'')}</p><p><b>Entrega:</b> ${escapeHTML(d.deliveryStatus||'')}</p><p><b>Total:</b> ${escapeHTML(d.totalFormatted||formatCLP(d.total))}</p><h4>Productos</h4><ul>${items}</ul><h4>Historial</h4><ul>${hist||'<li>Sin historial</li>'}</ul>`);}
+async function resendAdminDelivery(code){ const r=await fetch(`/api/admin/orders/${encodeURIComponent(code)}/resend-delivery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});const d=await r.json();showToast(r.ok?'📩 Entrega reenviada.':(d.error||'No se pudo reenviar.')); if(r.ok)fetchAdminOrders(); }
+async function retryAdminPayment(code, email){ const r=await fetch(`/api/orders/${encodeURIComponent(code)}/retry-payment`,{method:'POST',body:JSON.stringify({email:email||''}),headers:{'Content-Type':'application/json'}});const d=await r.json();if(!r.ok)return showToast(d.error||'No se pudo reintentar.');if(d.redirectUrl)window.location.href=d.redirectUrl; }
+async function cancelAdminOrder(code){ const reason=prompt('Motivo de la cancelación:','Cancelada por administración');if(reason===null)return;const r=await fetch(`/api/admin/orders/${encodeURIComponent(code)}/cancel`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'✖️ Orden cancelada.':(d.error||'No se pudo cancelar.'));if(r.ok)fetchAdminOrders();}
+async function refundAdminOrder(code){ const reason=prompt('Motivo del reembolso/cancelación:','Gestionado por administración');if(reason===null)return;const r=await fetch(`/api/admin/orders/${encodeURIComponent(code)}/refund`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})});const d=await r.json();showToast(r.ok?'↩️ Reembolso registrado.':(d.error||'No se pudo registrar.'));if(r.ok)fetchAdminOrders(); }
 function validateRegisterPasswordForm() {
   const pwd = document.getElementById('register-password').value;
   const email = document.getElementById('register-email').value.trim();
@@ -1915,7 +1739,7 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
 
   while (attempt < retries && !success) {
     try {
-      const res = await apiFetch('/api/juegos');
+      const res = await fetch('/api/juegos');
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -1933,12 +1757,6 @@ async function fetchCatalog(retries = 3, baseDelay = 1000) {
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-  }
-
-  if (!success && (!Array.isArray(catalog) || catalog.length === 0)) {
-    console.warn('⚠️ Se agotaron los reintentos de red. Cargando catálogo por defecto.');
-    catalog = [...DEFAULT_GAMES_FRONTEND];
-    catalogLoaded = true;
   }
 
   isFetchingCatalog = false;
@@ -1993,11 +1811,16 @@ function initGridViewControls() {
 }
 
 // --- SISTEMA DE FILTROS DEL CATÁLOGO (PRECIO, ORDEN, LICENCIA) ---
+// Tope del rango de precio: máximo de precioSecundaria Y precioPrimaria (~$50k), redondeado a $500
+function getCatalogPriceCeiling() {
+  return Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0, Number(g && g.precioPrimaria) || 0), 0) / 500) * 500);
+}
+
 function initFilters() {
   const minEl = document.getElementById('filter-price-min');
   const maxEl = document.getElementById('filter-price-max');
   if (!minEl && !maxEl) return;
-  const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0, Number(g && g.precioPrimaria) || 0), 0) / 500) * 500);
+  const rangeMax = getCatalogPriceCeiling();
   if (minEl) {
     minEl.max = rangeMax;
     const valEl = document.getElementById('filter-price-min-val');
@@ -2031,7 +1854,7 @@ function applyFilters() {
   // Mantener el tope del rango alineado con el precio máximo real del catálogo
   // (considera precioSecundaria Y precioPrimaria, que llega hasta $50.000)
   if (minEl || maxEl) {
-    const rangeMax = Math.max(10000, Math.ceil(catalog.reduce((m, g) => Math.max(m, Number(g && g.precioSecundaria) || 0, Number(g && g.precioPrimaria) || 0), 0) / 500) * 500);
+    const rangeMax = getCatalogPriceCeiling();
     if (minEl) minEl.max = rangeMax;
     if (maxEl && Number(maxEl.value) >= Number(maxEl.max)) {
       maxEl.max = rangeMax;
@@ -2088,10 +1911,6 @@ function renderCatalog(animatePrices = false, fast = true) {
 
   // Asegurar la vista guardada (densidad/modo lista) en cada render
   applyGridViewClasses();
-
-  if (!Array.isArray(catalog) || catalog.length === 0) {
-    catalog = [...DEFAULT_GAMES_FRONTEND];
-  }
 
   // Choreografía de entrada: el stagger aplica solo a la primera carga con
   // datos reales del servidor y a las sincronizaciones de fondo (fast=false);
@@ -2250,33 +2069,6 @@ function refreshCatalogPricesInPlace() {
   });
 }
 
-// Observador para animar tarjetas al scroll (Aparecer gradualmente al estar en vista)
-function initScrollObserverForCards() {
-  const cards = document.querySelectorAll('.game-card');
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting || entry.boundingClientRect.top < window.innerHeight + 100) {
-          entry.target.classList.add('in-view');
-          obs.unobserve(entry.target);
-        }
-      });
-    }, {
-      threshold: 0.01,
-      rootMargin: '100px 0px 100px 0px'
-    });
-
-    cards.forEach(card => observer.observe(card));
-  } else {
-    cards.forEach(card => card.classList.add('in-view'));
-  }
-
-  // Fallback de seguridad: Asegura que todas las tarjetas se muestren tras 300ms
-  setTimeout(() => {
-    document.querySelectorAll('.game-card').forEach(card => card.classList.add('in-view'));
-  }, 300);
-}
-
 function slugify(text) {
   if (!text) return '';
   return text
@@ -2298,92 +2090,6 @@ function openGameModal(gameId) {
   } else {
     window.location.href = `/juego?id=${gameId}`;
   }
-}
-
-function renderModalSlider() {
-  const imgElem = document.getElementById('gmodal-img');
-  const prevBtn = document.getElementById('modal-slider-prev');
-  const nextBtn = document.getElementById('modal-slider-next');
-  const dotsContainer = document.getElementById('modal-slider-dots');
-
-  if (currentModalImages.length > 0) {
-    imgElem.src = currentModalImages[currentModalImageIndex];
-  }
-
-  if (currentModalImages.length > 1) {
-    if (prevBtn) prevBtn.style.display = 'flex';
-    if (nextBtn) nextBtn.style.display = 'flex';
-    if (dotsContainer) {
-      dotsContainer.style.display = 'flex';
-      dotsContainer.innerHTML = currentModalImages.map((_, idx) => `
-        <span class="dot-pill ${idx === currentModalImageIndex ? 'active' : ''}" onclick="setModalSliderImage(${idx})"></span>
-      `).join('');
-    }
-  } else {
-    if (prevBtn) prevBtn.style.display = 'none';
-    if (nextBtn) nextBtn.style.display = 'none';
-    if (dotsContainer) {
-      dotsContainer.style.display = 'none';
-      dotsContainer.innerHTML = '';
-    }
-  }
-}
-
-function navigateModalSlider(direction) {
-  if (currentModalImages.length <= 1) return;
-  currentModalImageIndex = (currentModalImageIndex + direction + currentModalImages.length) % currentModalImages.length;
-  renderModalSlider();
-}
-
-function setModalSliderImage(index) {
-  if (index >= 0 && index < currentModalImages.length) {
-    currentModalImageIndex = index;
-    renderModalSlider();
-  }
-}
-
-function closeGameModal() {
-  document.getElementById('game-modal-backdrop').classList.remove('active');
-}
-
-function handleLicenseSelection(e) {
-  selectedLicenseType = e.target.value; // 'secundaria' o 'primaria'
-  const bullets = ACCOUNT_CONDITIONS[selectedLicenseType];
-
-  const infoBox = document.getElementById('license-info-box');
-  if (infoBox) {
-    infoBox.innerHTML = `
-      <ul class="license-bullets">
-        ${bullets.map(b => `<li>${b}</li>`).join('')}
-      </ul>
-    `;
-  }
-
-  const addBtn = document.getElementById('gmodal-add-btn');
-  const buyBtn = document.getElementById('gmodal-buy-btn');
-  if (addBtn) addBtn.disabled = false;
-  if (buyBtn) buyBtn.disabled = false;
-
-  const targetPriceId = selectedLicenseType === 'secundaria' ? 'gmodal-price-sec' : 'gmodal-price-prim';
-  const priceElem = document.getElementById(targetPriceId);
-  if (priceElem) {
-    priceElem.classList.remove('price-anim-pop');
-    void priceElem.offsetWidth;
-    priceElem.classList.add('price-anim-pop');
-  }
-}
-
-function handleAddSelectedLicenseToCart() {
-  if (!selectedGameForModal || !selectedLicenseType) return;
-  addGameWithLicenseToCart(selectedGameForModal, selectedLicenseType);
-  closeGameModal();
-}
-
-function handleBuySelectedLicenseNow() {
-  if (!selectedGameForModal || !selectedLicenseType) return;
-  directCheckoutItem = buildDirectCheckoutItem(selectedGameForModal, selectedLicenseType);
-  closeGameModal();
-  openPaymentModal();
 }
 
 // Ítem de compra directa ("Comprar ahora"): misma forma que un ítem del carrito,
@@ -2449,7 +2155,14 @@ function addGameWithLicenseToCart(game, licenseType) {
 // --- CARRITO ---
 function saveCart() {
 localStorage.setItem('zonaswitch_cart_v4', JSON.stringify(cart));
-let directCheckoutItem = null; // "Comprar ahora": ítem de pago directo SIN tocar el carrito
+}
+
+// Descuento por cupón aplicado: porcentaje del subtotal o monto fijo (con tope)
+function computeDiscount(subtotal) {
+  if (!appliedCoupon) return 0;
+  if (appliedCoupon.type === 'percent') return Math.round((subtotal * appliedCoupon.value) / 100);
+  if (appliedCoupon.type === 'fixed') return Math.min(subtotal, appliedCoupon.value);
+  return 0;
 }
 
 function updateCartBadge() {
@@ -2533,14 +2246,7 @@ function renderCartDrawer() {
     `;
   }).join('');
 
-  let discount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.round((subtotal * appliedCoupon.value) / 100);
-    } else if (appliedCoupon.type === 'fixed') {
-      discount = Math.min(subtotal, appliedCoupon.value);
-    }
-  }
+  const discount = computeDiscount(subtotal);
 
   const total = Math.max(0, subtotal - discount);
 
@@ -2645,14 +2351,7 @@ function renderPayCarousel() {
   const totalItems = items.reduce((acc, item) => acc + item.cantidad, 0);
   const subtotal = items.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
 
-  let discount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.round((subtotal * appliedCoupon.value) / 100);
-    } else if (appliedCoupon.type === 'fixed') {
-      discount = Math.min(subtotal, appliedCoupon.value);
-    }
-  }
+  const discount = computeDiscount(subtotal);
 
   const finalTotal = Math.max(0, subtotal - discount);
 
@@ -2719,14 +2418,7 @@ async function handlePaymentSubmit(e) {
 
   const checkoutItems = directCheckoutItem ? [directCheckoutItem] : cart;
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.precio * item.cantidad, 0);
-  let discount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.round((subtotal * appliedCoupon.value) / 100);
-    } else if (appliedCoupon.type === 'fixed') {
-      discount = Math.min(subtotal, appliedCoupon.value);
-    }
-  }
+  const discount = computeDiscount(subtotal);
   const montoTotal = Math.max(0, subtotal - discount);
 
   const username = currentUser ? currentUser.username : 'Invitado';
@@ -2736,7 +2428,7 @@ async function handlePaymentSubmit(e) {
 
   try {
     trackAnalytics({ type: 'checkout_start', itemCount: directCheckoutItem ? 1 : cart.reduce((n, i) => n + i.cantidad, 0) });
-    const res = await apiFetch('/api/checkout', {
+    const res = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, apellido, email, username, metodoPago, carrito: directCheckoutItem ? [directCheckoutItem] : cart, couponCode: appliedCoupon ? appliedCoupon.code : null })
@@ -2810,7 +2502,7 @@ async function checkPaymentReturnUrls() {
     if (status === '2' || status === 'approved') {
       if (orderCode) {
         try {
-          const res = await apiFetch(`/api/orders/${orderCode}`);
+          const res = await fetch(`/api/orders/${orderCode}`);
           if (res.ok) {
             const order = await res.json();
             // Compra directa: el carrito real nunca se tocó — no vaciarlo
@@ -3149,7 +2841,7 @@ let adminCouponsStore = [];
 
 async function fetchCoupons() {
   try {
-    const res = await apiFetch('/api/coupons');
+    const res = await fetch('/api/coupons');
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -3229,7 +2921,7 @@ async function handleAdminAddCouponSubmit(e) {
   }
 
   try {
-    const res = await apiFetch('/api/admin/coupons/create', {
+    const res = await fetch('/api/admin/coupons/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, type, value, desc })
@@ -3265,7 +2957,7 @@ async function deleteCoupon(code) {
   if (!confirm(`¿Estás seguro de borrar permanentemente el cupón "${code}" de los datos?`)) return;
 
   try {
-    const res = await apiFetch('/api/admin/coupons/delete', {
+    const res = await fetch('/api/admin/coupons/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code })
@@ -3425,18 +3117,6 @@ function handleSearchAutocomplete(inputEl, dropdownId) {
   dropdown.classList.add('active');
 }
 
-function selectAutocompleteResult(gameId, dropdownId) {
-  const dropdown = document.getElementById(dropdownId);
-  if (dropdown) dropdown.classList.remove('active');
-
-  const desktopSearch = document.getElementById('search-input');
-  if (desktopSearch) desktopSearch.value = '';
-  searchQuery = '';
-  renderCatalog();
-
-  openGameModal(gameId);
-}
-
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.header-search-box') && !e.target.closest('.mobile-search-box') && !e.target.closest('.mobile-search-overlay')) {
     document.querySelectorAll('.search-autocomplete-dropdown').forEach(d => d.classList.remove('active'));
@@ -3504,18 +3184,6 @@ function switchGuideTab(type) {
       </div>
     `;
   }
-}
-
-// --- MICROINTERACCIONES DE BOTONES ---
-function animateButtonSuccess(btn, successText = '✓ ¡Listo!') {
-  if (!btn) return;
-  const originalHtml = btn.innerHTML;
-  btn.classList.add('btn-success-clicked');
-  btn.innerHTML = `<span>${successText}</span>`;
-  setTimeout(() => {
-    btn.classList.remove('btn-success-clicked');
-    btn.innerHTML = originalHtml;
-  }, 1200);
 }
 
 // --- SCROLL HIDE/SHOW UNIFICADO (navbar + píldora móvil): rAF, umbrales ±4px ---
@@ -3700,7 +3368,7 @@ async function handleAdminToggleGallery() {
 
   const newStatus = !isGalleryEnabled;
   try {
-    const res = await apiFetch('/api/admin/settings/toggle-gallery', {
+    const res = await fetch('/api/admin/settings/toggle-gallery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled: newStatus })
@@ -3838,7 +3506,7 @@ async function handleAdminAddGallerySubmit(e) {
   saveBtn.textContent = 'Guardando...';
 
   try {
-    const res = await apiFetch('/api/admin/gallery/add', {
+    const res = await fetch('/api/admin/gallery/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3874,7 +3542,7 @@ async function deleteGalleryItem(id) {
   if (!currentUser || !confirm('¿Estás seguro de eliminar esta reseña de la tienda?')) return;
 
   try {
-    const res = await apiFetch('/api/admin/gallery/delete', {
+    const res = await fetch('/api/admin/gallery/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
@@ -4089,14 +3757,5 @@ function openAboutUsModal() {
 
 function closeAboutUsModal() {
   const backdrop = document.getElementById('about-us-modal-backdrop');
-  if (backdrop) backdrop.classList.remove('active');
-}
-
-function openTermsModal() {
-  window.location.href = '/terminos';
-}
-
-function closeTermsModal() {
-  const backdrop = document.getElementById('terms-modal-backdrop');
   if (backdrop) backdrop.classList.remove('active');
 }

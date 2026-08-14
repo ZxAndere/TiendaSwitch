@@ -24,9 +24,6 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 let isMongoConnected = false;
-let mongoLastError = null;
-
-// [MOVIDO] flowHeaders está declarado donde se utiliza (sección de Flow)
 
 // Manejo seguro de variables de entorno — JWT_SECRET OBLIGATORIO en producción
 let JWT_SECRET = process.env.JWT_SECRET;
@@ -154,11 +151,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// Rutas explícitas de URLs limpias
-app.get('/faq', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'faq.html')));
-app.get('/terminos', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'terminos.html')));
-app.get('/juego', (req, res) => res.sendFile(path.resolve(__dirname, 'public', 'juego.html')));
-
 // Servir juego.html para cualquier ruta limpia SEO de producto (ej: /Mario-Kart-8-Deluxe)
 app.get('/:slug', (req, res, next) => {
   const slug = req.params.slug;
@@ -226,7 +218,17 @@ const analyticsLimiter = rateLimit({
   legacyHeaders: false
 });
 
-const emailOtpLimiter = new Map(); // Mapa en memoria para rate limit por dirección de correo (60s)
+// Rate limit por dirección de correo (60s) — el email como clave en lugar de la IP
+const makeEmailOtpLimiter = (message) => rateLimit({
+  windowMs: 60 * 1000,
+  max: 1,
+  keyGenerator: (req) => (isString(req.body?.email) ? req.body.email.trim().toLowerCase() : req.ip),
+  message: { error: message },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+const emailOtpLimiter = makeEmailOtpLimiter("Por favor espera 60 segundos antes de solicitar otro código de verificación.");
+const forgotPasswordEmailLimiter = makeEmailOtpLimiter('Espera 60 segundos antes de solicitar otro código.');
 
 // Esquema de Usuario seguro
 const userSchema = new mongoose.Schema({
@@ -324,10 +326,6 @@ const AUDIT_FILE = path.resolve(DATA_DIR, 'audit-log.json');
 const ANALYTICS_FILE = path.resolve(DATA_DIR, 'analytics.json');
 
 // Helpers de validación de tipos y escritura atómica segura de JSON (Problemas 2 y 6)
-function safeString(val) {
-  return typeof val === 'string' ? val : '';
-}
-
 function isString(val) {
   return typeof val === 'string';
 }
@@ -524,7 +522,6 @@ if (process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI.trim())
     .then(async () => {
       isMongoConnected = true;
-      mongoLastError = null;
       console.log('🍃 Conectado exitosamente a MongoDB Atlas (Base de Datos en Tiempo Real)');
       
       // Sincronizar usuarios desde MongoDB Atlas
@@ -581,21 +578,9 @@ if (process.env.MONGODB_URI) {
       } catch (e) { console.error('Error cargando galería MongoDB:', e); }
     })
     .catch(err => {
-      mongoLastError = err.message;
       console.error('❌ Error de conexión a MongoDB Atlas:', err.message);
     });
 }
-
-// Endpoint de diagnóstico de MongoDB (PROTEGIDO — solo administradores)
-app.get('/api/debug/mongo', verifyAdmin, (req, res) => {
-  res.json({
-    connected: isMongoConnected,
-    hasUri: !!process.env.MONGODB_URI,
-    uriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.trim().length : 0,
-    lastError: mongoLastError
-  });
-});
-
 
 // Gestión de usuarios (PROTEGIDO — solo administradores)
 app.get('/api/admin/users', verifyAdmin, (req, res) => {
@@ -728,6 +713,14 @@ if (targetFlowUrl.includes('sandbox')) {
   targetFlowUrl = 'https://www.flow.cl/api';
 }
 const FLOW_API_URL = targetFlowUrl;
+
+// Headers comunes para las llamadas HTTP a la API de Flow (crear pago, getStatus)
+const flowHeaders = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7'
+};
 
 const MP_PUBLIC_KEY = (process.env.MP_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '');
 const MP_ACCESS_TOKEN = (process.env.MP_ACCESS_TOKEN || '').trim().replace(/^["']|["']$/g, '');
@@ -896,15 +889,8 @@ function generateOtpCode() {
   return crypto.randomInt(100000, 1000000).toString();
 }
 
-let USERS_CACHE = [];
-
-function loadUsersCache() {
-  USERS_CACHE = safeReadJsonSync(USERS_FILE, []);
-}
-
 function saveUsers(users) {
   if (!Array.isArray(users)) return;
-  USERS_CACHE = users;
   safeWriteJsonSync(USERS_FILE, users);
 
   if (isMongoConnected) {
@@ -945,14 +931,6 @@ async function verifyPassword(inputPassword, storedUser) {
     return true;
   }
   return false;
-}
-
-function safeCompareSignatures(sigA, sigB) {
-  if (typeof sigA !== 'string' || typeof sigB !== 'string') return false;
-  const bufA = Buffer.from(sigA, 'utf8');
-  const bufB = Buffer.from(sigB, 'utf8');
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 function signFlowParams(params) {
@@ -1612,7 +1590,7 @@ app.get('/api/auth/me', verifyToken, (req, res) => {
 });
 
 // Step 1: Solicitar registro y enviar código de 6 dígitos por correo
-app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
+app.post('/api/auth/send-register-code', authLimiter, emailOtpLimiter, async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!isString(username) || !isString(email) || !isString(password)) {
@@ -1640,20 +1618,6 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
   }
 
   const cleanEmail = email.trim().toLowerCase();
-  
-  // Rate-Limit de 60 segundos por correo electrónico para evitar abusos
-  const lastRequestTime = emailOtpLimiter.get(cleanEmail);
-  if (lastRequestTime && (Date.now() - lastRequestTime < 60000)) {
-    return res.status(429).json({ error: "Por favor espera 60 segundos antes de solicitar otro código de verificación." });
-  }
-  // Poda del mapa anti-spam (evita crecimiento ilimitado en memoria)
-  if (emailOtpLimiter.size > 5000) {
-    const cutoff = Date.now() - 60000;
-    for (const [k, t] of emailOtpLimiter) {
-      if (t < cutoff) emailOtpLimiter.delete(k);
-    }
-  }
-  emailOtpLimiter.set(cleanEmail, Date.now());
 
   const users = getUsers();
   if (users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase())) {
@@ -1663,7 +1627,7 @@ app.post('/api/auth/send-register-code', authLimiter, async (req, res) => {
     return res.status(400).json({ error: "Ya existe una cuenta con ese usuario o correo." });
   }
 
-  const code = crypto.randomInt(100000, 1000000).toString();
+  const code = generateOtpCode();
   const passwordHash = await bcrypt.hash(password, 10);
 
   OTP_STORE.set(`reg_${cleanEmail}`, {
@@ -1794,7 +1758,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
 
 // Recuperación pública de contraseña
-app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
+app.post('/api/auth/forgot-password', authLimiter, forgotPasswordEmailLimiter, async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Ingresa un correo válido.' });
@@ -1804,10 +1768,6 @@ app.post('/api/auth/forgot-password', authLimiter, async (req, res) => {
   // Respuesta neutra para no revelar si existe la cuenta
   if (!user) return res.json({ exito: true, mensaje: 'Si el correo está registrado, recibirás un código de recuperación.' });
   const key = `forgot_${email}`;
-  const existing = OTP_STORE.get(key);
-  if (existing && existing.expiresAt > Date.now() && existing.lastSentAt && Date.now() - existing.lastSentAt < 60000) {
-    return res.status(429).json({ error: 'Espera 60 segundos antes de solicitar otro código.' });
-  }
   const code = generateOtpCode();
   OTP_STORE.set(key, { code, email, userId: user.id, attempts: 0, expiresAt: Date.now() + 600000, lastSentAt: Date.now() });
   const sent = await sendVerificationEmail(email, code, 'Código para Recuperar tu Contraseña');
@@ -1952,7 +1912,7 @@ app.post('/api/user/send-email-code', verifyToken, userApiLimiter, async (req, r
     return res.status(400).json({ error: "Este correo ya está registrado por otra cuenta." });
   }
 
-  const code = crypto.randomInt(100000, 1000000).toString();
+  const code = generateOtpCode();
   OTP_STORE.set(`email_${userId}`, { newEmail: cleanEmail, code, expiresAt: Date.now() + 600000 });
 
   const sent = await sendVerificationEmail(cleanEmail, code, "Código para Cambiar Correo Electrónico");
@@ -2008,7 +1968,7 @@ app.post('/api/user/send-password-code', verifyToken, userApiLimiter, async (req
   const user = users.find(u => u.id === userId);
   if (!user || !user.email) return res.status(400).json({ error: "No se encontró un correo asociado a tu cuenta." });
 
-  const code = crypto.randomInt(100000, 1000000).toString();
+  const code = generateOtpCode();
   
   // Hash con bcrypt de la nueva contraseña propuesta
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
@@ -2058,141 +2018,23 @@ app.post('/api/user/confirm-password-update', verifyToken, userApiLimiter, (req,
   res.json({ exito: true, mensaje: "Contraseña actualizada correctamente. Por seguridad, debes iniciar sesión de nuevo." });
 });
 
-// Catálogo de Juegos por Defecto
-const DEFAULT_GAMES = [
-  {
-    id: 1,
-    titulo: "The Legend of Zelda: Tears of the Kingdom",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 14990,
-    precioPrimaria: 24990,
-    precioOriginal: 59990,
-    rating: 5,
-    peso: "16.3 GB",
-    imagen: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Explora los cielos y las profundidades de Hyrule en esta aclamada secuela épica.",
-    resumenExtenso: "Embarca en una aventura sin precedentes a través de la tierra y los cielos de Hyrule...",
-    visible: true
-  },
-  {
-    id: 2,
-    titulo: "Super Mario Bros. Wonder",
-    categoria: "Plataformas",
-    precioSecundaria: 12990,
-    precioPrimaria: 21990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "4.5 GB",
-    imagen: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Disfruta de la magia de las Flores Maravilla y transforma el mundo de Mario en compañía.",
-    resumenExtenso: "Super Mario Bros. Wonder redefine la experiencia clásica de plataformas 2D...",
-    visible: true
-  },
-  {
-    id: 3,
-    titulo: "Mario Kart 8 Deluxe",
-    categoria: "Multijugador",
-    precioSecundaria: 11990,
-    precioPrimaria: 19990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "8.0 GB",
-    imagen: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Compite con tus personajes favoritos en 48 pistas llenas de emoción y objetos locos.",
-    resumenExtenso: "La versión definitiva del juego de carreras más famoso de Nintendo...",
-    visible: true
-  },
-  {
-    id: 4,
-    titulo: "Super Smash Bros. Ultimate",
-    categoria: "Multijugador",
-    precioSecundaria: 13990,
-    precioPrimaria: 22990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "17.0 GB",
-    imagen: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "¡Todos están aquí! El mayor crossover de la historia del videojuego con más de 80 luchadores.",
-    resumenExtenso: "Super Smash Bros. Ultimate reúne a icónicos héroes y villanos...",
-    visible: true
-  },
-  {
-    id: 5,
-    titulo: "Pokémon Escarlata",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 12990,
-    precioPrimaria: 21990,
-    precioOriginal: 54990,
-    rating: 5,
-    peso: "10.0 GB",
-    imagen: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Explora la región de Paldea en un mundo abierto sin fronteras y atrapa nuevos Pokémon.",
-    resumenExtenso: "Vive la primera gran aventura de mundo abierto de Pokémon...",
-    visible: true
-  },
-  {
-    id: 6,
-    titulo: "Metroid Dread",
-    categoria: "Acción / Aventura",
-    precioSecundaria: 10990,
-    precioPrimaria: 18990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "4.1 GB",
-    imagen: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Acompaña a Samus Aran en su misión más peligrosa huyendo de los mortales robots E.M.M.I.",
-    resumenExtenso: "Metroid Dread marca el regreso de la legendaria caza-recompensas Samus Aran...",
-    visible: true
-  },
-  {
-    id: 7,
-    titulo: "Animal Crossing: New Horizons",
-    categoria: "Simulación",
-    precioSecundaria: 11990,
-    precioPrimaria: 19990,
-    precioOriginal: 49990,
-    rating: 5,
-    peso: "7.0 GB",
-    imagen: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Crea tu propio paraíso en una isla desierta y vive a tu propio ritmo con vecinos encantadores.",
-    resumenExtenso: "Escapa a tu propia isla desierta en Animal Crossing: New Horizons...",
-    visible: true
-  },
-  {
-    id: 8,
-    titulo: "Hollow Knight",
-    categoria: "Indie",
-    precioSecundaria: 4990,
-    precioPrimaria: 8990,
-    precioOriginal: 14990,
-    rating: 5,
-    peso: "5.3 GB",
-    imagen: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=800&auto=format&fit=crop",
-    imagenDetalle: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1200&auto=format&fit=crop",
-    descripcion: "Desciende al oscuro reino de Hallownest en una obra maestra de acción y exploración en 2D.",
-    resumenExtenso: "Hollow Knight es una aventura de acción en 2D de estilo metroidvania...",
-    visible: true
-  }
-];
-
 let GAMES_STORE = [];
-function loadInitialGames() {
+function ensureGamesLoaded() {
   // Seed SOLO en el primer arranque (sin archivo persistido). Si el archivo
   // existe (aunque esté vacío o corrupto), el catálogo se respeta tal cual:
   // un catálogo vaciado a propósito NO debe resucitar desde JUEGOS.
   if (!fs.existsSync(GAMES_FILE)) {
-    GAMES_STORE = [...JUEGOS];
-    saveGamesLocal(GAMES_STORE);
+    if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+      GAMES_STORE = [...JUEGOS];
+      saveGamesLocal(GAMES_STORE);
+    }
   } else {
     GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
   }
+}
+
+function loadInitialGames() {
+  ensureGamesLoaded();
 }
 
 function saveGamesLocal(games) {
@@ -2286,13 +2128,7 @@ app.get('/api/juegos', generalApiLimiter, (req, res) => {
   res.setHeader('Expires', '0');
 
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
-    // Seed SOLO en primer arranque (sin archivo persistido); si el archivo
-    // existe pero está vacío, el dueño vació el catálogo a propósito.
-    if ((!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) && !fs.existsSync(GAMES_FILE)) {
-      GAMES_STORE = [...JUEGOS];
-      saveGamesLocal(GAMES_STORE);
-    }
+    ensureGamesLoaded();
   }
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
   // NUNCA exponer cuentas/stock interno al público
@@ -2309,13 +2145,7 @@ app.get('/api/juegos/:identifier', (req, res) => {
   if (!param) return res.status(400).json({ error: "Identificador no proporcionado." });
 
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
-    // Seed SOLO en primer arranque (sin archivo persistido); si el archivo
-    // existe pero está vacío, el dueño vació el catálogo a propósito.
-    if ((!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) && !fs.existsSync(GAMES_FILE)) {
-      GAMES_STORE = [...JUEGOS];
-      saveGamesLocal(GAMES_STORE);
-    }
+    ensureGamesLoaded();
   }
 
   const rawClean = param.toLowerCase().trim();
@@ -2468,7 +2298,6 @@ app.post('/api/admin/juegos/create', verifyAdmin, async (req, res) => {
 
     GAMES_STORE.push(newGame);
     saveGamesLocal(GAMES_STORE);
-    broadcastCatalogUpdate();
 
     console.log(`🛠️ [ADMIN] Juego creado: "${newGame.titulo}" (ID ${newGame.id})`);
     logAudit({ actor: req.user, action: 'juegos.create', resourceType: 'juego', resourceId: newGame.id, summary: `Juego "${newGame.titulo}" creado (ID ${newGame.id}).` });
@@ -2517,7 +2346,6 @@ app.post('/api/admin/juegos/delete', verifyAdmin, (req, res) => {
     GAMES_STORE.splice(gameIndex, 1);
     if (isMongoConnected) GameModel.deleteOne({ id: gameId }).catch(e => console.error('Error eliminando juego en Mongo:', e.message));
     saveGamesLocal(GAMES_STORE);
-    broadcastCatalogUpdate();
     console.log(`🛠️ [ADMIN] Juego eliminado definitivamente: "${game.titulo}" (ID ${game.id})`);
     logAudit({ actor: req.user, action: 'juegos.delete_permanent', resourceType: 'juego', resourceId: game.id, summary: `Juego "${game.titulo}" eliminado definitivamente.` });
     return res.json({ exito: true, mensaje: `Juego "${game.titulo}" eliminado definitivamente.`, juegos: GAMES_STORE });
@@ -2591,7 +2419,6 @@ app.post('/api/admin/juegos/update', verifyAdmin, (req, res) => {
   }
 
   saveGamesLocal(GAMES_STORE);
-  broadcastCatalogUpdate();
 
   console.log(`🛠️ [ADMIN] Juego "${game.titulo}" actualizado. Fotos: ${game.imagenesDetalle ? game.imagenesDetalle.length : 0}, YouTube: ${game.youtubeUrl || 'no'}`);
   logAudit({ actor: req.user, action: 'juegos.update', resourceType: 'juego', resourceId: game.id, summary: `Juego "${game.titulo}" actualizado.` });
@@ -2849,7 +2676,6 @@ app.post('/api/admin/juegos/import/commit', verifyAdmin, adminImportLimiter, imp
 
     if (importedGames.length > 0) {
       saveGamesLocal(GAMES_STORE);
-      broadcastCatalogUpdate();
     }
 
     logAudit({
@@ -2930,18 +2756,9 @@ function saveGalleryLocal(gallery) {
 const COUPONS_FILE = path.join(__dirname, 'data', 'coupons.json');
 let COUPONS_STORE = [];
 
-const DEFAULT_COUPONS = [
-  // Sin cupones hardcodeados: los códigos en el código fuente son públicos (repo público).
-  // Crear cupones reales desde el panel de administración.
-];
-
 function loadCoupons() {
   COUPONS_STORE = safeReadJsonSync(COUPONS_FILE, []);
   if (!Array.isArray(COUPONS_STORE) || COUPONS_STORE.length === 0) {
-    if (DEFAULT_COUPONS.length > 0) {
-      COUPONS_STORE = [...DEFAULT_COUPONS];
-      saveCouponsLocal(COUPONS_STORE);
-    }
     console.warn('⚠️ [CUPONES] Sin cupones configurados. Créalos desde el panel de administración.');
   }
 }
@@ -3146,12 +2963,6 @@ app.get('/api/gallery', (req, res) => {
   res.json(GALLERY_STORE);
 });
 
-// Helper de sanitización contra XSS en Galería
-function sanitizeHtml(str) {
-  if (typeof str !== 'string') return '';
-  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
-}
-
 // Endpoint Admin: Agregar nueva foto/reseña a la galería (XSS Protected)
 app.post('/api/admin/gallery/add', verifyAdmin, (req, res) => {
   const { user, stars, comment, imagen } = req.body;
@@ -3160,8 +2971,8 @@ app.post('/api/admin/gallery/add', verifyAdmin, (req, res) => {
     return res.status(400).json({ error: "Por favor completa el usuario, comentario y la URL de la foto." });
   }
 
-  const cleanUser = sanitizeHtml(user.trim());
-  const cleanComment = sanitizeHtml(comment.trim());
+  const cleanUser = escapeHtmlEmail(user.trim());
+  const cleanComment = escapeHtmlEmail(comment.trim());
 
   if (!isSafeHttpUrl(imagen)) {
     return res.status(400).json({ error: "La URL de la foto debe ser http(s)." });
@@ -3437,13 +3248,6 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
 
   let flowParams = buildFlowParams(flowEmail);
 
-  const flowHeaders = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'es-CL,es;q=0.9,en-US;q=0.8,en;q=0.7'
-  };
-
   try {
     let flowRes = await fetch(`${FLOW_API_URL}/payment/create`, {
       method: 'POST',
@@ -3500,6 +3304,32 @@ app.post('/api/checkout', checkoutLimiter, async (req, res) => {
   }
 });
 
+// Helpers compartidos de callbacks Flow (retorno y confirmación)
+function verifyFlowSignature(incomingParams) {
+  const incomingSign = incomingParams.s;
+  if (!incomingSign) return 'missing';
+  delete incomingParams.s;
+  if (!verifyOtpCode(signFlowParams(incomingParams), incomingSign)) return 'invalid';
+  return 'ok';
+}
+
+async function fetchFlowStatus(token) {
+  const params = { apiKey: FLOW_API_KEY, token };
+  params.s = signFlowParams(params);
+  const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
+    headers: flowHeaders
+  });
+  const responseText = await flowRes.text();
+  return JSON.parse(responseText);
+}
+
+function finalizePaidOrder(order, oldStatus) {
+  if (order.estado === 'pagada' && oldStatus !== 'pagada') {
+    assignAccountsToOrder(order);
+    sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
+  }
+}
+
 // Retorno del usuario desde la pasarela Flow (Webpay, etc.)
 app.all('/api/flow/return', async (req, res) => {
   const token = req.query?.token || req.body?.token;
@@ -3509,34 +3339,17 @@ app.all('/api/flow/return', async (req, res) => {
 
   // Validar firma del callback recibida de Flow usando tiempo constante (Anti Timing Attack)
   const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
-  const incomingSign = incomingParams.s;
-  if (!incomingSign) {
+  const signResult = verifyFlowSignature(incomingParams);
+  if (signResult === 'missing') {
     return res.status(403).send('Firma requerida.');
   }
-  if (incomingSign) {
-    delete incomingParams.s;
-    const computedSign = signFlowParams(incomingParams);
-    if (!safeCompareSignatures(computedSign, incomingSign)) {
-      console.warn("⚠️ Advertencia: Firma de callback de Flow no válida.");
-      return res.redirect('/?status=cancelled');
-    }
+  if (signResult === 'invalid') {
+    console.warn("⚠️ Advertencia: Firma de callback de Flow no válida.");
+    return res.redirect('/?status=cancelled');
   }
 
   try {
-    const params = { apiKey: FLOW_API_KEY, token };
-    params.s = signFlowParams(params);
-
-    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
-      headers: flowHeaders
-    });
-    const responseText = await flowRes.text();
-    let statusData;
-    try {
-      statusData = JSON.parse(responseText);
-    } catch (e) {
-      console.error('❌ Error parseando estado de Flow:', responseText);
-      return res.redirect('/?status=cancelled');
-    }
+    const statusData = await fetchFlowStatus(token);
 
     const order = (await getOrderByCode(token)) || (statusData.commerceOrder ? await getOrderByCode(statusData.commerceOrder) : null);
 
@@ -3552,10 +3365,7 @@ app.all('/api/flow/return', async (req, res) => {
       orderCode = order.codigoOrden;
 
       // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
-      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
-        assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
-      }
+      finalizePaidOrder(order, oldStatus);
     }
 
     res.redirect(`/?flow_order=${encodeURIComponent(orderCode)}&status=${encodeURIComponent(status)}`);
@@ -3572,33 +3382,17 @@ app.post('/api/flow/confirm', async (req, res) => {
 
   // Validar firma del callback recibida de Flow usando tiempo constante (Problema 1: Anti Timing Attack)
   const incomingParams = req.method === 'POST' ? { ...req.body } : { ...req.query };
-  const incomingSign = incomingParams.s;
-  if (!incomingSign) {
+  const signResult = verifyFlowSignature(incomingParams);
+  if (signResult === 'missing') {
     return res.status(403).send('Firma requerida.');
   }
-  if (incomingSign) {
-    delete incomingParams.s;
-    const computedSign = signFlowParams(incomingParams);
-    if (!safeCompareSignatures(computedSign, incomingSign)) {
-      console.warn("⚠️ Advertencia: Firma de webhook de Flow no válida.");
-      return res.status(403).send("Firma inválida.");
-    }
+  if (signResult === 'invalid') {
+    console.warn("⚠️ Advertencia: Firma de webhook de Flow no válida.");
+    return res.status(403).send("Firma inválida.");
   }
 
   try {
-    const params = { apiKey: FLOW_API_KEY, token };
-    params.s = signFlowParams(params);
-
-    const flowRes = await fetch(`${FLOW_API_URL}/payment/getStatus?${new URLSearchParams(params).toString()}`, {
-      headers: flowHeaders
-    });
-    const responseText = await flowRes.text();
-    let statusData;
-    try {
-      statusData = JSON.parse(responseText);
-    } catch (e) {
-      return res.status(500).send('Error');
-    }
+    const statusData = await fetchFlowStatus(token);
 
     const order = (await getOrderByCode(token)) || (await getOrderByCode(statusData.commerceOrder));
 
@@ -3610,10 +3404,7 @@ app.post('/api/flow/confirm', async (req, res) => {
       await saveSingleOrder(order);
 
       // Asignar cuentas y enviar correo de entrega si el pedido acaba de ser pagado 📩
-      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
-        assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
-      }
+      finalizePaidOrder(order, oldStatus);
     }
 
     res.send('OK');
@@ -3664,10 +3455,7 @@ app.all('/api/mp/return', async (req, res) => {
       await saveSingleOrder(order);
 
       // Asignar cuentas y enviar correo SOLO si el pago fue verificado como aprobado
-      if (order.estado === 'pagada' && oldStatus !== 'pagada') {
-        assignAccountsToOrder(order);
-        sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
-      }
+      finalizePaidOrder(order, oldStatus);
     }
   }
 
@@ -3693,18 +3481,15 @@ app.post('/api/mp/confirm', async (req, res) => {
 
         if (externalRef) {
           const order = await getOrderByCode(externalRef);
-          if (order) {
-            const oldStatus = order.estado;
-            order.mpPaymentId = data.id;
-            order.mpStatus = verifiedStatus;
-            order.estado = verifiedStatus === 'approved' ? 'pagada' : (verifiedStatus === 'rejected' ? 'rechazada' : order.estado);
-            await saveSingleOrder(order);
+            if (order) {
+              const oldStatus = order.estado;
+              order.mpPaymentId = data.id;
+              order.mpStatus = verifiedStatus;
+              order.estado = verifiedStatus === 'approved' ? 'pagada' : (verifiedStatus === 'rejected' ? 'rechazada' : order.estado);
+              await saveSingleOrder(order);
 
-            if (order.estado === 'pagada' && oldStatus !== 'pagada') {
-              assignAccountsToOrder(order);
-              sendOrderConfirmationEmail(order).then(() => { order.deliveryStatus = 'sent'; addOrderEvent(order, 'delivery_email_sent', 'Correo de entrega enviado.', 'system'); return saveSingleOrder(order); }).catch(err => console.error('Error enviando correo:', err));
+              finalizePaidOrder(order, oldStatus);
             }
-          }
         }
       }
     } catch (err) {
@@ -4056,31 +3841,7 @@ app.get('/api/orders/:code', generalApiLimiter, async (req, res) => {
   const order = await getOrderByCode(req.params.code);
   if (!order) return res.status(404).json({ error: "Orden no encontrada." });
 
-  // Sanitizar datos sensibles: no exponer credenciales de cuentas asignadas
-  const emailMasked = order.email && order.email.includes('@')
-    ? order.email.replace(/^(.)[^@]*@/, '$1***@')
-    : '***';
-  const sanitizedOrder = {
-    codigoOrden: order.codigoOrden,
-    cliente: order.cliente,
-    usuario: order.usuario,
-    email: emailMasked,
-    carrito: Array.isArray(order.carrito) ? order.carrito.map(item => ({
-      titulo: item.titulo,
-      cantidad: item.cantidad,
-      licencia: item.licencia,
-      precio: item.precio
-      // varianteAsignada deliberadamente EXCLUIDA
-    })) : [],
-    articulos: order.articulos,
-    total: order.total,
-    totalFormatted: order.totalFormatted,
-    fecha: order.fecha,
-    estado: order.estado,
-    metodoPago: order.metodoPago
-  };
-
-  res.json(sanitizedOrder);
+  res.json(sanitizeOrderForUser(order));
 });
 
 // Captura global de promesas no manejadas y excepciones para evitar caídas del proceso
