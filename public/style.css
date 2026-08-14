@@ -5680,11 +5680,13 @@ html.light-mode .grid-density-slider::-moz-range-thumb {
   background: rgba(0, 240, 255, 0.15);
 }
 
-/* Botón Tuerca Admin en tarjetas del catálogo */
+/* Botón Tuerca Admin en tarjetas del catálogo.
+   Apila debajo del corazón (top .7rem + 36px + margen): mismo borde derecho,
+   sin colisión en ningún ancho (card-media ≥ 125px alto en móvil, ≥ ~140px en desktop). */
 .card-admin-gear {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 56px;
+  right: .7rem;
   z-index: 10;
   background: rgba(7, 10, 18, 0.88);
   border: 1.5px solid var(--joycon-cyan);
