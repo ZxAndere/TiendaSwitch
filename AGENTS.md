@@ -38,4 +38,5 @@ ZonaSwitch — Spanish-language Nintendo Switch game shop. Monolithic Node/Expre
 ## Misc
 
 - `git status`/diff: files in `public/` may show LF→CRLF warnings — harmless, commit anyway.
+- **Never reseed the catalog from the hardcoded `JUEGOS` fallback**: seeding happens ONLY when `data/games.json` does not exist (true first boot, server.js `loadInitialGames`/`GET /api/juegos`). An emptied or all-hidden catalog is legitimate and must stay empty / return `[]` — a previous bug resurrected deleted games this way (fixed; keep the `fs.existsSync(GAMES_FILE)` guards).
 - Don't touch `server.js` auth/payment/security code casually; the repo had a security audit pass and those paths are intentionally hardened (rate limits, OTP lockouts, constant-time compares).

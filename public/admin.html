@@ -412,10 +412,57 @@
 
       <!-- ============ VISTA: AJUSTES ============ -->
       <section class="view" id="view-ajustes" hidden>
-        <div class="empty-state">
-          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
-          <h2>Próximamente</h2>
-          <p>La configuración general de la tienda estará disponible en una próxima actualización.</p>
+        <div class="page-header">
+          <div>
+            <h2>Ajustes</h2>
+            <p>Configuración de la tienda</p>
+          </div>
+        </div>
+
+        <div class="dash-grid-even">
+          <div class="panel-card">
+            <div class="panel-head panel-head-row">
+              <h3>Estado del sistema</h3>
+              <button type="button" class="btn-ghost" data-action="check-mongo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+                <span>Verificar</span>
+              </button>
+            </div>
+            <div class="panel-body">
+              <div id="sys-status"></div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-head"><h3>Preferencias</h3></div>
+            <div class="panel-body">
+              <div class="settings-row">
+                <span class="settings-label">Tema</span>
+                <div class="segmented" id="theme-seg" role="group" aria-label="Tema del panel">
+                  <button type="button" class="seg-btn" data-action="set-theme" data-theme="dark">Oscuro</button>
+                  <button type="button" class="seg-btn" data-action="set-theme" data-theme="light">Claro</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <span class="settings-label">Tamaño de página por defecto<span class="settings-note">Se aplica a Juegos y Pedidos</span></span>
+                <select id="settings-pagesize" class="toolbar-select page-size-select" aria-label="Tamaño de página por defecto"></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card panel-wide">
+            <div class="panel-head"><h3>Privacidad</h3></div>
+            <div class="panel-body">
+              <div class="privacy-text">
+                <p>La tienda recopila estadísticas anónimas de navegación (vistas de juegos, carritos, compras y búsquedas) para mejorar el catálogo. Estas métricas no almacenan datos personales.</p>
+                <p>Cada usuario puede desactivar el seguimiento desde los ajustes de su cuenta en la tienda. Los visitantes sin cuenta pueden hacerlo desde el aviso de privacidad del sitio.</p>
+              </div>
+              <div class="settings-row" id="privacy-optout-row" hidden>
+                <span class="settings-label">Tu cuenta</span>
+                <span id="privacy-optout-chip"></span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

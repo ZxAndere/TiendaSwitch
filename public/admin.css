@@ -851,6 +851,7 @@ html.light-mode .btn-danger:hover {
   font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Stock */
@@ -1109,6 +1110,7 @@ button.kpi-card:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .kpi-icon {
@@ -1273,16 +1275,15 @@ html.light-mode .kpi-red {
 }
 
 /* ==========================================================================
-   EMBUDO DE COMPRA
+   EMBUDO DE COMPRA — instrumento de métricas (CSS nativo)
    ========================================================================== */
 .funnel {
-  padding: 16px 20px 18px;
+  padding: 18px 20px;
 }
 
 .funnel-steps {
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
 .funnel-step {
@@ -1291,29 +1292,35 @@ html.light-mode .kpi-red {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 14px 8px;
-  background: var(--bg-card-hover);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
+  gap: 6px;
+  padding: 4px 8px;
 }
 
 .funnel-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(0, 240, 255, 0.08);
   color: var(--joycon-cyan);
 }
 
 .funnel-num {
   font-family: var(--font-heading);
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 .funnel-label {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--text-dim);
   white-space: nowrap;
   overflow: hidden;
@@ -1321,27 +1328,57 @@ html.light-mode .kpi-red {
   max-width: 100%;
 }
 
-.funnel-chev {
-  color: var(--text-dim);
-  flex-shrink: 0;
+/* Conector sutil entre etapas: línea + flecha */
+.funnel-connector {
+  flex: 0 0 30px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--border-strong);
+  position: relative;
+  opacity: 0.85;
+}
+
+.funnel-connector::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: -3px;
+  border-left: 6px solid var(--text-dim);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
 }
 
 .funnel-rates {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 14px;
+}
+
+.funnel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.funnel-foot-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
 }
 
 .funnel-ticket {
-  font-size: 0.84rem;
-  color: var(--text-muted);
-  margin-top: 12px;
-}
-
-.funnel-ticket strong {
-  color: var(--joycon-cyan);
+  font-family: var(--font-heading);
   font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--joycon-cyan);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -1350,9 +1387,9 @@ html.light-mode .kpi-red {
 .hour-chart {
   display: flex;
   align-items: flex-end;
-  gap: 3px;
-  height: 110px;
-  padding: 14px 20px 0;
+  gap: 4px;
+  height: 120px;
+  padding: 18px 20px 0;
 }
 
 .hour-col {
@@ -1362,17 +1399,21 @@ html.light-mode .kpi-red {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
 .hour-bar {
   width: 100%;
-  max-width: 14px;
+  max-width: 16px;
   border-radius: 3px 3px 0 0;
-  background: var(--bg-card-hover);
+  background: rgba(148, 163, 184, 0.35);
   min-height: 2px;
   transition: background 0.15s var(--ease-in);
+}
+
+.hour-bar.zero {
+  background: rgba(148, 163, 184, 0.12);
 }
 
 .hour-col.peak .hour-bar {
@@ -1386,14 +1427,19 @@ html.light-mode .kpi-red {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--joycon-cyan);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .hour-labels {
   display: flex;
   justify-content: space-between;
-  padding: 6px 22px 14px;
-  font-size: 0.68rem;
+  padding: 8px 22px 16px;
+  font-size: 0.66rem;
   color: var(--text-dim);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -1443,6 +1489,107 @@ html.light-mode .kpi-red {
 
 html.light-mode .mini-icon.mini-heart {
   color: #b91c1c;
+}
+
+/* ==========================================================================
+   AJUSTES — estado del sistema, preferencias y privacidad
+   ========================================================================== */
+.panel-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-head-row .btn-ghost {
+  height: 30px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 700;
+}
+
+.settings-note {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.settings-value {
+  font-weight: 600;
+  word-break: break-word;
+  text-align: right;
+}
+
+/* Selector segmentado de tema */
+.segmented {
+  display: flex;
+  flex-shrink: 0;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.seg-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s var(--ease-in), color 0.15s var(--ease-in), box-shadow 0.15s var(--ease-in);
+}
+
+.seg-btn:hover {
+  color: var(--text-main);
+}
+
+.seg-btn.active {
+  background: var(--joycon-cyan);
+  color: #000000;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25);
+}
+
+/* Card informativa de privacidad */
+.privacy-text {
+  padding: 14px 20px 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.privacy-text p {
+  margin: 0 0 10px;
+}
+
+.privacy-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* La card ancha de privacidad abarca las dos columnas */
+.dash-grid-even .panel-wide {
+  grid-column: 1 / -1;
 }
 
 /* Checkbox de confirmación en el diálogo */
@@ -1526,8 +1673,8 @@ html.light-mode .mini-icon.mini-heart {
 
 /* --- Icono mini para filas de analytics --- */
 .mini-icon {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1679,7 +1826,7 @@ html.light-mode .stock-tag {
   word-break: break-word;
 }
 
-/* --- Top vendedores --- */
+/* --- Top vendedores / rankings --- */
 .top-row {
   display: flex;
   align-items: center;
@@ -1688,8 +1835,8 @@ html.light-mode .stock-tag {
 }
 
 .top-rank {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1699,6 +1846,7 @@ html.light-mode .stock-tag {
   font-size: 0.74rem;
   font-weight: 800;
   color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .top-row:first-child .top-rank {
@@ -1727,6 +1875,8 @@ html.light-mode .top-row:first-child .top-rank {
 .top-count {
   font-size: 0.76rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -2506,6 +2656,7 @@ html.light-mode .toast-error {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .page-btns {

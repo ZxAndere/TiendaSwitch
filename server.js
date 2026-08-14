@@ -2184,10 +2184,14 @@ const DEFAULT_GAMES = [
 
 let GAMES_STORE = [];
 function loadInitialGames() {
-  GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
-  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+  // Seed SOLO en el primer arranque (sin archivo persistido). Si el archivo
+  // existe (aunque esté vacío o corrupto), el catálogo se respeta tal cual:
+  // un catálogo vaciado a propósito NO debe resucitar desde JUEGOS.
+  if (!fs.existsSync(GAMES_FILE)) {
     GAMES_STORE = [...JUEGOS];
     saveGamesLocal(GAMES_STORE);
+  } else {
+    GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
   }
 }
 
@@ -2246,14 +2250,9 @@ setInterval(() => {
 }, 30000);
 
 function broadcastCatalogUpdate() {
-  if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
-    GAMES_STORE = [...JUEGOS];
-  }
+  // Sin fallbacks a JUEGOS: un catálogo vacío u oculto por completo es legítimo
+  // y se transmite tal cual (un catálogo vaciado no debe resucitar).
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
-  if (visibleGames.length === 0) {
-    GAMES_STORE = JUEGOS.map(g => ({ ...g, visible: true }));
-    visibleGames = GAMES_STORE;
-  }
   const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', games: visibleGames.map(sanitizeGameForPublic) })}\n\n`;
   sseClients.forEach(client => {
     try {
@@ -2288,17 +2287,14 @@ app.get('/api/juegos', generalApiLimiter, (req, res) => {
 
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
     GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
-    if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+    // Seed SOLO en primer arranque (sin archivo persistido); si el archivo
+    // existe pero está vacío, el dueño vació el catálogo a propósito.
+    if ((!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) && !fs.existsSync(GAMES_FILE)) {
       GAMES_STORE = [...JUEGOS];
       saveGamesLocal(GAMES_STORE);
     }
   }
   let visibleGames = GAMES_STORE.filter(g => g.visible !== false);
-  if (visibleGames.length === 0) {
-    GAMES_STORE = JUEGOS.map(g => ({ ...g, visible: true }));
-    saveGamesLocal(GAMES_STORE);
-    visibleGames = GAMES_STORE;
-  }
   // NUNCA exponer cuentas/stock interno al público
   res.json(visibleGames.map(sanitizeGameForPublic));
 });
@@ -2314,7 +2310,9 @@ app.get('/api/juegos/:identifier', (req, res) => {
 
   if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
     GAMES_STORE = safeReadJsonSync(GAMES_FILE, []);
-    if (!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) {
+    // Seed SOLO en primer arranque (sin archivo persistido); si el archivo
+    // existe pero está vacío, el dueño vació el catálogo a propósito.
+    if ((!Array.isArray(GAMES_STORE) || GAMES_STORE.length === 0) && !fs.existsSync(GAMES_FILE)) {
       GAMES_STORE = [...JUEGOS];
       saveGamesLocal(GAMES_STORE);
     }

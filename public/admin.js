@@ -154,7 +154,8 @@ const state = {
   usersLoaded: false,
   importPayload: null,
   importPreview: null,
-  importTimer: null
+  importTimer: null,
+  sysChecked: false
 };
 
 /* ==========================================================================
@@ -231,6 +232,7 @@ function switchView(view) {
   else if (view === 'cupones') ensureCoupons();
   else if (view === 'galeria') ensureGallery();
   else if (view === 'usuarios') ensureUsers();
+  else if (view === 'ajustes') ensureSystemStatus();
 }
 
 function ensureGames() {
@@ -1575,6 +1577,12 @@ function renderDashAnalytics(a) {
 }
 
 /* --- Embudo de compra --- */
+/* Color con intención: conversión sana verde, baja ámbar, nula roja */
+function rateChip(pct, label) {
+  const cls = pct >= 15 ? 'chip-pagada' : (pct > 0 ? 'chip-pendiente' : 'chip-rechazada');
+  return `<span class="chip ${cls}">${pct}% ${label}</span>`;
+}
+
 function renderFunnel(a) {
   const el = document.getElementById('dash-funnel');
   const f = a && a.funnel ? a.funnel : null;
@@ -1595,21 +1603,30 @@ function renderFunnel(a) {
     { label: 'carrito→checkout', v: f.cartToCheckout },
     { label: 'checkout→compra', v: f.checkoutToPurchase }
   ];
+  const step = (ic, count, label) => `
+    <div class="funnel-step">
+      <span class="funnel-icon" aria-hidden="true">${icon(ic, 16)}</span>
+      <span class="funnel-num">${count}</span>
+      <span class="funnel-label">${escapeHTML(label)}</span>
+    </div>`;
   el.innerHTML = `
     <div class="funnel">
       <div class="funnel-steps">
-        <div class="funnel-step"><span class="funnel-icon">${icon('eye', 16)}</span><span class="funnel-num">${views}</span><span class="funnel-label">Vistas</span></div>
-        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
-        <div class="funnel-step"><span class="funnel-icon">${icon('bag', 16)}</span><span class="funnel-num">${addToCart}</span><span class="funnel-label">Carrito</span></div>
-        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
-        <div class="funnel-step"><span class="funnel-icon">${icon('ticket', 16)}</span><span class="funnel-num">${checkoutStart}</span><span class="funnel-label">Checkout</span></div>
-        <span class="funnel-chev" aria-hidden="true">${icon('chevRight', 16)}</span>
-        <div class="funnel-step"><span class="funnel-icon">${icon('check', 16)}</span><span class="funnel-num">${purchases}</span><span class="funnel-label">Compras</span></div>
+        ${step('eye', views, 'Vistas')}
+        <span class="funnel-connector" aria-hidden="true"></span>
+        ${step('bag', addToCart, 'Carrito')}
+        <span class="funnel-connector" aria-hidden="true"></span>
+        ${step('ticket', checkoutStart, 'Checkout')}
+        <span class="funnel-connector" aria-hidden="true"></span>
+        ${step('check', purchases, 'Compras')}
       </div>
       <div class="funnel-rates">
-        ${rates.map(r => `<span class="chip chip-percent">${toPercent(r.v)}% ${r.label}</span>`).join('')}
+        ${rates.map(r => rateChip(toPercent(r.v), r.label)).join('')}
       </div>
-      <p class="funnel-ticket">Ticket promedio: <strong>${formatCLP(a.ticketPromedio)}</strong></p>
+      <div class="funnel-foot">
+        <span class="funnel-foot-label">Ticket promedio</span>
+        <span class="funnel-ticket">${formatCLP(a.ticketPromedio)}</span>
+      </div>
     </div>`;
 }
 
@@ -1639,8 +1656,8 @@ function renderActivity(a) {
         const hh = Number(h.hour);
         const isPeak = c > 0 && c === peakCount;
         return `<div class="hour-col${isPeak ? ' peak' : ''}" title="Hora ${hh} · ${c} eventos">
-          <div class="hour-bar" style="height:${c ? Math.max(4, Math.round((c / max) * 100)) : 2}%"></div>
-          ${isPeak ? '<span class="peak-tag">pico</span>' : ''}
+          <div class="hour-bar${c ? '' : ' zero'}" style="height:${c ? Math.max(4, Math.round((c / max) * 100)) : 2}%"></div>
+          ${isPeak ? `<span class="peak-tag">pico ${c}</span>` : ''}
         </div>`;
       }).join('')}
     </div>
@@ -2037,6 +2054,87 @@ async function toggleUserRole(id) {
   } catch (err) {
     if (String(err.message) !== 'Sesión expirada') showToast('Error de comunicación con el servidor.', 'error');
   }
+}
+
+/* ==========================================================================
+   VISTA: AJUSTES — estado del sistema, preferencias y privacidad
+   ========================================================================== */
+function ensureSystemStatus() {
+  if (!state.sysChecked) fetchSystemStatus(false);
+}
+
+async function fetchSystemStatus(force) {
+  if (state.sysChecked && !force) return;
+  const el = document.getElementById('sys-status');
+  el.innerHTML = '<div class="panel-list">' +
+    '<span class="skeleton-line" style="margin:10px 20px;width:72%"></span>'.repeat(3) + '</div>';
+  try {
+    const res = await apiFetch('/api/debug/mongo');
+    if (!res.ok) {
+      renderSystemStatus(null);
+      state.sysChecked = true;
+      return;
+    }
+    const d = await res.json();
+    renderSystemStatus(d);
+    state.sysChecked = true;
+  } catch (err) {
+    if (String(err.message) !== 'Sesión expirada') renderSystemStatus(null);
+  }
+}
+
+function renderSystemStatus(d) {
+  const el = document.getElementById('sys-status');
+  if (!d) {
+    el.innerHTML = `
+      <div class="settings-row"><span class="settings-label">MongoDB</span><span class="chip chip-cancelada">No disponible</span></div>
+      <div class="settings-row"><span class="settings-label">URI configurada</span><span class="settings-value">—</span></div>
+      <div class="settings-row"><span class="settings-label">Último error</span><span class="settings-value">No disponible</span></div>`;
+    return;
+  }
+  const mongoChip = d.connected
+    ? '<span class="chip chip-pagada">Conectado</span>'
+    : '<span class="chip chip-rechazada">Desconectado</span>';
+  el.innerHTML = `
+    <div class="settings-row"><span class="settings-label">MongoDB</span>${mongoChip}</div>
+    <div class="settings-row"><span class="settings-label">URI configurada</span><span class="settings-value">${d.hasUri ? 'Sí' : 'No'}</span></div>
+    <div class="settings-row"><span class="settings-label">Último error</span><span class="settings-value">${escapeHTML(d.lastError || '—')}</span></div>`;
+}
+
+/* Preferencias: tema (misma clave que la tienda) y tamaño de página */
+function setTheme(theme) {
+  const light = theme === 'light';
+  document.documentElement.classList.toggle('light-mode', light);
+  try {
+    localStorage.setItem('zonaswitch_theme', light ? 'light' : 'dark');
+  } catch (e) {}
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.theme === 'light') === light);
+  });
+}
+
+function initSettings() {
+  const isLight = document.documentElement.classList.contains('light-mode');
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.theme === 'light') === isLight);
+  });
+  const sel = document.getElementById('settings-pagesize');
+  sel.innerHTML = PAGE_SIZES.map(s =>
+    `<option value="${s}"${s === state.pageSize ? ' selected' : ''}>${s} por página</option>`
+  ).join('');
+}
+
+/* Privacidad: estado de seguimiento de la cuenta admin (desde el gate) */
+function renderPrivacyRow() {
+  const row = document.getElementById('privacy-optout-row');
+  if (!state.user || state.user.trackingOptOut === undefined) {
+    row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  document.getElementById('privacy-optout-chip').innerHTML = state.user.trackingOptOut
+    ? '<span class="chip chip-cancelada">Seguimiento desactivado</span>'
+    : '<span class="chip chip-pagada">Seguimiento activado</span>';
 }
 
 /* ==========================================================================
@@ -2466,6 +2564,8 @@ document.addEventListener('click', (e) => {
     case 'bulk-toggle': bulkToggleVisibility(el.dataset.visible === '1'); break;
     case 'bulk-edit': openBulkEditModal(); break;
     case 'bulk-delete': bulkPermanentDelete(); break;
+    case 'check-mongo': fetchSystemStatus(true); break;
+    case 'set-theme': setTheme(el.dataset.theme); break;
   }
 });
 
@@ -2503,6 +2603,12 @@ document.addEventListener('change', (e) => {
     state.ordersStatus = t.value;
     state.ordersPage = 1;
     fetchOrders();
+  } else if (t.id === 'settings-pagesize') {
+    const v = Number(t.value);
+    state.pageSize = PAGE_SIZES.includes(v) ? v : DEFAULT_PAGE_SIZE;
+    try {
+      localStorage.setItem('zonaswitch_admin_pagesize', String(state.pageSize));
+    } catch (err) {}
   } else if (t.id === 'gallery-toggle') {
     toggleGallery(t.checked);
   } else if (t.id === 'import-file') {
@@ -2609,6 +2715,8 @@ function init() {
   document.getElementById('bulk-apply-btn').addEventListener('click', bulkEditApply);
   document.getElementById('confirm-no').addEventListener('click', () => resolveConfirm(false));
   document.getElementById('confirm-yes').addEventListener('click', () => resolveConfirm(true));
+  initSettings();
+  renderPrivacyRow();
   switchView('juegos');
 }
 
