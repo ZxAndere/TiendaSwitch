@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel de Administración · ZonaSwitch</title>
+<script>
+  /* Aplicar tema guardado antes del primer pintado (mismo patrón que el resto del sitio) */
+  (function () {
+    try {
+      if (localStorage.getItem('zonaswitch_theme') === 'light') {
+        document.documentElement.classList.add('light-mode');
+      }
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="admin-shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Navegación del panel">
+    <div class="sidebar-brand">
+      <span class="brand-mark">Z</span>
+      <span class="brand-text">ZonaSwitch <em>Admin</em></span>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Secciones"></nav>
+    <button type="button" class="rail-toggle" id="rail-toggle" data-action="toggle-rail" aria-label="Colapsar o expandir el menú" title="Colapsar menú">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"></path><path d="m18 17-5-5 5-5"></path></svg>
+    </button>
+  </aside>
+
+  <div class="admin-main">
+
+    <!-- ============ TOPBAR ============ -->
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1 id="topbar-title">Panel de Administración</h1>
+        <p id="topbar-subtitle"></p>
+      </div>
+      <div class="topbar-right">
+        <span class="user-chip" id="user-chip" title="Sesión actual"></span>
+      </div>
+    </header>
+
+    <!-- ============ NAV MÓVIL (strip scrolleable < 768px) ============ -->
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Secciones (móvil)"></nav>
+
+    <main class="content">
+
+      <div class="gate-loader" id="gate-loader">Verificando acceso…</div>
+
+      <!-- ============ VISTA: DASHBOARD ============ -->
+      <section class="view" id="view-dashboard" hidden>
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></span>
+          <h2>Próximamente</h2>
+          <p>El panel de resumen con las métricas de la tienda estará disponible en una próxima actualización.</p>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: JUEGOS ============ -->
+      <section class="view" id="view-juegos" hidden>
+        <div class="page-header">
+          <div>
+            <h2>Juegos</h2>
+            <p>Catálogo completo de la tienda</p>
+          </div>
+          <div class="page-actions">
+            <button type="button" class="btn-secondary" data-action="refresh-games">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+              <span>Actualizar</span>
+            </button>
+            <button type="button" class="btn-primary" data-action="create-game">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+              <span>Crear Juego</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input type="text" id="games-search" placeholder="Buscar por título o categoría…" autocomplete="off">
+          </div>
+          <span class="toolbar-count" id="games-count"></span>
+        </div>
+
+        <div class="table-card">
+          <div class="table-wrap">
+            <table class="data-table" id="games-table">
+              <thead id="games-thead"></thead>
+              <tbody id="games-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="games-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: PEDIDOS ============ -->
+      <section class="view" id="view-pedidos" hidden>
+        <div class="page-header">
+          <div>
+            <h2>Pedidos</h2>
+            <p>Todas las órdenes de la tienda</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input type="text" id="orders-search" placeholder="Buscar por código, email o usuario…" autocomplete="off">
+          </div>
+          <select id="orders-status" class="toolbar-select" aria-label="Filtrar por estado">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">pendiente</option>
+            <option value="pagada">pagada</option>
+            <option value="rechazada">rechazada</option>
+            <option value="cancelada">cancelada</option>
+            <option value="reembolsada">reembolsada</option>
+          </select>
+          <button type="button" class="btn-secondary" data-action="refresh-orders">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+            <span>Actualizar</span>
+          </button>
+          <span class="toolbar-count" id="orders-count"></span>
+        </div>
+
+        <div class="table-card">
+          <div class="table-wrap">
+            <table class="data-table" id="orders-table">
+              <thead>
+                <tr>
+                  <th scope="col">Código</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col" class="num">Total</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" class="col-actions">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="orders-tbody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="orders-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: CUPONES ============ -->
+      <section class="view" id="view-cupones" hidden>
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg></span>
+          <h2>Próximamente</h2>
+          <p>La gestión de códigos de descuento estará disponible en una próxima actualización.</p>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: GALERÍA ============ -->
+      <section class="view" id="view-galeria" hidden>
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></span>
+          <h2>Próximamente</h2>
+          <p>La administración de la galería de clientes estará disponible en una próxima actualización.</p>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: USUARIOS ============ -->
+      <section class="view" id="view-usuarios" hidden>
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+          <h2>Próximamente</h2>
+          <p>La gestión de usuarios y roles estará disponible en una próxima actualización.</p>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: AJUSTES ============ -->
+      <section class="view" id="view-ajustes" hidden>
+        <div class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+          <h2>Próximamente</h2>
+          <p>La configuración general de la tienda estará disponible en una próxima actualización.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============ MODAL: EDITOR DE JUEGO (crear / editar) ============ -->
+<div class="modal-backdrop" id="game-modal" hidden>
+  <div class="modal-card modal-game" role="dialog" aria-modal="true" aria-labelledby="game-modal-title">
+    <div class="modal-head">
+      <h3 id="game-modal-title">Crear Juego</h3>
+      <button type="button" class="icon-btn" data-action="close-modal" data-modal="game-modal" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+      </button>
+    </div>
+    <form id="game-form" novalidate>
+      <div class="modal-body">
+        <div class="form-error" id="game-form-error" hidden></div>
+
+        <section class="form-section">
+          <h4><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg> Información</h4>
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-titulo">Título <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="f-titulo" maxlength="200" required>
+              <p class="field-err" id="err-titulo"></p>
+            </div>
+            <div class="field">
+              <label for="f-categoria">Categoría <span class="req" aria-hidden="true">*</span></label>
+              <input type="text" id="f-categoria" list="categorias-list" maxlength="100" required>
+              <datalist id="categorias-list"></datalist>
+              <p class="field-err" id="err-categoria"></p>
+            </div>
+            <div class="field">
+              <label for="f-peso">Peso (GB)</label>
+              <input type="text" id="f-peso" maxlength="20">
+            </div>
+            <div class="field">
+              <label for="f-rating">Rating (0–5)</label>
+              <input type="number" id="f-rating" min="0" max="5" step="0.5">
+              <p class="field-err" id="err-rating"></p>
+            </div>
+            <div class="field field-switch">
+              <span class="field-label">Visible en la tienda</span>
+              <label class="switch">
+                <input type="checkbox" id="f-visible" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h4><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"></path><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"></path></svg> Precios y stock</h4>
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-sec">Precio Secundaria <span class="req" aria-hidden="true">*</span> (CLP)</label>
+              <input type="number" id="f-sec" min="0" step="1" required>
+              <p class="field-err" id="err-sec"></p>
+            </div>
+            <div class="field">
+              <label for="f-prim">Precio Primaria <span class="req" aria-hidden="true">*</span> (CLP)</label>
+              <input type="number" id="f-prim" min="0" step="1" required>
+              <p class="field-err" id="err-prim"></p>
+            </div>
+            <div class="field">
+              <label for="f-orig">Precio Original (CLP)</label>
+              <input type="number" id="f-orig" min="0" step="1">
+              <p class="field-err" id="err-orig"></p>
+            </div>
+            <div class="field">
+              <label for="f-stock-sec">Stock Secundaria</label>
+              <input type="number" id="f-stock-sec" min="0" step="1">
+              <p class="field-hint">Vacío = ilimitado</p>
+              <p class="field-err" id="err-stock-sec"></p>
+            </div>
+            <div class="field">
+              <label for="f-stock-prim">Stock Primaria</label>
+              <input type="number" id="f-stock-prim" min="0" step="1">
+              <p class="field-hint">Vacío = ilimitado</p>
+              <p class="field-err" id="err-stock-prim"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h4><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg> Imágenes y contenido</h4>
+          <div class="form-grid">
+            <div class="field">
+              <label for="f-imagen">Imagen principal <span class="req" aria-hidden="true">*</span> (URL)</label>
+              <input type="url" id="f-imagen" maxlength="500" required>
+              <div class="img-preview" id="preview-imagen" aria-hidden="true"></div>
+              <p class="field-err" id="err-imagen"></p>
+            </div>
+            <div class="field">
+              <label for="f-imagen-detalle">Imagen de detalle <span class="req" aria-hidden="true">*</span> (URL)</label>
+              <input type="url" id="f-imagen-detalle" maxlength="500" required>
+              <div class="img-preview" id="preview-imagen-detalle" aria-hidden="true"></div>
+              <p class="field-err" id="err-imagen-detalle"></p>
+            </div>
+            <div class="field field-full">
+              <label for="f-descripcion">Descripción corta <span class="req" aria-hidden="true">*</span></label>
+              <textarea id="f-descripcion" rows="3" maxlength="1000" required></textarea>
+              <p class="field-err" id="err-descripcion"></p>
+            </div>
+            <div class="field field-full">
+              <label for="f-resumen">Resumen extenso</label>
+              <textarea id="f-resumen" rows="5" maxlength="5000"></textarea>
+            </div>
+            <div class="field field-full">
+              <label for="f-youtube">YouTube URL</label>
+              <input type="url" id="f-youtube" maxlength="500">
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h4><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg> Cuentas</h4>
+          <div class="form-grid">
+            <div class="field field-full">
+              <label for="f-cuentas">Cuentas (una por línea)</label>
+              <textarea id="f-cuentas" rows="5" placeholder="Cuenta / Contraseña / Código"></textarea>
+              <p class="field-hint">Formato: cuenta / contraseña / código — una por línea</p>
+            </div>
+            <div class="field field-full">
+              <label for="f-correo-texto">Texto del correo de entrega</label>
+              <textarea id="f-correo-texto" rows="4" maxlength="3000"></textarea>
+            </div>
+            <div class="field field-full">
+              <label for="f-correo-imagen">Imagen del correo (URL)</label>
+              <input type="url" id="f-correo-imagen" maxlength="500">
+            </div>
+          </div>
+        </section>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-secondary" data-action="close-modal" data-modal="game-modal">Cancelar</button>
+        <button type="submit" class="btn-primary" id="game-save-btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: DETALLE DE PEDIDO ============ -->
+<div class="modal-backdrop" id="order-modal" hidden>
+  <div class="modal-card modal-order" role="dialog" aria-modal="true" aria-labelledby="order-head">
+    <div class="modal-head">
+      <div id="order-head"></div>
+      <button type="button" class="icon-btn" data-action="close-modal" data-modal="order-modal" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="order-body"></div>
+    <div class="modal-foot" id="order-foot"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: CONFIRMACIÓN ============ -->
+<div class="modal-backdrop modal-backdrop-sm" id="confirm-modal" hidden>
+  <div class="modal-card modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+    <span class="confirm-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+    </span>
+    <h3 id="confirm-title">¿Confirmar?</h3>
+    <p class="confirm-msg" id="confirm-msg"></p>
+    <div class="field" id="confirm-reason-wrap" hidden>
+      <label for="confirm-reason" id="confirm-reason-label"></label>
+      <textarea id="confirm-reason" rows="3" maxlength="500"></textarea>
+      <p class="field-err" id="confirm-reason-err"></p>
+    </div>
+    <div class="confirm-actions">
+      <button type="button" class="btn-secondary" id="confirm-no">Cancelar</button>
+      <button type="button" class="btn-danger" id="confirm-yes">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MENÚ KEBAB (posición fija) ============ -->
+<div class="kebab-menu" id="kebab-menu" hidden></div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
